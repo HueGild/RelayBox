@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r4 (2026-11-24 · 单文件分享页直接内嵌文本/代码阅读器+一键复制、PDF内嵌预览与音频播放器；包含 r2/r3 全部修复，API零改动) -->
+<!-- RelayBox v3.0 UI r5 (2026-11-24 · 对接 v3.1 Batch 1 契约：新增首页 5 位短取件码输入栏、分享下载次数上限与取件码展示复制、分享页剩余次数提示、管理员 API 密钥管理弹窗与 curl 示例；包含 r2/r3/r4 全部修复) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -295,6 +295,37 @@
   .share-doc .pv-pdf { height: 68vh; min-height: 420px; }
   .share-audio { margin-top: 12px; padding: 14px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--border); }
   .share-audio audio { width: 100%; display: block; }
+  /* r5: 首页 5 位短取件码快捷栏 */
+  .pickup-card { padding: 11px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+  .pickup-label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; flex-shrink: 0; }
+  .pickup-label svg { width: 16px; height: 16px; color: var(--accent); }
+  .pickup-input { flex: 1; min-width: 0; height: 36px; padding: 6px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; }
+  .pickup-input::placeholder { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; letter-spacing: 0; text-transform: none; font-weight: 400; }
+  .pickup-btn { height: 36px; padding: 0 16px; font-size: 13px; font-weight: 600; flex-shrink: 0; white-space: nowrap; }
+  /* r5: 分享设置弹窗快捷次数 + 结果区 */
+  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .preset-row .pill { padding: 4px 10px; font-size: 12px; }
+  .share-res { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--border); }
+  .share-res-code { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .pickup-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 18px; font-weight: 700; letter-spacing: .18em; }
+  .share-res-url { font-size: 12px; color: var(--muted); word-break: break-all; margin-bottom: 10px; }
+  .share-res-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .share-res-btns button { padding: 6px 12px; font-size: 12px; flex: 1; }
+  .share-limit-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+  .share-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: var(--btn-bg); color: var(--btn-text); font-weight: 500; }
+  .share-chip.warn { background: var(--danger-bg); color: var(--danger-text); }
+  .share-chip.code-chip { cursor: pointer; background: var(--accent-soft); color: var(--accent); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: .08em; }
+  /* r5: API 密钥管理弹窗 */
+  .token-card { max-width: 520px; width: 100%; max-height: 86vh; overflow-y: auto; }
+  .token-created { margin: 10px 0; padding: 12px; border-radius: 12px; background: var(--ok-bg); border: 1px solid rgba(5,150,105,.25); }
+  .token-created-val { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; word-break: break-all; background: var(--surface); color: var(--text); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); margin: 8px 0; }
+  .token-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .token-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-soft); border: 1px solid var(--border); }
+  .token-meta { min-width: 0; flex: 1; }
+  .token-name { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .token-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  .token-curl { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--surface-soft); border: 1px solid var(--border); font-size: 12px; }
+  .token-curl pre { margin: 6px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--bg); color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11.5px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
   .pv-doc-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
   .pv-doc-title { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .pv-doc-btn { padding: 5px 12px; font-size: 12px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; flex-shrink: 0; border: 0; cursor: pointer; }
@@ -365,6 +396,7 @@
     .pv-doc { width: calc(100vw - 24px); height: 80vh; }
     .share-doc { width: 100%; height: auto; }
     .modal .pnav { width: 36px; height: 36px; font-size: 22px; }
+    .pickup-label span { display: none; }
   }
 </style>
 </head>
@@ -384,6 +416,7 @@
     <div class="top-actions">
       <button class="ghost" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg> 自动</button>
       <button class="icon-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
+      <button class="icon-btn" id="tokensBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="API 密钥管理" aria-label="API 密钥管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></button>
       <div class="loginbar" id="loginbar"></div>
     </div>
   </div>
@@ -396,6 +429,12 @@
       <button class="ghost" id="loginCancel">取消</button>
     </div>
     <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div class="card pickup-card" id="pickupCard">
+    <span class="pickup-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V3"/><path d="M8 3h8"/><path d="M9 14h6"/></svg><span>取件码</span></span>
+    <input type="text" class="pickup-input" id="pickupInput" placeholder="输入 5 位取件码快速取件" maxlength="8" autocomplete="off" spellcheck="false">
+    <button class="pickup-btn" id="pickupGoBtn" type="button">取件</button>
   </div>
 
   <div class="card" id="uploadCard">
@@ -511,10 +550,11 @@
 <div class="modal" id="moveModal"><span class="close" id="moveClose">×</span><div class="card" style="max-width:360px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:10px" id="moveTitle">移动到…</div><div id="moveList"></div></div></div>
 <div class="modal" id="inputModal"><span class="close" id="inputClose">×</span><div class="card" style="max-width:360px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:10px" id="inputTitle">输入</div><input type="text" id="inputField" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="inputCancel">取消</button><button id="inputOk">确定</button></div></div></div>
 <div class="modal" id="expireEditModal"><span class="close" id="expireEditClose">×</span><div class="card" style="max-width:360px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:4px">修改有效期</div><div class="meta" id="expireEditName" style="margin-bottom:12px"></div><div id="expireEditOpts"></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="expireEditCancel">取消</button></div></div></div>
-<div class="modal" id="shareSettingsModal"><span class="close" id="shareSettingsClose">×</span><div class="card" style="max-width:360px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:4px">分享设置</div><div class="meta" id="shareSettingsName" style="margin-bottom:12px"></div><label style="display:block;font-size:13px;margin-bottom:4px">提取码（留空 = 不设提取码）</label><input type="text" id="shareCodeInput" placeholder="如 1234" maxlength="32" style="width:100%;margin-bottom:12px"><label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:4px"><input type="checkbox" id="shareBurnCheck"> 阅后即焚（下载一次后链接作废）</label><div class="meta" style="margin-bottom:12px">不设提取码、不勾阅后即焚，就是普通分享链接。</div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="shareSettingsCancel">取消</button><button id="shareSettingsOk">生成链接并复制</button></div></div></div>
+<div class="modal" id="shareSettingsModal"><span class="close" id="shareSettingsClose">×</span><div class="card" style="max-width:400px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:4px">分享设置</div><div class="meta" id="shareSettingsName" style="margin-bottom:12px"></div><label style="display:block;font-size:13px;margin-bottom:4px">提取码（留空 = 不设提取码）</label><input type="text" id="shareCodeInput" placeholder="如 1234" maxlength="32" style="width:100%;margin-bottom:12px"><label style="display:block;font-size:13px;margin-bottom:4px">最大下载次数（0 = 不限，1 = 阅后即焚）</label><input type="number" id="shareMaxDlInput" min="0" max="99999" value="0" style="width:100%;padding:9px 12px;border:1px solid var(--input-border);border-radius:10px;font-size:14px;background:var(--input-bg);color:var(--text)"><div class="preset-row" id="shareMaxDlPresets"><button type="button" class="pill active" data-maxdl="0">不限</button><button type="button" class="pill" data-maxdl="1">1 次（阅后即焚）</button><button type="button" class="pill" data-maxdl="5">5 次</button><button type="button" class="pill" data-maxdl="10">10 次</button></div><label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;color:var(--muted)"><input type="checkbox" id="shareBurnCheck"> 阅后即焚（下载一次后链接作废）</label><div class="share-res" id="shareResultBox" style="display:none"><div class="share-res-code"><div><div class="meta" style="margin:0 0 4px">5 位短取件码</div><span class="pickup-badge" id="shareResPickup">-----</span></div><div class="meta" id="shareResQuota" style="text-align:right"></div></div><div class="share-res-url" id="shareResUrl"></div><div class="share-res-btns"><button type="button" class="ghost" id="shareCopyCodeBtn">复制取件码</button><button type="button" class="ghost" id="shareCopyUrlBtn">复制链接</button><button type="button" id="shareCopyPackBtn">复制分享文案</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="shareSettingsCancel">关闭</button><button id="shareSettingsOk">保存并复制链接</button></div></div></div>
 <div class="modal" id="downloadConfirmModal"><span class="close" id="downloadConfirmClose">×</span><div class="card" style="max-width:360px;width:100%;text-align:center"><div style="font-size:16px;font-weight:600;margin-bottom:10px">是否确认下载？</div><div id="downloadConfirmName" style="font-size:14px;word-break:break-all;margin-bottom:4px"></div><div class="meta" id="downloadConfirmSize" style="margin-bottom:16px"></div><button id="downloadConfirmOk" style="width:100%;padding:11px;font-size:15px">确定下载</button><button class="ghost" id="downloadConfirmCancel" style="width:100%;margin-top:8px">取消</button></div></div>
 <div class="modal" id="modal"><span class="close" id="modalClose">×</span><button class="pnav prev" id="modalPrev" aria-label="上一张">‹</button><button class="pnav next" id="modalNext" aria-label="下一张">›</button><div class="pcount" id="modalCount"></div><div id="modalBody"></div></div>
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
+<div class="modal" id="tokensModal"><span class="close" id="tokensClose">×</span><div class="card token-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">API 密钥管理</div><div class="meta" style="margin-bottom:12px">用于 curl、ShareX、PicGo、iOS 快捷指令一键直传（单文件 ≤ 32MB，默认公开直链）。</div><div class="row" style="margin-top:0"><input type="text" id="tokenNameInput" placeholder="备注名，如 Mac ShareX / 快捷指令" maxlength="40"><button id="tokenCreateBtn" type="button">生成密钥</button></div><div class="token-created" id="tokenCreatedBox" style="display:none"><div style="font-size:12px;font-weight:600;color:var(--ok-text)">已生成新密钥（明文仅展示这一次，请立即保存）：</div><div class="token-created-val" id="tokenCreatedVal"></div><div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tokenCopyKeyBtn" style="flex:1;padding:7px 10px;font-size:12px">复制密钥</button><button type="button" id="tokenCopyCurlBtn" style="flex:1;padding:7px 10px;font-size:12px">复制 curl 上传命令</button></div></div><div class="token-list" id="tokenList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="token-curl"><div style="font-weight:600;color:var(--text)">极客上传接口示例（POST /api/raw-upload）</div><pre id="tokenCurlExample"></pre></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="tokensDoneBtn" type="button">关闭</button></div></div></div>
 <div class="modal" id="qrModal"><span class="close" id="qrClose">×</span><div class="card" style="max-width:320px;width:100%;text-align:center"><div id="qrBox"></div><div class="meta" id="qrUrl" style="word-break:break-all;font-size:12px;margin-top:10px"></div><button id="qrCopy" style="margin-top:12px">复制链接</button></div></div>
 
 <div class="wrap" id="shareView" style="display:none">
@@ -1195,6 +1235,7 @@ async function loadList(showSkel) {
     $('folderBtn').style.display = authed ? '' : 'none';
     $('selectAllBtn').style.display = authed ? '' : 'none';
     $('announceBtn').style.display = authed ? '' : 'none';
+    if ($('tokensBtn')) $('tokensBtn').style.display = authed ? '' : 'none';
     const r2Pct = r2On && d.r2Total ? Math.min(100, (d.r2Used || 0) / d.r2Total * 100) : 0;
     const localPct = d.diskTotal ? Math.min(100, (d.localUsed || 0) / d.diskTotal * 100) : 0;
     let quotaHtml = `<div>${currentFolders.length ? `共 ${currentFolders.length} 个文件夹 · ` : '共 '}${allFiles.length} 个文件</div>`;
@@ -1579,6 +1620,7 @@ document.addEventListener('keydown', (e) => {
   if ($('shareSettingsModal').classList.contains('open')) { closeShareSettings(); return; }
   if ($('downloadConfirmModal').classList.contains('open')) { closeDownloadConfirm(); return; }
   if ($('qrModal').classList.contains('open')) { $('qrModal').classList.remove('open'); return; }
+  if ($('tokensModal') && $('tokensModal').classList.contains('open')) { closeTokensModal(); return; }
 });
 
 async function copyFolderLink(id, btn) {
@@ -1590,9 +1632,10 @@ async function copyFolderLink(id, btn) {
     const d = await r.json();
     if (!d.ok) { setMsg('生成分享链接失败：' + (d.error || ''), 'err'); return; }
     token = d.token;
+    if (d.pickupCode) fd._pickupCode = d.pickupCode;
     loadList();
   }
-  copyText(location.origin + '/s/' + token, '文件夹分享链接已复制');
+  copyText(location.origin + '/s/' + token, '文件夹分享链接已复制' + (fd._pickupCode ? ' · 取件码 ' + fd._pickupCode : ''));
   if (btn) flashCopied(btn);
 }
 async function revokeFolderShare(id) {
@@ -1805,6 +1848,44 @@ async function revokeShare(id) {
 }
 
 let shareSettingsTarget = null;
+let shareResData = null;
+function syncMaxDlUI(val) {
+  const n = Math.max(0, parseInt(val, 10) || 0);
+  $('shareMaxDlInput').value = String(n);
+  $('shareBurnCheck').checked = (n === 1);
+  document.querySelectorAll('#shareMaxDlPresets button').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.maxdl) === n);
+  });
+}
+function renderShareResultBox(data) {
+  const box = $('shareResultBox');
+  if (!box) return;
+  if (!data || !data.token) { box.style.display = 'none'; shareResData = null; return; }
+  shareResData = data;
+  const fullUrl = location.origin + '/s/' + data.token;
+  $('shareResPickup').textContent = data.pickupCode || '未生成';
+  const md = Number(data.maxDownloads || (data.burn ? 1 : 0));
+  const ud = Number(data.usedDownloads || 0);
+  $('shareResQuota').textContent = md > 0 ? `剩余 ${Math.max(0, md - ud)} / ${md} 次` : '下载次数不限';
+  $('shareResUrl').textContent = fullUrl;
+  $('shareCopyCodeBtn').style.display = data.pickupCode ? '' : 'none';
+  box.style.display = 'block';
+}
+document.querySelectorAll('#shareMaxDlPresets button').forEach(b => {
+  b.onclick = () => syncMaxDlUI(b.dataset.maxdl);
+});
+$('shareMaxDlInput').oninput = () => syncMaxDlUI($('shareMaxDlInput').value);
+$('shareBurnCheck').onchange = () => syncMaxDlUI($('shareBurnCheck').checked ? 1 : 0);
+$('shareCopyCodeBtn').onclick = () => { if (shareResData && shareResData.pickupCode) copyText(shareResData.pickupCode, '取件码已复制：' + shareResData.pickupCode); };
+$('shareCopyUrlBtn').onclick = () => { if (shareResData && shareResData.token) copyText(location.origin + '/s/' + shareResData.token, '分享链接已复制'); };
+$('shareCopyPackBtn').onclick = () => {
+  if (!shareResData || !shareResData.token) return;
+  const lines = ['文件：' + $('shareSettingsName').textContent, '链接：' + location.origin + '/s/' + shareResData.token];
+  if (shareResData.pickupCode) lines.push('取件码：' + shareResData.pickupCode);
+  if (shareResData.code) lines.push('提取码：' + shareResData.code);
+  copyText(lines.join('\n'), '分享文案已复制');
+};
+
 async function openShareSettings(id, kind) {
   const isFolder = kind === 'folder';
   const name = isFolder
@@ -1812,13 +1893,16 @@ async function openShareSettings(id, kind) {
     : (allFiles.find(x => x.id === id) || {}).name || '文件';
   $('shareSettingsName').textContent = name;
   $('shareCodeInput').value = '';
-  $('shareBurnCheck').checked = false;
+  syncMaxDlUI(0);
+  renderShareResultBox(null);
   try {
     const r = await fetch(`/api/${isFolder ? 'folders' : 'files'}/${id}/share`);
     const d = await r.json();
     if (d.ok && d.share) {
       $('shareCodeInput').value = d.share.code || '';
-      $('shareBurnCheck').checked = !!d.share.burn;
+      const md = d.share.maxDownloads !== undefined ? Number(d.share.maxDownloads) : (d.share.burn ? 1 : 0);
+      syncMaxDlUI(md);
+      renderShareResultBox(d.share);
     }
   } catch {}
   shareSettingsTarget = { id, isFolder };
@@ -1830,21 +1914,142 @@ $('shareSettingsClose').onclick = closeShareSettings;
 $('shareSettingsCancel').onclick = closeShareSettings;
 $('shareSettingsModal').onclick = (e) => { if (e.target.id === 'shareSettingsModal') closeShareSettings(); };
 $('shareCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('shareSettingsOk').click(); });
+$('shareMaxDlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('shareSettingsOk').click(); });
 $('shareSettingsOk').onclick = async () => {
   if (!shareSettingsTarget) return;
   const { id, isFolder } = shareSettingsTarget;
   const code = $('shareCodeInput').value.trim();
-  const burn = $('shareBurnCheck').checked;
+  const maxDownloads = Math.max(0, parseInt($('shareMaxDlInput').value, 10) || 0);
+  const burn = maxDownloads === 1;
   const r = await fetch(`/api/${isFolder ? 'folders' : 'files'}/${id}/share`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, burn }),
+    body: JSON.stringify({ code, burn, maxDownloads }),
   });
   const d = await r.json();
   if (!d.ok) { setMsg('生成分享链接失败：' + (d.error || ''), 'err'); return; }
-  closeShareSettings();
-  copyText(location.origin + '/s/' + d.token, '分享链接已复制' + (code ? '（提取码 ' + code + '）' : '') + (burn ? '（阅后即焚）' : ''));
+  const info = {
+    token: d.token,
+    code: d.code !== undefined ? d.code : code,
+    burn: d.burn !== undefined ? d.burn : burn,
+    pickupCode: d.pickupCode || '',
+    maxDownloads: d.maxDownloads !== undefined ? d.maxDownloads : maxDownloads,
+    usedDownloads: d.usedDownloads || 0,
+  };
+  renderShareResultBox(info);
+  const tip = '分享链接已复制' + (info.pickupCode ? ' · 取件码 ' + info.pickupCode : '') + (code ? '（提取码 ' + code + '）' : '') + (maxDownloads === 1 ? '（阅后即焚）' : maxDownloads > 1 ? `（限 ${maxDownloads} 次）` : '');
+  copyText(location.origin + '/s/' + d.token, tip);
   loadList();
 };
+
+// r5: 首页 5 位短取件码查询
+async function goPickupCode() {
+  const input = $('pickupInput');
+  const code = (input ? input.value : '').trim().toUpperCase();
+  if (!code) { showToast('请输入取件码', 'err'); if (input) input.focus(); return; }
+  const btn = $('pickupGoBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch('/api/pickup/' + encodeURIComponent(code));
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok && d.token) {
+      location.href = '/s/' + encodeURIComponent(d.token);
+      return;
+    }
+    if (r.status === 429) showToast(d.error || '尝试次数过多，请 10 分钟后再试', 'err');
+    else showToast(d.error || '取件码不存在或已失效', 'err');
+  } catch {
+    showToast('网络错误，请稍后重试', 'err');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+if ($('pickupGoBtn')) $('pickupGoBtn').onclick = goPickupCode;
+if ($('pickupInput')) $('pickupInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') goPickupCode(); });
+
+// r5: 管理员 API 密钥管理弹窗
+let lastCreatedToken = '';
+function curlSnippetFor(tok) {
+  const t = tok || 'rbx_你的密钥';
+  return `curl -X POST "${location.origin}/api/raw-upload?format=text" \\\n  -H "Authorization: Bearer ${t}" \\\n  -F "file=@demo.png"`;
+}
+function openTokensModal() {
+  if (!authed) return;
+  $('tokenCreatedBox').style.display = 'none';
+  lastCreatedToken = '';
+  $('tokenNameInput').value = '';
+  $('tokenCurlExample').textContent = curlSnippetFor('');
+  $('tokensModal').classList.add('open');
+  loadTokensList();
+}
+function closeTokensModal() {
+  $('tokensModal').classList.remove('open');
+  lastCreatedToken = '';
+  $('tokenCreatedBox').style.display = 'none';
+}
+async function loadTokensList() {
+  const el = $('tokenList');
+  el.innerHTML = '<div class="empty" style="padding:18px 0">加载中…</div>';
+  try {
+    const r = await fetch('/api/tokens');
+    const d = await r.json();
+    if (!r.ok || !d.ok) { el.innerHTML = `<div class="empty" style="padding:18px 0">${escapeHtml(d.error || '当前后端尚未启用 API 密钥功能')}</div>`; return; }
+    const tokens = d.tokens || [];
+    if (!tokens.length) { el.innerHTML = '<div class="empty" style="padding:18px 0">还没有 API 密钥，上方填个备注即可生成</div>'; return; }
+    el.innerHTML = tokens.map(t => `<div class="token-row">
+      <div class="token-meta">
+        <div class="token-name">${escapeHtml(t.name || '未命名密钥')}</div>
+        <div class="token-sub">${escapeHtml(t.prefix || 'rbx_****')}… · 创建于 ${fmtDate(t.createdAt)}${t.lastUsedAt ? ' · 最近使用 ' + fmtDate(t.lastUsedAt) : ''}</div>
+      </div>
+      <button type="button" class="icon-btn danger" title="吊销密钥" aria-label="吊销密钥" onclick="revokeApiToken('${t.id}', '${escapeHtml(t.name || '')}')">${ICONS.trash}</button>
+    </div>`).join('');
+  } catch {
+    el.innerHTML = '<div class="empty" style="padding:18px 0">加载失败</div>';
+  }
+}
+async function createApiToken() {
+  const name = $('tokenNameInput').value.trim() || '默认密钥';
+  const btn = $('tokenCreateBtn');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, scope: 'upload' }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok || !d.token) { showToast('生成失败：' + (d.error || ('HTTP ' + r.status)), 'err'); return; }
+    lastCreatedToken = d.token;
+    $('tokenCreatedVal').textContent = d.token;
+    $('tokenCreatedBox').style.display = 'block';
+    $('tokenCurlExample').textContent = curlSnippetFor(d.token);
+    $('tokenNameInput').value = '';
+    showToast('API 密钥已生成，请及时保存', 'ok');
+    loadTokensList();
+  } catch {
+    showToast('生成失败：网络错误', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function revokeApiToken(id, name) {
+  if (!confirm(`确定吊销密钥「${name || id}」吗？吊销后使用该密钥的脚本将立即失效。`)) return;
+  try {
+    const r = await fetch('/api/tokens/' + encodeURIComponent(id), { method: 'DELETE' });
+    const d = await r.json();
+    if (r.ok && d.ok) { showToast('密钥已吊销', 'ok'); loadTokensList(); }
+    else showToast('吊销失败：' + (d.error || ''), 'err');
+  } catch {
+    showToast('吊销失败：网络错误', 'err');
+  }
+}
+if ($('tokensBtn')) $('tokensBtn').onclick = openTokensModal;
+if ($('tokensClose')) $('tokensClose').onclick = closeTokensModal;
+if ($('tokensDoneBtn')) $('tokensDoneBtn').onclick = closeTokensModal;
+if ($('tokensModal')) $('tokensModal').onclick = (e) => { if (e.target.id === 'tokensModal') closeTokensModal(); };
+if ($('tokenCreateBtn')) $('tokenCreateBtn').onclick = createApiToken;
+if ($('tokenNameInput')) $('tokenNameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') createApiToken(); });
+if ($('tokenCopyKeyBtn')) $('tokenCopyKeyBtn').onclick = () => { if (lastCreatedToken) copyText(lastCreatedToken, 'API 密钥已复制'); };
+if ($('tokenCopyCurlBtn')) $('tokenCopyCurlBtn').onclick = () => { if (lastCreatedToken) copyText(curlSnippetFor(lastCreatedToken), 'curl 命令已复制'); };
 
 async function removeFile(id, name) {
   let pw = '';
@@ -2445,7 +2650,7 @@ async function loadShareFolder(folderId) {
         $('shareCodeField').focus();
         return;
       }
-      $('shareCard').innerHTML = '<div class="empty">这个分享链接不存在或已被取消</div>';
+      $('shareCard').innerHTML = r.status === 410 ? '<div class="empty">这个分享已达到下载次数上限，链接已失效</div>' : '<div class="empty">这个分享链接不存在或已被取消</div>';
       return;
     }
     if (d.folder) { renderShareFolder(d); return; }
@@ -2454,6 +2659,7 @@ async function loadShareFolder(folderId) {
     const codeQ = shareCode ? '&code=' + encodeURIComponent(shareCode) : '';
     const shareRawUrl = `/f/${f.id}?share=${shareToken}${codeQ}`;
     $('shareCard').innerHTML = `
+      ${shareLimitBarHtml(d.share)}
       <div class="file">
         <div class="icon">${iconFor(f)}</div>
         <div class="info">
@@ -2488,6 +2694,19 @@ async function loadShareFolder(folderId) {
     $('shareCard').innerHTML = '<div class="empty">加载失败，请稍后再试</div>';
   }
 }
+function shareLimitBarHtml(sh) {
+  if (!sh) return '';
+  const chips = [];
+  if (sh.pickupCode) chips.push(`<span class="share-chip code-chip" title="点此复制取件码" onclick="copyText('${escapeHtml(sh.pickupCode)}', '取件码已复制')">取件码 ${escapeHtml(sh.pickupCode)}</span>`);
+  const md = Number(sh.maxDownloads || (sh.burn ? 1 : 0));
+  const ud = Number(sh.usedDownloads || 0);
+  if (md > 0) {
+    const rem = Math.max(0, md - ud);
+    const label = md === 1 ? '阅后即焚（仅限下载 1 次）' : `剩余 ${rem} / ${md} 次下载`;
+    chips.push(`<span class="share-chip${rem <= 1 ? ' warn' : ''}">${label}</span>`);
+  }
+  return chips.length ? `<div class="share-limit-bar">${chips.join('')}</div>` : '';
+}
 function renderShareFolder(d) {
   shareFiles = d.files || [];
   const crumbs = (d.path || []).map((p, i) => {
@@ -2497,6 +2716,7 @@ function renderShareFolder(d) {
       : `<button onclick="loadShareFolder('${p.id}')">${escapeHtml(p.name)}</button>`);
   }).join('');
   $('shareCard').innerHTML = `
+    ${shareLimitBarHtml(d.share)}
     <div class="share-folder-head" style="font-size:16px;font-weight:600;margin-bottom:4px">${ICONS.folderSolid} ${escapeHtml(d.folder.name)}</div>
     <div class="crumbs">${crumbs}</div>
     ${(d.folders || []).map(fd => `
