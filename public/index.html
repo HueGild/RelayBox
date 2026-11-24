@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r7 (2026-11-24 · 桌面+手机端全面动效与细节升级：点击光晕涟漪、View Transitions 丝滑明暗切换、弹性下拉/弹窗动效、悬停与手机长按自定义气泡提示、卡片打勾高亮、图片预览底部缩放/旋转工具条、默认复制格式设置、上传目标目录快选、增强缩略图列表视图、文件详情弹窗对接上传IP/归属地/分辨率) -->
+<!-- RelayBox v3.0 UI r8 (2026-11-24 · v3.1.6 自适应 R2 传输双模式：预签名直传 / Worker 绑定中转图床模式一键切换 + 无 S3 密钥自动降级 + 完整保留 r7 动效与文件详情) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -518,6 +518,21 @@
  .fmt-opt strong { display: block; font-size: 13px; margin-bottom: 2px; }
  .fmt-opt span { display: block; font-size: 11px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+ /* r8: R2 传输双模式设置弹窗与状态徽章 */
+ .mode-opts { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 12px; }
+ .mode-opt { padding: 11px 13px; border-radius: 12px; background: var(--surface-soft); border: 1.5px solid var(--border); color: var(--text); text-align: left; cursor: pointer; transition: border-color .15s, background .15s; width: 100%; }
+ .mode-opt:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+ .mode-opt.active { border-color: var(--accent); background: var(--accent-soft); }
+ .mode-opt:disabled { opacity: .52; cursor: not-allowed; }
+ .mode-opt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+ .mode-opt-head strong { font-size: 13.5px; color: var(--text); }
+ .mode-opt.active .mode-opt-head strong { color: var(--accent); }
+ .mode-opt-tag { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--btn-bg); color: var(--muted); font-weight: 600; flex-shrink: 0; }
+ .mode-opt.active .mode-opt-tag { background: var(--accent); color: #fff; }
+ .mode-opt p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+ .mode-badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 600; border: 0; cursor: pointer; flex-shrink: 0; margin-left: 2px; }
+ .mode-badge:hover { background: var(--accent); color: #fff; }
+
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
   .mob-only-wrap { display: inline-flex; }
@@ -548,12 +563,14 @@
  <button class="ghost" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg> 自动</button>
  <button class="icon-btn desk-only-btn" id="copyFmtBtn" style="width:30px;height:30px;border-radius:999px" title="默认复制格式" aria-label="默认复制格式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="transferModeBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="R2 传输模式" aria-label="R2 传输模式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
  <button class="icon-btn desk-only-btn" id="tokensBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="API 密钥管理" aria-label="API 密钥管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></button>
  <span class="top-more-wrap mob-only-wrap">
   <button class="icon-btn" id="topMoreBtn" type="button" style="width:30px;height:30px;border-radius:999px" title="更多功能" aria-label="更多功能"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
   <div class="top-more-menu" id="topMoreMenu">
    <button type="button" id="mobCopyFmtBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认复制格式</button>
    <button type="button" id="mobAnnounceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> 设置站点公告</button>
+   <button type="button" id="mobTransferModeBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> R2 传输模式</button>
    <button type="button" id="mobTokensBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API 密钥管理</button>
   </div>
  </span>
@@ -702,6 +719,7 @@
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
 <div class="modal" id="tokensModal"><span class="close" id="tokensClose">×</span><div class="card token-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">API 密钥管理</div><div class="meta" style="margin-bottom:12px">用于 curl、ShareX、PicGo、iOS 快捷指令一键直传（单文件 ≤ 32MB，默认公开直链）。</div><div class="row" style="margin-top:0"><input type="text" id="tokenNameInput" placeholder="备注名，如 Mac ShareX / 快捷指令" maxlength="40"><button id="tokenCreateBtn" type="button">生成密钥</button></div><div class="token-created" id="tokenCreatedBox" style="display:none"><div style="font-size:12px;font-weight:600;color:var(--ok-text)">已生成新密钥（明文仅展示这一次，请立即保存）：</div><div class="token-created-val" id="tokenCreatedVal"></div><div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tokenCopyKeyBtn" style="flex:1;padding:7px 10px;font-size:12px">复制密钥</button><button type="button" id="tokenCopyCurlBtn" style="flex:1;padding:7px 10px;font-size:12px">复制 curl 上传命令</button></div></div><div class="token-list" id="tokenList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="token-curl"><div style="font-weight:600;color:var(--text)">极客上传接口示例（POST /api/raw-upload）</div><pre id="tokenCurlExample"></pre></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="tokensDoneBtn" type="button">关闭</button></div></div></div>
 <div class="modal" id="detailModal"><span class="close" id="detailClose">×</span><div class="card detail-card" id="detailCardBody"></div></div>
+<div class="modal" id="transferModeModal"><span class="close" id="transferModeClose">×</span><div class="card" style="max-width:440px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">R2 传输模式</div><div class="meta" style="margin-bottom:8px">根据网络环境与文件大小随时切换，保存后全站即时生效（无需重新部署）。</div><div class="mode-opts" id="transferModeOpts"><button type="button" class="mode-opt" data-mode="proxy"><div class="mode-opt-head"><strong>Worker 绑定中转（图床模式）</strong><span class="mode-opt-tag">校园网推荐</span></div><p>上传下载全程走当前自定义域名，绕开 r2.cloudflarestorage.com 阻断，支持公开文件边缘缓存与视频进度条拖动；零 S3 密钥、零 CORS；超过 20MB 自动分片。</p></button><button type="button" class="mode-opt" data-mode="presign" id="modeOptPresign"><div class="mode-opt-head"><strong>R2 预签名直传（大文件模式）</strong><span class="mode-opt-tag" id="modePresignTag">GB 级大文件</span></div><p>≤100MB 直连 R2 上传，下载 302 走 R2 边缘直出，最省 Worker 额度且大文件下载最稳；需要配置 R2 S3 密钥与桶 CORS。</p></button></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="transferModeCancel">取消</button><button type="button" id="transferModeSave">保存并生效</button></div></div></div>
 <div class="modal" id="copyFmtModal"><span class="close" id="copyFmtClose">×</span><div class="card" style="max-width:400px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">默认复制链接格式</div><div class="meta" style="margin-bottom:8px">点击文件上的“复制链接”图标时，自动按所选格式复制（仅保存在本机浏览器）。</div><div class="fmt-opts" id="copyFmtOpts"><button type="button" class="fmt-opt" data-fmt="raw"><strong>原始直链</strong><span>https://.../f/id</span></button><button type="button" class="fmt-opt" data-fmt="md"><strong>Markdown</strong><span>![name](url)</span></button><button type="button" class="fmt-opt" data-fmt="html"><strong>HTML</strong><span>&lt;img src="url"&gt;</span></button><button type="button" class="fmt-opt" data-fmt="bb"><strong>BBCode</strong><span>[img]url[/img]</span></button></div><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">自定义链接前缀（留空 = 使用当前站点域名）</label><input type="text" id="copyPrefixInput" placeholder="例如 https://relaybox.19660716.xyz" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="copyFmtCancel">取消</button><button type="button" id="copyFmtSave">保存设置</button></div></div></div>
 <div class="modal" id="qrModal"><span class="close" id="qrClose">×</span><div class="card" style="max-width:320px;width:100%;text-align:center"><div id="qrBox"></div><div class="meta" id="qrUrl" style="word-break:break-all;font-size:12px;margin-top:10px"></div><button id="qrCopy" style="margin-top:12px">复制链接</button></div></div>
 
@@ -765,6 +783,9 @@ let allFiles = [];
 let viewFiles = [];
 let authed = false;
 let r2On = false;
+let r2TransferMode = 'presign';
+let r2PresignAvailable = true;
+let r2ProxyAvailable = false;
 let hasLocalStorage = true;
 let maxUploadSize = 0;
 
@@ -1429,6 +1450,9 @@ async function loadList(showSkel) {
  currentPath = d.path || [{ id: null, name: '根目录' }];
  currentFolderId = (currentPath.length > 1) ? currentPath[currentPath.length - 1].id : null;
  r2On = d.r2 === true;
+ r2TransferMode = d.r2TransferMode === 'proxy' ? 'proxy' : 'presign';
+ r2PresignAvailable = d.r2PresignAvailable !== false;
+ r2ProxyAvailable = d.r2ProxyAvailable === true;
  hasLocalStorage = !!(d.diskTotal && d.diskTotal > 0);
  maxUploadSize = Number(d.maxUploadSize || d.maxFileSize || 0);
  if (Number(d.chunkUploadThreshold) > 0) CHUNK_UPLOAD_THRESHOLD = Number(d.chunkUploadThreshold);
@@ -1445,13 +1469,15 @@ async function loadList(showSkel) {
  if ($('tokensBtn')) $('tokensBtn').style.display = authed ? '' : 'none';
  if ($('mobAnnounceBtn')) $('mobAnnounceBtn').style.display = authed ? 'flex' : 'none';
  if ($('mobTokensBtn')) $('mobTokensBtn').style.display = authed ? 'flex' : 'none';
+ if ($('transferModeBtn')) $('transferModeBtn').style.display = (authed && r2ProxyAvailable) ? '' : 'none';
+ if ($('mobTransferModeBtn')) $('mobTransferModeBtn').style.display = (authed && r2ProxyAvailable) ? 'flex' : 'none';
  updateUploadDestUI();
  const r2Pct = r2On && d.r2Total ? Math.min(100, (d.r2Used || 0) / d.r2Total * 100) : 0;
  const localPct = d.diskTotal ? Math.min(100, (d.localUsed || 0) / d.diskTotal * 100) : 0;
  let quotaHtml = `<div>${currentFolders.length ? `共 ${currentFolders.length} 个文件夹 · ` : '共 '}${allFiles.length} 个文件</div>`;
  if (authed) {
  quotaHtml += `<div class="quota">`;
- if (r2On) quotaHtml += `<div class="quota-row"><span class="q-label">R2</span><div class="q-bar r2"><div style="width:${r2Pct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(d.r2Used || 0)} / ${fmtSize(d.r2Total || 0)}</span></div>`;
+ if (r2On) quotaHtml += `<div class="quota-row"><span class="q-label">R2</span><div class="q-bar r2"><div style="width:${r2Pct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(d.r2Used || 0)} / ${fmtSize(d.r2Total || 0)}</span>${r2ProxyAvailable ? `<button type="button" class="mode-badge" onclick="openTransferModeModal()" title="点击切换 R2 传输模式">${r2TransferMode === 'proxy' ? '中转' : '直传'}</button>` : ''}</div>`;
  if (d.diskTotal) quotaHtml += `<div class="quota-row"><span class="q-label">本地</span><div class="q-bar local"><div style="width:${localPct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(d.localUsed || 0)} / ${fmtSize(d.diskTotal || 0)}</span></div>`;
  quotaHtml += `</div>`;
  }
@@ -1857,6 +1883,7 @@ document.addEventListener('keydown', (e) => {
  if ($('tokensModal') && $('tokensModal').classList.contains('open')) { closeTokensModal(); return; }
  if ($('detailModal') && $('detailModal').classList.contains('open')) { closeDetailModal(); return; }
  if ($('copyFmtModal') && $('copyFmtModal').classList.contains('open')) { closeCopyFmtModal(); return; }
+ if ($('transferModeModal') && $('transferModeModal').classList.contains('open')) { closeTransferModeModal(); return; }
 });
 
 async function copyFolderLink(id, btn) {
@@ -2805,6 +2832,40 @@ async function uploadOne(job, idx, total) {
  }
  };
  $('progress').style.display = 'block';
+ if (uploadToR2() && r2TransferMode === 'proxy') {
+ return new Promise((resolve) => {
+  const qs = new URLSearchParams({
+   name: f.name,
+   size: String(f.size),
+   visibility: job.visibility,
+   expires: String(job.expires),
+   folderId: targetFolderId || '',
+   ...(job.dims && job.dims.width ? { width: String(job.dims.width), height: String(job.dims.height) } : {}),
+  });
+  const xhr = new XMLHttpRequest();
+  job.abortFn = () => xhr.abort();
+  xhr.open('POST', '/api/upload-proxy?' + qs.toString());
+  if (pw) xhr.setRequestHeader('X-Upload-Password', pw);
+  xhr.setRequestHeader('Content-Type', f.type || 'application/octet-stream');
+  xhr.upload.onprogress = (e) => { if (e.lengthComputable) showProgress(e.loaded, e.total); };
+  xhr.onload = async () => {
+   let d = {};
+   try { d = JSON.parse(xhr.responseText); } catch {}
+   if (xhr.status === 200 && d.ok) {
+    job.pct = 100; job.status = 'done';
+    setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok');
+    await waitThumb(d.file, f);
+   } else {
+    job.status = 'error';
+    setMsg(`第 ${idx} 个上传失败：` + (d.error || ('HTTP ' + xhr.status)), 'err');
+   }
+   resolve();
+  };
+  xhr.onerror = () => { job.status = 'error'; setMsg(`第 ${idx} 个上传失败：网络错误`, 'err'); resolve(); };
+  xhr.onabort = () => { resolve(); };
+  xhr.send(f);
+ });
+ }
  if (uploadToR2()) {
  return (async () => {
  try {
@@ -3242,6 +3303,72 @@ document.addEventListener('click', (e) => {
 if ($('mobCopyFmtBtn')) $('mobCopyFmtBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openCopyFmtModal(); };
 if ($('mobAnnounceBtn')) $('mobAnnounceBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); editAnnouncement(); };
 if ($('mobTokensBtn')) $('mobTokensBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openTokensModal(); };
+// ===== r8: R2 传输双模式切换弹窗 =====
+let editingTransferMode = 'presign';
+function syncTransferModeOptsUI() {
+ const preBtn = $('modeOptPresign');
+ const preTag = $('modePresignTag');
+ if (preBtn) preBtn.disabled = !r2PresignAvailable;
+ if (preTag) preTag.textContent = r2PresignAvailable ? 'GB 级大文件' : '未配 S3 密钥';
+ document.querySelectorAll('#transferModeOpts .mode-opt').forEach(b => {
+  b.classList.toggle('active', b.dataset.mode === editingTransferMode);
+ });
+}
+async function openTransferModeModal() {
+ if (!authed || !r2ProxyAvailable) return;
+ editingTransferMode = r2TransferMode;
+ syncTransferModeOptsUI();
+ $('transferModeModal').classList.add('open');
+ try {
+  const r = await fetch('/api/settings');
+  const d = await r.json();
+  if (r.ok && d.ok) {
+   r2TransferMode = d.r2TransferMode === 'proxy' ? 'proxy' : 'presign';
+   r2PresignAvailable = d.presignAvailable !== false;
+   r2ProxyAvailable = d.proxyAvailable === true;
+   editingTransferMode = r2TransferMode;
+   syncTransferModeOptsUI();
+  }
+ } catch {}
+}
+function closeTransferModeModal() { $('transferModeModal').classList.remove('open'); }
+document.querySelectorAll('#transferModeOpts .mode-opt').forEach(b => {
+ b.onclick = () => {
+  if (b.disabled) return;
+  editingTransferMode = b.dataset.mode;
+  syncTransferModeOptsUI();
+ };
+});
+if ($('transferModeBtn')) $('transferModeBtn').onclick = openTransferModeModal;
+if ($('mobTransferModeBtn')) $('mobTransferModeBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openTransferModeModal(); };
+if ($('transferModeClose')) $('transferModeClose').onclick = closeTransferModeModal;
+if ($('transferModeCancel')) $('transferModeCancel').onclick = closeTransferModeModal;
+if ($('transferModeModal')) $('transferModeModal').onclick = (e) => { if (e.target.id === 'transferModeModal') closeTransferModeModal(); };
+if ($('transferModeSave')) $('transferModeSave').onclick = async () => {
+ const btn = $('transferModeSave');
+ btn.disabled = true;
+ try {
+  const r = await fetch('/api/settings', {
+   method: 'POST',
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ r2TransferMode: editingTransferMode }),
+  });
+  const d = await r.json();
+  if (!r.ok || !d.ok) {
+   showToast('保存失败：' + (d.error || ('HTTP ' + r.status)), 'err');
+   return;
+  }
+  r2TransferMode = d.r2TransferMode === 'proxy' ? 'proxy' : 'presign';
+  closeTransferModeModal();
+  showToast('已切换为：' + (r2TransferMode === 'proxy' ? 'Worker 绑定中转（图床模式）' : 'R2 预签名直传'), 'ok');
+  loadList();
+ } catch {
+  showToast('保存失败：网络错误', 'err');
+ } finally {
+  btn.disabled = false;
+ }
+};
+
 
 window.addEventListener('scroll', () => {
  const tb = document.querySelector('#mainWrap .topbar');

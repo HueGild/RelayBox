@@ -1,7 +1,7 @@
 // RelayBox core routes — upload (local multipart / R2 presigned upload-url /
 // upload-complete). Captures uploadIp, uploadGeo, width, height (v3.1.5).
 
-import { readJsonBody, kindOf, safeName, extOf, keyOf, parseDim, parseExpiresHours, expiresAtOf, newId, MIN_FREE_BYTES, log } from '../lib/util.js';
+import { readJsonBody, kindOf, safeName, extOf, keyOf, parseDim, parseExpiresHours, expiresAtOf, newId, MIN_FREE_BYTES, MIME, log } from '../lib/util.js';
 import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
 
 export function registerUpload(app) {
@@ -132,6 +132,80 @@ export function registerUpload(app) {
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
     log('uploaded (r2):', filename, (n / 1024 / 1024).toFixed(2) + 'MB');
+    return c.json({ ok: true, file: item });
+  });
+
+  // Worker 绑定中转直传（v3.1.6，图床模式：单文件 <= 20MB，零 S3 密钥、零 CORS）
+  app.post('/api/upload-proxy', async (c) => {
+    const deps = c.get('deps');
+    if (!deps.r2.enabled || !deps.r2.proxySupported) {
+      return c.json({ ok: false, error: '当前环境不支持中转上传' }, 501);
+    }
+    const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
+    if (auth !== 'ok') return authFail(c, auth);
+    const maxProxyBytes = Number(deps.config.proxyUploadMaxBytes) > 0
+      ? Number(deps.config.proxyUploadMaxBytes)
+      : 20 * 1024 * 1024;
+    const q = c.req.query();
+    const filename = safeName(q.name || '');
+    const declaredSize = Number(q.size);
+    if (!filename || !Number.isFinite(declaredSize) || declaredSize <= 0 || declaredSize > deps.config.maxUploadSize) {
+      return c.json({ ok: false, error: '文件名或大小不对' }, 400);
+    }
+    if (declaredSize > maxProxyBytes) {
+      return c.json({ ok: false, error: '文件超过中转单次上限，请使用分片上传' }, 413);
+    }
+    const contentLength = Number(c.req.header('Content-Length') || 0);
+    if (Number.isFinite(contentLength) && contentLength > maxProxyBytes) {
+      return c.json({ ok: false, error: '文件超过中转单次上限，请使用分片上传' }, 413);
+    }
+    let bytes;
+    try {
+      bytes = new Uint8Array(await c.req.arrayBuffer());
+    } catch (e) {
+      return c.json({ ok: false, error: '读取文件失败' }, 400);
+    }
+    if (!bytes || bytes.byteLength <= 0) {
+      return c.json({ ok: false, error: '没有收到文件' }, 400);
+    }
+    if (bytes.byteLength > maxProxyBytes) {
+      return c.json({ ok: false, error: '文件超过中转单次上限，请使用分片上传' }, 413);
+    }
+    if (bytes.byteLength !== declaredSize) {
+      return c.json({ ok: false, error: '文件大小和申报的不一致' }, 400);
+    }
+    let folderId = (typeof q.folderId === 'string' && q.folderId) ? q.folderId : null;
+    if (folderId && !(await deps.meta.getFolder(folderId))) folderId = null;
+    const ext = extOf(filename);
+    const mime = MIME[ext] || (c.req.header('Content-Type') || '').split(';')[0].trim() || 'application/octet-stream';
+    const id = newId();
+    const key = keyOf(id, filename);
+    try {
+      await deps.r2.put(key, bytes, mime);
+    } catch (e) {
+      log('upload-proxy R2 put failed:', e && e.message);
+      return c.json({ ok: false, error: '保存失败' }, 500);
+    }
+    const { uploadIp, uploadGeo } = clientMeta(c, deps);
+    const item = {
+      id, name: filename, size: bytes.byteLength, ext, kind: kindOf(ext),
+      visibility: q.visibility === 'public' ? 'public' : 'private',
+      storage: 'r2', storageKey: key, folderId,
+      expiresAt: expiresAtOf(parseExpiresHours(q.expires || '0')),
+      uploadedAt: new Date().toISOString(),
+      downloads: 0,
+      uploadIp, uploadGeo,
+      width: parseDim(q.width),
+      height: parseDim(q.height),
+    };
+    try {
+      await deps.meta.createFile(item);
+    } catch (e) {
+      log('upload-proxy meta save failed:', e && e.message);
+      try { await deps.r2.delete(key); } catch {}
+      return c.json({ ok: false, error: '保存失败' }, 500);
+    }
+    log('uploaded (r2-proxy):', filename, (bytes.byteLength / 1024 / 1024).toFixed(2) + 'MB');
     return c.json({ ok: true, file: item });
   });
 }

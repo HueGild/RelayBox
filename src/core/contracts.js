@@ -72,6 +72,7 @@ export const MetaStoreMethods = [
   'createApiToken', 'getApiTokenByHash', 'listApiTokens', 'deleteApiToken', 'touchApiToken',
   'getSession', 'createSession', 'deleteSession', 'deleteExpiredSessions',
   'getAnnouncement', 'setAnnouncement',
+  'getSetting', 'setSetting',
   'recordFailure', 'countFailuresSince', 'clearFailures', 'isBlocked',
   'getChunkUpload', 'createChunkUpload', 'updateChunkUpload', 'deleteChunkUpload',
   'listStaleChunkUploads',

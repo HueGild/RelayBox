@@ -16,19 +16,8 @@ import { registerChunks } from './routes/chunks.js';
 import { registerThumbs } from './routes/thumbs.js';
 import { registerTokens } from './routes/tokens.js';
 import { registerRawUpload } from './routes/raw-upload.js';
+import { registerSettings } from './routes/settings.js';
 
-/**
- * deps: {
- *   meta,            // MetaStore (JsonMetaStore / D1MetaStore)
- *   local,           // LocalStorage (VPS disk; CF: unused)
- *   r2,              // R2Storage (may be disabled when unconfigured)
- *   config: { uploadPassword, maxUploadSize, r2Enabled, chunkUploadThreshold, chunkSize },
- *   parseMultipart,  // (c, { maxFileSize, filesDir }) => { fields, file, failed, tmpPath }
- *                     // Node-only (busboy); absent on CF (local upload is VPS-only).
- *   getClientIp,     // (c) => string — socket address for the rate limiter
- *                     // (Node entry: @hono/node-server conninfo; CF: cf-connecting-ip).
- * }
- */
 export function createApp(deps) {
   assertImplements(deps.meta, MetaStoreMethods, 'MetaStore');
   assertImplements(deps.local, StorageStoreMethods, 'LocalStorage');
@@ -45,6 +34,7 @@ export function createApp(deps) {
 
   registerAuth(app);
   registerAnnounce(app);
+  registerSettings(app);
   registerFiles(app);
   registerFolders(app);
   registerShares(app);

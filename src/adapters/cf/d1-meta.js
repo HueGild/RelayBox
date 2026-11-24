@@ -362,6 +362,21 @@ export class D1MetaStore {
     ).bind(text).run();
   }
 
+  // ---- settings (v3.1.6) ----
+  async getSetting(key) {
+    try {
+      const r = await this.db.prepare('SELECT value FROM settings WHERE key = ?').bind(String(key)).first();
+      return (r && typeof r.value === 'string') ? r.value : null;
+    } catch {
+      return null;
+    }
+  }
+  async setSetting(key, value) {
+    await this.db.prepare(
+      'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)',
+    ).bind(String(key), String(value ?? ''), Date.now()).run();
+  }
+
   // ---- login brute-force ----
   async recordFailure(ip, at) {
     await this.db.prepare('INSERT INTO login_attempts (ip, at) VALUES (?, ?)').bind(ip, at || Date.now()).run();

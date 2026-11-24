@@ -3,6 +3,7 @@
 
 import { readJsonBody, folderIdOf, folderPath, folderVisibleToGuest, isExpired, kindOf, safeName, extOf, keyOf, parseExpiresHours, expiresAtOf, parseRange, MIME, R2_FREE_BYTES, log } from '../lib/util.js';
 import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
+import { getTransferModeState } from './settings.js';
 
 function mapFile(f, shareToken, authed) {
   const out = {
@@ -88,12 +89,20 @@ export function registerFiles(app) {
     const total = files.reduce((a, f) => a + f.size, 0);
     const r2Used = files.filter((f) => f.storage === 'r2').reduce((a, f) => a + f.size, 0);
     const localUsed = files.filter((f) => f.storage !== 'r2').reduce((a, f) => a + f.size, 0);
+    const transfer = await getTransferModeState(deps);
+    const chunkSize = deps.config.chunkSize || 5 * 1024 * 1024;
+    const presignThreshold = deps.config.chunkUploadThreshold || 32 * 1024 * 1024;
+    const proxyThreshold = deps.config.proxyChunkUploadThreshold || Math.min(presignThreshold, chunkSize);
+    const effectiveThreshold = transfer.mode === 'proxy' ? proxyThreshold : presignThreshold;
     return c.json({
       ok: true, files, folders: subfolders, path: folderPath(folders, folderId), folderId, total,
       free: deps.local.freeBytes(), diskTotal: deps.local.totalBytes(),
       r2Used, localUsed, r2Total: R2_FREE_BYTES, authed, r2: deps.r2.enabled,
-      chunkUploadThreshold: deps.config.chunkUploadThreshold || 32 * 1024 * 1024,
-      chunkSize: deps.config.chunkSize || 5 * 1024 * 1024,
+      r2TransferMode: transfer.mode,
+      r2PresignAvailable: transfer.presignAvailable,
+      r2ProxyAvailable: transfer.proxyAvailable,
+      chunkUploadThreshold: effectiveThreshold,
+      chunkSize,
     });
   });
 
@@ -162,15 +171,27 @@ export function registerFiles(app) {
     if (item.storage === 'r2') {
       if (!deps.r2.enabled) return c.json({ ok: false, error: 'R2 未配置，文件暂时无法访问' }, 503);
       try {
-        const res = await deps.r2.get(item.storageKey, { contentType: mime, disposition });
-        if (forceDownload) {
+        const transfer = await getTransferModeState(deps);
+        const cacheControl = (!forceDownload && item.visibility === 'public' && !item.expiresAt && !shareToken)
+          ? 'public, max-age=86400'
+          : 'private, no-store';
+        const res = await deps.r2.get(item.storageKey, {
+          mode: transfer.mode,
+          start: range ? range.start : undefined,
+          end: range ? range.end : undefined,
+          contentType: mime,
+          disposition,
+          cacheControl,
+        });
+        if (!res) return c.json({ ok: false, error: '文件不存在' }, 404);
+        if (forceDownload && res.status !== 416) {
           const consumed = await consumeShare(deps, shareToken);
           if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
         }
         return res;
       } catch (e) {
-        log('presign GET failed:', e && e.message);
-        return c.json({ ok: false, error: '生成下载链接失败' }, 500);
+        log('R2 GET failed:', e && e.message);
+        return c.json({ ok: false, error: '获取文件失败' }, 500);
       }
     }
     const res = await deps.local.get(item.storageKey, {

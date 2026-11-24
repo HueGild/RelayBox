@@ -15,6 +15,7 @@ export class JsonMetaStore {
     this.sessionsFile = path.join(dataDir, 'sessions.json');
     this.announceFile = path.join(dataDir, 'announcement.json');
     this.apiTokensFile = path.join(dataDir, 'api_tokens.json');
+    this.settingsFile = path.join(dataDir, 'settings.json');
     this.chunksDir = path.join(dataDir, 'chunks');
     fs.mkdirSync(dataDir, { recursive: true });
     fs.mkdirSync(this.chunksDir, { recursive: true });
@@ -392,6 +393,22 @@ export class JsonMetaStore {
   async setAnnouncement(text) {
     return this._enqueue(() => {
       fs.writeFileSync(this.announceFile, JSON.stringify({ text }));
+    });
+  }
+
+  // ---- settings (v3.1.6) ----
+  async getSetting(key) {
+    const obj = this._readJson(this.settingsFile, {});
+    if (!obj || typeof obj !== 'object') return null;
+    const v = obj[String(key)];
+    return typeof v === 'string' ? v : null;
+  }
+  async setSetting(key, value) {
+    return this._enqueue(() => {
+      const obj = this._readJson(this.settingsFile, {});
+      const next = (obj && typeof obj === 'object') ? obj : {};
+      next[String(key)] = String(value ?? '');
+      this._writeJson(this.settingsFile, next);
     });
   }
 

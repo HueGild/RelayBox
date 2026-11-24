@@ -1,10 +1,5 @@
 // RelayBox Node adapter — R2Storage (VPS target, AWS SDK).
 // Implements the StorageStore contract against Cloudflare R2 (S3-compatible).
-// Graceful degradation: when the r2 config is incomplete, `enabled` is false
-// and every method throws R2_NOT_CONFIGURED (routes map it to 501/503/500
-// exactly like v2.8.4's R2_ENABLED checks).
-// Keys are the v2.8.4 flat `${id}_${name}` format (see storageKey notes in
-// the plan — new YYYY/MM keys are a Phase 2/CF decision, VPS keeps flat keys).
 
 import fs from 'node:fs';
 import {
@@ -38,6 +33,14 @@ export class R2Storage {
     }
   }
 
+  get presignEnabled() {
+    return this.enabled;
+  }
+
+  get proxySupported() {
+    return false;
+  }
+
   _need() {
     if (!this.enabled) {
       const e = new Error('R2_NOT_CONFIGURED');
@@ -54,7 +57,6 @@ export class R2Storage {
     }));
   }
 
-  /** Stream a local file (e.g. an assembled chunk upload) straight to R2. */
   async putFile(key, filePath, contentType) {
     this._need();
     const stream = fs.createReadStream(filePath);
@@ -69,11 +71,6 @@ export class R2Storage {
     }
   }
 
-  /**
-   * Download: 302 redirect to a presigned GET (bytes never pass through the VPS).
-   * opts: { start, end, contentType, disposition } — Range is left to the
-   * browser/R2 (the browser re-sends Range to the presigned URL).
-   */
   async get(key, opts = {}) {
     const url = await this.presignedGetUrl(key, opts);
     return Response.redirect(url, 302);
@@ -105,7 +102,6 @@ export class R2Storage {
     }));
   }
 
-  /** R2 rename = CopyObject + DeleteObject (same as v2.8.4). */
   async rename(srcKey, dstKey) {
     await this.copy(srcKey, dstKey);
     await this.delete(srcKey);
@@ -131,7 +127,6 @@ export class R2Storage {
     return getSignedUrl(this.client, cmd, { expiresIn: opts.expiresIn || 6 * 3600 });
   }
 
-  // ---- R2 multipart (used by the CF chunk flow; implemented here for contract parity) ----
   async createMultipartUpload(key, contentType) {
     this._need();
     const out = await this.client.send(new CreateMultipartUploadCommand({
@@ -162,7 +157,6 @@ export class R2Storage {
     } catch { /* already gone is fine */ }
   }
 
-  // Thumbnails are stored locally even for R2 files (v2.8.4 behaviour).
   async putThumb() {
     throw new Error('thumbnails are stored by LocalStorage, not R2Storage');
   }

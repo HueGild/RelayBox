@@ -1,26 +1,11 @@
 // RelayBox Cloudflare adapter — R2Storage (Workers target).
 // Implements the StorageStore contract against Cloudflare R2.
 //
-// Two drivers, split exactly as the plan requires:
-// - Blob ops (put/get/head/delete/copy/rename/multipart) use the native
-//   `env.R2` Binding (no SDK, no credentials needed).
-// - Presigned URLs (signPut/signGet/signPart) use `aws4fetch` (pure Web
-//   Crypto, no Node deps) with the R2 S3 API credentials, because the
-//   Workers R2 Binding cannot generate presigned URLs. Credentials come
-//   from Worker Secrets (R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY /
-//   R2_ACCOUNT_ID) — never hard-coded, never committed.
-//
-// Download / video Range (pitfall #2): `get()` answers with a 302 to a
-// presigned GET, so download traffic and video scrubbing (Range) are
-// served directly by the R2 edge; bytes never pass through the Worker.
-// `/thumb/:id` does NOT use this — thumbnails go through `getThumb()`
-// (env.R2.get, direct bytes, no redirect).
-//
-// This same instance is also passed as `local` in entry-worker.js (CF has
-// no local disk): the "local" extras below (freeBytes/totalBytes,
-// tempFilePath/importTempFile/removeTempFile) exist so the shared core
-// routes keep working. Blob ops on the "local" role operate on R2, which
-// is correct on CF because every file lives in R2.
+// Adaptive dual transfer modes (v3.1.6):
+// - 'presign': 302 redirect to aws4fetch presigned URL (requires R2 S3 secrets + CORS).
+// - 'proxy':   zero-copy streaming through native env.R2 Binding with full HTTP Range
+//              (200/206/416) & Cache-Control support (zero S3 secrets, zero CORS).
+// When S3 secrets are absent, get() automatically falls back to 'proxy'.
 
 import { AwsClient } from 'aws4fetch';
 import { MIME, R2_FREE_BYTES } from '../../core/lib/util.js';
@@ -40,14 +25,6 @@ function s3Url(accountId, bucket, key) {
 }
 
 export class R2Storage {
-  /**
-   * @param {object} opts
-   * @param {R2Bucket} opts.binding   env.R2 (the R2 Binding)
-   * @param {string} opts.bucket      bucket name (for presigned URLs; the Binding itself needs none)
-   * @param {string} opts.accountId   R2 account id (S3 endpoint host), from Worker Secret
-   * @param {string} opts.accessKeyId R2 S3 API key id, from Worker Secret
-   * @param {string} opts.secretAccessKey R2 S3 API secret, from Worker Secret
-   */
   constructor(opts = {}) {
     this.binding = opts.binding || null;
     this.bucket = opts.bucket || '';
@@ -58,6 +35,16 @@ export class R2Storage {
   }
 
   get enabled() {
+    return !!this.binding;
+  }
+
+  /** Whether S3 credentials + bucket name are present for presigned URLs. */
+  get presignEnabled() {
+    return !!(this.binding && this.accessKeyId && this.secretAccessKey && this.accountId && this.bucket);
+  }
+
+  /** Whether native R2 Binding streaming proxy mode is supported. */
+  get proxySupported() {
     return !!this.binding;
   }
 
@@ -86,13 +73,6 @@ export class R2Storage {
     }
   }
 
-  /**
-   * Presign a URL with aws4fetch (signQuery). Returns the presigned URL string.
-   * `expiresIn` is honoured by pre-setting X-Amz-Expires (aws4fetch only
-   * defaults it to 86400 when absent). Note aws4fetch treats content-type /
-   * content-length as unsignable, so they are NOT bound by the signature —
-   * the browser may send any Content-Type/Length; R2 stores what it receives.
-   */
   async _presign(method, key, { expiresIn, query = {} } = {}) {
     const client = this._awsClient();
     const url = new URL(s3Url(this.accountId, this.bucket, key));
@@ -119,13 +99,71 @@ export class R2Storage {
   }
 
   /**
-   * Download: 302 redirect to a presigned GET (bytes never pass through the
-   * Worker; the browser re-sends Range to the presigned URL, so video
-   * scrubbing works at the R2 edge).
-   * opts: { start, end, contentType, disposition } — Range is intentionally
-   * NOT forwarded here; R2 answers it on the redirected request.
+   * Direct streaming download via R2 Binding (zero-copy ReadableStream, full Range 206/416).
+   * opts: { start, end, contentType, disposition, cacheControl }
+   */
+  async getStream(key, opts = {}) {
+    this._needBinding();
+    const hasRange = opts.start !== undefined || opts.end !== undefined;
+    const baseHeaders = {
+      'Content-Type': opts.contentType || 'application/octet-stream',
+      'Accept-Ranges': 'bytes',
+    };
+    if (opts.disposition) baseHeaders['Content-Disposition'] = opts.disposition;
+    if (opts.cacheControl) baseHeaders['Cache-Control'] = opts.cacheControl;
+
+    if (hasRange) {
+      const head = await this.binding.head(key);
+      if (!head) return null;
+      const totalSize = head.size;
+      if (totalSize === 0) {
+        return new Response(null, { status: 416, headers: { 'Content-Range': 'bytes */0' } });
+      }
+      let s = opts.start;
+      let e = opts.end;
+      if ((s === null || s === undefined) && e !== null && e !== undefined) {
+        if (e <= 0) {
+          return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${totalSize}` } });
+        }
+        s = Math.max(0, totalSize - e);
+        e = totalSize - 1;
+      } else {
+        if (s === null || s === undefined) s = 0;
+        if (e === null || e === undefined || e >= totalSize) e = totalSize - 1;
+      }
+      if (s < 0 || s >= totalSize || s > e) {
+        return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${totalSize}` } });
+      }
+      const len = e - s + 1;
+      const obj = await this.binding.get(key, { range: { offset: s, length: len } });
+      if (!obj) return null;
+      const headers = {
+        ...baseHeaders,
+        'Content-Range': `bytes ${s}-${e}/${totalSize}`,
+        'Content-Length': String(len),
+      };
+      if (obj.httpEtag) headers['ETag'] = obj.httpEtag;
+      return new Response(obj.body, { status: 206, headers });
+    }
+
+    const obj = await this.binding.get(key);
+    if (!obj) return null;
+    const headers = {
+      ...baseHeaders,
+      'Content-Length': String(obj.size),
+    };
+    if (obj.httpEtag) headers['ETag'] = obj.httpEtag;
+    return new Response(obj.body, { status: 200, headers });
+  }
+
+  /**
+   * Download: adaptive between 'proxy' (Worker Binding streaming) and 'presign' (302 to R2).
+   * Falls back to 'proxy' automatically if S3 presign credentials are not configured.
    */
   async get(key, opts = {}) {
+    if (opts.mode === 'proxy' || !this.presignEnabled) {
+      return this.getStream(key, opts);
+    }
     const url = await this.presignedGetUrl(key, opts);
     return Response.redirect(url, 302);
   }
@@ -170,12 +208,6 @@ export class R2Storage {
   }
 
   // ---- R2 multipart (Binding; used by the CF chunk flow) ----
-  // The R2 Binding's multipart API is object-based, NOT bucket-based:
-  // createMultipartUpload returns an R2MultipartUpload object; across
-  // requests (Workers are stateless) the handle is recovered with
-  // resumeMultipartUpload(key, uploadId), then uploadPart / complete /
-  // abort are called on that object. There is NO bucket.uploadPart,
-  // bucket.completeMultipartUpload or bucket.abortMultipartUpload.
 
   async createMultipartUpload(key, contentType) {
     this._needBinding();
@@ -186,8 +218,6 @@ export class R2Storage {
   }
 
   async presignedPartUrl(uploadId, key, partNumber, expiresIn = 900) {
-    // X-Amz-Expires must be set BEFORE signing (it is part of the signed
-    // query string); changing it afterwards would invalidate the signature.
     const client = this._awsClient();
     const url = new URL(s3Url(this.accountId, this.bucket, key));
     url.searchParams.set('partNumber', String(partNumber));
@@ -197,14 +227,6 @@ export class R2Storage {
     return signed.url;
   }
 
-  /**
-   * Direct part upload through the Worker (the live CF chunk flow: the
-   * frontend POSTs chunk bytes to /api/upload/chunk and the Worker proxies
-   * them to R2 — 20MB per part, far under the 100MB Worker body limit and
-   * above the 5MB R2 multipart minimum).
-   * partNumber is the R2 1-based number (callers map frontend index + 1).
-   * Returns { etag }.
-   */
   async uploadPart(uploadId, key, partNumber, body) {
     this._needBinding();
     const mpu = this.binding.resumeMultipartUpload(key, uploadId);
@@ -229,7 +251,7 @@ export class R2Storage {
     } catch { /* already gone is fine */ }
   }
 
-  // ---- thumbnails (R2, `thumbs/` prefix — plan §6) ----
+  // ---- thumbnails (R2, `thumbs/` prefix) ----
   async putThumb(id, buffer) {
     await this.put(THUMB_PREFIX + id + '.jpg', buffer, 'image/jpeg');
   }
@@ -244,8 +266,6 @@ export class R2Storage {
   }
 
   // ---- "local" extras (this instance doubles as `local` on CF) ----
-  // CF has no local disk: quota lines report the R2 free allowance, and
-  // temp-file helpers are inert (chunk assembly happens in R2, not on disk).
   freeBytes() {
     return R2_FREE_BYTES;
   }

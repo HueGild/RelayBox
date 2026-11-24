@@ -31,9 +31,12 @@ function buildDeps(env) {
     config: {
       uploadPassword: env.UPLOAD_PASSWORD || '',
       maxUploadSize,
-      // CF 上传策略：100MB 以下预签名直传，超过 100MB 分片每片 20MB（留足 128MB 内存余量）。
+      // CF 上传策略：直传模式 100MB 以下预签名直传；中转模式 20MB 以下 Worker 绑定直传；超出均按 20MB 分片。
       chunkUploadThreshold: 100 * 1024 * 1024,
+      proxyChunkUploadThreshold: 20 * 1024 * 1024,
+      proxyUploadMaxBytes: 20 * 1024 * 1024,
       chunkSize: 20 * 1024 * 1024,
+      defaultTransferMode: env.R2_TRANSFER_MODE === 'proxy' ? 'proxy' : 'presign',
     },
     getClientIp: (c) => c.req.header('cf-connecting-ip') || 'unknown',
     // Cloudflare Workers 原生免费地理信息（零外部调用、零额外延迟）。

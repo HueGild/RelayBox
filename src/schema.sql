@@ -114,3 +114,10 @@ CREATE TABLE chunk_uploads (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX idx_chunks_created ON chunk_uploads(created_at);
+
+-- Runtime settings (v3.1.6: e.g. r2_transfer_mode = 'presign' | 'proxy')
+CREATE TABLE settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT '',
+  updated_at INTEGER NOT NULL
+);
