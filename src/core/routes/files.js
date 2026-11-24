@@ -1,15 +1,24 @@
 // RelayBox core routes — files (list / search / download / move / rename /
-// visibility / expiry / delete). Mirrors v2.8.4's router + handlers exactly.
+// visibility / expiry / delete). Mirrors v2.8.4's router + handlers + v3.1.5 file details.
 
 import { readJsonBody, folderIdOf, folderPath, folderVisibleToGuest, isExpired, kindOf, safeName, extOf, keyOf, parseExpiresHours, expiresAtOf, parseRange, MIME, R2_FREE_BYTES, log } from '../lib/util.js';
 import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
 
-function mapFile(f, shareToken) {
+function mapFile(f, shareToken, authed) {
   const out = {
     id: f.id, name: f.name, size: f.size, ext: f.ext, kind: f.kind,
     uploadedAt: f.uploadedAt, visibility: f.visibility, storage: f.storage,
     folderId: folderIdOf(f), expiresAt: f.expiresAt || null, downloads: f.downloads || 0,
   };
+  if (f.width && f.height) {
+    out.width = f.width;
+    out.height = f.height;
+  }
+  // 上传者 IP 与归属地严格仅管理员可见，绝不向未登录访客暴露。
+  if (authed) {
+    if (f.uploadIp) out.uploadIp = f.uploadIp;
+    if (f.uploadGeo) out.uploadGeo = f.uploadGeo;
+  }
   if (shareToken) out.shareToken = shareToken;
   return out;
 }
@@ -33,14 +42,6 @@ async function canAccessViaShare(deps, item, shareToken) {
   return false;
 }
 
-/**
- * 下载交付点消费分享（v3.1）：原子扣减下载次数 + 阅后即焚时清理分享。
- * 只在真正下载时（?download=1）调用。返回 { ok: true } 或
- * { ok: false, exhausted: true }（次数已耗尽，调用方回 410 Gone）。
- * 扣减是原子条件更新：max_downloads=0（不限）恒成功；限次时仅 used<max 才 +1。
- * 注意：限次用尽时不删分享（只删 burn=true 的），否则私密文件的下次下载
- * 会在权限校验处回 403 而非 410；保留用尽的分享才能稳定回 410。
- */
 async function consumeShare(deps, token) {
   if (!token) return { ok: true };
   const changes = await deps.meta.incrementShareDownloads(token);
@@ -54,7 +55,7 @@ async function consumeShare(deps, token) {
 }
 
 export function registerFiles(app) {
-  // 列表：未登录只看公开文件；管理员看全部，且能看到每个文件的分享 token。
+  // 列表：未登录只看公开文件；管理员看全部，且能看到分享 token 及上传 IP/归属地。
   app.get('/api/files', async (c) => {
     const deps = c.get('deps');
     const authed = await isAuthed(c, deps);
@@ -64,9 +65,8 @@ export function registerFiles(app) {
     const files = [];
     for (const f of visible) {
       const s = authed ? await deps.meta.getShareByFileId(f.id) : null;
-      files.push(mapFile(f, s ? s.token : null));
+      files.push(mapFile(f, s ? s.token : null, authed));
     }
-    // 当前目录的子文件夹：访客只能看到里面（递归）有公开文件的。附带文件数/子文件夹数（按看得见的算）。
     const allFiles = await deps.meta.listAllFiles({ authed: true });
     const filesForCounts = allFiles.filter((f) => !isExpired(f) && (authed || f.visibility === 'public'));
     const visibleFolders = folders
@@ -86,14 +86,12 @@ export function registerFiles(app) {
       subfolders.push(out);
     }
     const total = files.reduce((a, f) => a + f.size, 0);
-    // 统计行用的实际用量：按存储位置分别汇总（可见文件；管理员看就是全部）。
     const r2Used = files.filter((f) => f.storage === 'r2').reduce((a, f) => a + f.size, 0);
     const localUsed = files.filter((f) => f.storage !== 'r2').reduce((a, f) => a + f.size, 0);
     return c.json({
       ok: true, files, folders: subfolders, path: folderPath(folders, folderId), folderId, total,
       free: deps.local.freeBytes(), diskTotal: deps.local.totalBytes(),
       r2Used, localUsed, r2Total: R2_FREE_BYTES, authed, r2: deps.r2.enabled,
-      // 前端上传策略（由部署端决定：VPS 200MB/50MB，CF 32MB/5MB）。
       chunkUploadThreshold: deps.config.chunkUploadThreshold || 32 * 1024 * 1024,
       chunkSize: deps.config.chunkSize || 5 * 1024 * 1024,
     });
@@ -110,11 +108,8 @@ export function registerFiles(app) {
     const matched = await deps.meta.searchFiles(q, { authed });
     const files = [];
     for (const f of matched) {
-      const out = mapFile(f, null);
-      if (authed) {
-        const s = await deps.meta.getShareByFileId(f.id);
-        if (s) out.shareToken = s.token;
-      }
+      const s = authed ? await deps.meta.getShareByFileId(f.id) : null;
+      const out = mapFile(f, s ? s.token : null, authed);
       const p = folderPath(folders, folderIdOf(f));
       out.folderPath = p.length > 1 ? p.slice(1).map((x) => x.name).join(' / ') : '';
       files.push(out);
@@ -149,30 +144,25 @@ export function registerFiles(app) {
     const item = await deps.meta.getFile(id);
     if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
     if (isExpired(item)) return c.json({ ok: false, error: '文件已过期' }, 404);
-    // 凭分享 token 访问时，若该分享设了提取码，须同时校验提取码（否则只凭 token 就能绕过提取码）。
     if (shareToken) {
       const share = await deps.meta.getShareByToken(shareToken);
       if (share && share.code && (shareCode || '') !== share.code) {
         return c.json({ ok: false, error: '提取码不正确' }, 403);
       }
     }
-    // 私密文件：管理员直接看，或凭该文件的分享 token、或凭包含该文件的文件夹分享 token 看。
     if (item.visibility === 'private' && !(await isAuthed(c, deps))) {
       const ok = shareToken && (await canAccessViaShare(deps, item, shareToken));
       if (!ok) return c.json({ ok: false, error: '这是私密文件，需要分享链接才能访问' }, 403);
     }
-    // 明确点下载才计数（?download=1）：预览、视频首帧加载不算。
     if (forceDownload) await deps.meta.incrementDownloads(id);
     const mime = MIME[item.ext] || 'application/octet-stream';
     const disposition = (forceDownload ? 'attachment' : 'inline') +
       `; filename*=UTF-8''${encodeURIComponent(item.name)}`;
     const range = parseRange(c.req.header('Range'));
-    // R2 文件：验完权限后 302 到 R2 的临时下载链接（6 小时有效），字节不经过 VPS。
     if (item.storage === 'r2') {
       if (!deps.r2.enabled) return c.json({ ok: false, error: 'R2 未配置，文件暂时无法访问' }, 503);
       try {
         const res = await deps.r2.get(item.storageKey, { contentType: mime, disposition });
-        // 限次扣减/阅后即焚：临时链接已生成，下载即消费这个分享；次数用尽回 410。
         if (forceDownload) {
           const consumed = await consumeShare(deps, shareToken);
           if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
@@ -189,7 +179,6 @@ export function registerFiles(app) {
       contentType: mime, disposition,
     });
     if (!res) return c.json({ ok: false, error: '文件不存在' }, 404);
-    // 限次扣减/阅后即焚：文件已确认存在，开始传输即消费这个分享（416 不消费）；次数用尽回 410。
     if (forceDownload && res.status !== 416) {
       const consumed = await consumeShare(deps, shareToken);
       if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
@@ -211,8 +200,7 @@ export function registerFiles(app) {
     return c.json({ ok: true, file: updated });
   });
 
-  // 文件改名（管理员）。本地改磁盘文件名；R2 用复制+删除实现改名（对象键就是 id_文件名）。
-  // 分享链接和下载地址都按文件 id 找，所以改名后旧链接照常能用。
+  // 文件改名（管理员）。
   app.post('/api/files/:id/rename', async (c) => {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
@@ -282,7 +270,7 @@ export function registerFiles(app) {
     return c.json({ ok: true, file: updated });
   });
 
-  // 删除文件（管理员，或凭上传密码）。R2 删对象、本地删磁盘文件、缩略图一起删，分享一并取消。
+  // 删除文件（管理员，或凭上传密码）。
   app.delete('/api/files/:id', async (c) => {
     const deps = c.get('deps');
     const id = decodeURIComponent(c.req.param('id'));
@@ -300,7 +288,7 @@ export function registerFiles(app) {
     } else {
       try { await deps.local.delete(item.storageKey); } catch {}
     }
-    try { await deps.local.deleteThumb(item.id); } catch {} // 缩略图一起删
+    try { await deps.local.deleteThumb(item.id); } catch {}
     await deps.meta.deleteFile(id);
     const share = await deps.meta.getShareByFileId(id);
     if (share) await deps.meta.deleteShare(share.token);

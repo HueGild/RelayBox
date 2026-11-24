@@ -2,24 +2,6 @@
 // Built on the shared Hono core (src/core/app.js) with the CF adapters
 // (D1MetaStore + R2Storage). The same codebase, same API contract as the
 // VPS (Node) target; only the adapters and the entry differ.
-//
-// Bindings (wrangler.toml):
-// - D1 Database `DB`, R2 Bucket `R2`, Static Assets (ASSETS).
-// Secrets (set with `wrangler secret put`, never in the repo):
-// - UPLOAD_PASSWORD          admin/upload password
-// - R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY
-//   R2 S3 API credentials — needed ONLY for aws4fetch presigning
-//   (env.R2 Binding cannot generate presigned URLs).
-// Vars (wrangler.toml [vars]):
-// - R2_BUCKET                bucket name (the Binding does not expose it;
-//   presigned URLs need it)
-// - MAX_UPLOAD_SIZE          default 5GB on CF
-// - CLEANUP_INTERVAL_MS      unused here (scheduled trigger replaces it)
-//
-// Exported handlers:
-// - fetch: HTTP requests (API + static assets + /s/* fallback).
-// - scheduled: Cron Trigger (every 5 min) — the same expiry + stale-chunk
-//   cleanup the VPS runs on a setInterval.
 
 import { createApp } from './core/app.js';
 import { D1MetaStore } from './adapters/cf/d1-meta.js';
@@ -38,8 +20,6 @@ function buildDeps(env) {
     accessKeyId: env.R2_ACCESS_KEY_ID || '',
     secretAccessKey: env.R2_SECRET_ACCESS_KEY || '',
   });
-  // CF has no local disk: the same R2 instance serves as `local`
-  // (its "local" extras report the R2 free allowance / no-op temp files).
   const meta = new D1MetaStore(env.DB, r2);
   const maxUploadSize = env.MAX_UPLOAD_SIZE
     ? Number(env.MAX_UPLOAD_SIZE)
@@ -51,29 +31,29 @@ function buildDeps(env) {
     config: {
       uploadPassword: env.UPLOAD_PASSWORD || '',
       maxUploadSize,
-      // CF 上传策略（2026-11-24 Jay 要求调大）：100MB 以下直传（R2 预签名直传，
-      // 不经过 Worker，所以不受 Workers 100MB 单请求上限约束），超过 100MB 才分片，
-      // 每片 20MB。片大小的上限：必须 <100MB（发往 Worker 的单请求上限），
-      // 且 ≥5MB（R2 分片每片最少 5MB）；20MB 留足 Worker 内存余量（128MB 上限，
-      // 后端读片会先拼成 Buffer，50MB 的片峰值内存可能超限，所以 CF 不用 50MB）。
+      // CF 上传策略：100MB 以下预签名直传，超过 100MB 分片每片 20MB（留足 128MB 内存余量）。
       chunkUploadThreshold: 100 * 1024 * 1024,
       chunkSize: 20 * 1024 * 1024,
     },
-    // Client IP for the rate limiter (Cloudflare sets cf-connecting-ip;
-    // clientIp() already prefers X-Forwarded-For when present).
     getClientIp: (c) => c.req.header('cf-connecting-ip') || 'unknown',
+    // Cloudflare Workers 原生免费地理信息（零外部调用、零额外延迟）。
+    getClientGeo: (c) => {
+      const cf = c.req.raw && c.req.raw.cf;
+      if (cf && typeof cf === 'object') {
+        const parts = [];
+        for (const v of [cf.country, cf.region, cf.city]) {
+          const s = (typeof v === 'string') ? v.trim() : '';
+          if (s && s !== 'XX' && s !== 'T1' && !parts.includes(s)) parts.push(s);
+        }
+        if (parts.length) return parts.join(' · ').slice(0, 120);
+      }
+      const country = (c.req.header('cf-ipcountry') || '').trim();
+      return (country && country !== 'XX' && country !== 'T1') ? country : '';
+    },
   };
 }
 
 export default {
-  /**
-   * HTTP entry. Order matters:
-   * 1. `/api/*` and `/f/:id` and `/thumb/:id` — the Hono app (shared core).
-   * 2. `/` and `/s/*` — static `index.html` (pitfall #3: a share link
-   *    must return the SPA, never a 404).
-   * 3. Other static assets (qrcode.min.js, jszip.min.js) — ASSETS binding.
-   * 4. Anything else — the SPA fallback (single-page-application).
-   */
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -90,31 +70,21 @@ export default {
     }
 
     // 2) SPA entry points: `/` and share pages `/s/:token` — index.html.
-    // (Pitfall #3: /s/:token must NOT 404; the frontend renders the share.)
-    // Fetch `/` (not `/index.html`): the Assets handler canonicalises
-    // `/index.html` to `/` with a 307, while `/` serves the file directly.
     if (path === '/' || path.startsWith('/s/')) {
       return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
     }
 
     // 3) Static assets (qrcode.min.js, jszip.min.js, ...).
     const asset = await env.ASSETS.fetch(request);
-    // 4) Unknown non-API path — fall back to the SPA (mirrors the
-    // `not_found_handling = "single-page-application"` in wrangler.toml).
+    // 4) Unknown non-API path — fall back to the SPA.
     if (asset.status === 404) {
       return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
     }
     return asset;
   },
 
-  /**
-   * Cron Trigger (wrangler.toml [triggers] crons, every 5 minutes).
-   * Same two cleanups the VPS runs on a setInterval: expired files and
-   * stale chunk uploads (> 24h).
-   */
   async scheduled(event, env, ctx) {
     const deps = buildDeps(env);
-    // cleanupExpired also prunes expired sessions and calls cleanupChunks.
     await cleanupExpired(deps);
   },
 };

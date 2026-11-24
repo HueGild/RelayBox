@@ -1,20 +1,12 @@
 // RelayBox core routes — chunked upload (chunk / chunk-status / chunk-complete).
-// Mirrors v2.8.4's handleUploadChunk / handleChunkStatus / handleChunkComplete.
-// VPS behaviour: parts are stored on disk under data/chunks/<uploadId>/ and
-// assembled locally (R2 target: assembled once, then a single PutObject).
-// Chunk meta stores received as [{ partNumber, etag }] (etag null on disk);
-// the chunk-status response maps it back to plain part numbers, exactly what
-// the frontend's resume logic expects.
+// Captures uploadIp, uploadGeo, width, height on chunk-complete (v3.1.5).
 
-import { readJsonBody, kindOf, extOf, keyOf, safeName, parseExpiresHours, expiresAtOf, newId, CHUNK_SIZE, MIN_FREE_BYTES, MIME, log } from '../lib/util.js';
-import { authOrPassword, authFail } from '../lib/auth.js';
+import { readJsonBody, kindOf, extOf, keyOf, safeName, parseDim, parseExpiresHours, expiresAtOf, newId, CHUNK_SIZE, MIN_FREE_BYTES, MIME, log } from '../lib/util.js';
+import { authOrPassword, authFail, clientMeta } from '../lib/auth.js';
 
 export function registerChunks(app) {
-  // 收一片：POST /api/upload/chunk?uploadId&index&total&name&size&visibility&expires&storage&folderId，body 是分片原字节。
   app.post('/api/upload/chunk', async (c) => {
     const deps = c.get('deps');
-    // 分片大小由部署端配置决定（VPS 50MB，CF 20MB），与前端下发的 chunkSize 一致；
-    // 用配置值校验，否则 50MB 的片会被当成“分片太大”拒掉。
     const chunkSize = Number(deps.config.chunkSize) > 0 ? Number(deps.config.chunkSize) : CHUNK_SIZE;
     if (deps.local.freeBytes() < MIN_FREE_BYTES) {
       return c.json({ ok: false, error: '磁盘空间不足' }, 507);
@@ -30,8 +22,6 @@ export function registerChunks(app) {
     if (!uploadId || !Number.isInteger(index) || index < 0 || !Number.isInteger(total) || total < 1 || index >= total || !name || !Number.isFinite(size) || size <= 0 || size > deps.config.maxUploadSize) {
       return c.json({ ok: false, error: '参数不对' }, 400);
     }
-    // 流式读 body，超限立刻 413（不把整片都读进内存）。
-    // 注意：Hono 的 c.req 没有 .body 属性，原生 Request 在 c.req.raw 上。
     const chunks = [];
     let len = 0;
     try {
@@ -49,7 +39,6 @@ export function registerChunks(app) {
       return c.json({ ok: false, error: '读取分片失败' }, 400);
     }
     const buf = Buffer.concat(chunks);
-    // 最后一片可以小一点，其余片必须满一片（按部署端配置的片大小）。
     const expect = index === total - 1 ? size - index * chunkSize : chunkSize;
     if (buf.length !== expect) return c.json({ ok: false, error: '分片大小不对' }, 400);
     let meta = await deps.meta.getChunkUpload(uploadId);
@@ -71,7 +60,6 @@ export function registerChunks(app) {
     return c.json({ ok: true, received: index, done: updated.received.length, total });
   });
 
-  // 查已收到的片：GET /api/upload/chunk-status?uploadId=...，断点续传用。
   app.get('/api/upload/chunk-status', async (c) => {
     const deps = c.get('deps');
     const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
@@ -86,7 +74,6 @@ export function registerChunks(app) {
     });
   });
 
-  // 拼起来：POST /api/upload/chunk-complete { uploadId }，校验齐了再拼成本地文件或传 R2，登记后清分片。
   app.post('/api/upload/chunk-complete', async (c) => {
     const deps = c.get('deps');
     const body = await readJsonBody(c);
@@ -107,10 +94,6 @@ export function registerChunks(app) {
       const assembled = await deps.meta.assembleChunks(cleanId, tmpPath);
       if (assembled !== meta.size) throw new Error('assembled size mismatch');
       if (meta.r2UploadId) {
-        // CF (D1MetaStore): the object already lives in R2 — assembleChunks
-        // completed the multipart under the temp key meta.storageKey
-        // (`chunks/<uploadId>`); rename it to the final storage key.
-        // No temp file exists, so putFile / importTempFile are skipped.
         await deps.r2.rename(meta.storageKey, keyOf(id, meta.name));
       } else if (meta.storage === 'r2') {
         if (!deps.r2.enabled) throw new Error('R2 未配置');
@@ -127,12 +110,16 @@ export function registerChunks(app) {
     try { await deps.meta.deleteChunkUpload(cleanId); } catch {}
     const folders = await deps.meta.listFolders();
     const folderId = (typeof meta.folderId === 'string' && meta.folderId && folders.some((fd) => fd.id === meta.folderId)) ? meta.folderId : null;
+    const { uploadIp, uploadGeo } = clientMeta(c, deps);
     const item = {
       id, name: meta.name, size: meta.size, ext, kind: kindOf(ext),
       visibility: meta.visibility, storage: meta.storage, storageKey: keyOf(id, meta.name), folderId,
       expiresAt: expiresAtOf(meta.expiresHours),
       uploadedAt: new Date().toISOString(),
       downloads: 0,
+      uploadIp, uploadGeo,
+      width: parseDim(body.width),
+      height: parseDim(body.height),
     };
     try {
       await deps.meta.createFile(item);

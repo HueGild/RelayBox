@@ -5,7 +5,7 @@ import { parseCookies, newSessionToken, SESSION_TTL, FAIL_LIMIT, FAIL_WINDOW_MS 
 
 /**
  * Client IP: X-Forwarded-For first entry, else the runtime-provided address
- * (the entry injects deps.getClientIp; @hono/node-server's getConnInfo).
+ * (the entry injects deps.getClientIp; @hono/node-server's getConnInfo / CF cf-connecting-ip).
  */
 export function clientIp(c, deps) {
   const xff = (c.req.header('x-forwarded-for') || '').split(',')[0].trim();
@@ -17,6 +17,32 @@ export function clientIp(c, deps) {
     } catch { /* ignore */ }
   }
   return 'unknown';
+}
+
+/**
+ * Client geo string (v3.1.5): Cloudflare Workers native request.cf
+ * (country / region / city) injected via deps.getClientGeo, falling back
+ * to CF-IPCountry header when proxied through Cloudflare.
+ */
+export function clientGeo(c, deps) {
+  if (deps && typeof deps.getClientGeo === 'function') {
+    try {
+      const geo = String(deps.getClientGeo(c) || '').trim();
+      if (geo) return geo.slice(0, 120);
+    } catch { /* ignore */ }
+  }
+  const country = (c.req.header('cf-ipcountry') || '').trim();
+  if (country && country !== 'XX' && country !== 'T1') return country.slice(0, 32);
+  return '';
+}
+
+/** Capture uploader IP & geo on file creation (stored on file record; admin-only on read). */
+export function clientMeta(c, deps) {
+  const rawIp = clientIp(c, deps);
+  const uploadIp = (rawIp && rawIp !== 'unknown') ? String(rawIp).slice(0, 64) : null;
+  const rawGeo = clientGeo(c, deps);
+  const uploadGeo = rawGeo ? rawGeo : null;
+  return { uploadIp, uploadGeo };
 }
 
 /** Admin session check: fs_admin cookie -> MetaStore session (expiry enforced). */

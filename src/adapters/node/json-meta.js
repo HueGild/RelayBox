@@ -1,18 +1,10 @@
 // RelayBox Node adapter — JsonMetaStore (VPS target).
 // Implements the MetaStore contract on JSON files (data/files.json, shares.json,
 // folders.json, sessions.json, announcement.json) + chunk parts under data/chunks/.
-// All mutating operations run through an in-memory serial write queue so the
-// "read -> modify -> write" cycle can never interleave and clobber another
-// request's write (the race the plan's §3.3 fixes). Reads are fresh from disk
-// on every call, same as v2.8.4's load-on-every-request behaviour.
-//
-// Extra methods beyond the contract (Node-only, used by core chunk/thumb routes):
-//   writeChunkPart / readChunkPart / chunkPartExists / assembleChunks
-//   (chunk part bytes live on disk under data/chunks/<uploadId>/)
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { folderIdOf, isExpired, SESSION_TTL, FAIL_WINDOW_MS, FAIL_LIMIT, FAIL_BLOCK_MS, CHUNK_SIZE } from '../../core/lib/util.js';
+import { folderIdOf, isExpired, parseDim, SESSION_TTL, FAIL_WINDOW_MS, FAIL_LIMIT, FAIL_BLOCK_MS, CHUNK_SIZE } from '../../core/lib/util.js';
 
 export class JsonMetaStore {
   constructor(dataDir) {
@@ -26,23 +18,18 @@ export class JsonMetaStore {
     this.chunksDir = path.join(dataDir, 'chunks');
     fs.mkdirSync(dataDir, { recursive: true });
     fs.mkdirSync(this.chunksDir, { recursive: true });
-    // Serial write queue: a promise chain; every mutating op appends to it.
     this._queue = Promise.resolve();
-    // Login brute-force records (in-memory, same shape as v2.8.4's failMap).
     this._failures = new Map();
-    // Admin sessions (in-memory Map, persisted to sessions.json).
     this._sessions = new Map();
     this._loadSessions();
   }
 
-  /** Append fn to the serial queue; the chain survives fn throwing. */
   _enqueue(fn) {
     const run = this._queue.then(fn, fn);
     this._queue = run.catch(() => {});
     return run;
   }
 
-  // ---- low-level JSON helpers (sync; fresh read every time) ----
   _readJson(file, fallback) {
     try {
       const v = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -56,8 +43,6 @@ export class JsonMetaStore {
   }
 
   // ---- file records ----
-  // v2.8.4 compat: missing visibility -> public, missing storage -> local,
-  // missing folderId -> null, missing downloads -> 0, missing storageKey -> flat key.
   _normalizeFile(f) {
     if (!f || typeof f !== 'object') return null;
     if (f.visibility !== 'public' && f.visibility !== 'private') f.visibility = 'public';
@@ -65,6 +50,10 @@ export class JsonMetaStore {
     if (typeof f.folderId !== 'string' || !f.folderId) f.folderId = null;
     if (typeof f.downloads !== 'number') f.downloads = 0;
     if (typeof f.storageKey !== 'string' || !f.storageKey) f.storageKey = `${f.id}_${f.name}`;
+    f.uploadIp = (typeof f.uploadIp === 'string' && f.uploadIp) ? f.uploadIp : null;
+    f.uploadGeo = (typeof f.uploadGeo === 'string' && f.uploadGeo) ? f.uploadGeo : null;
+    f.width = parseDim(f.width);
+    f.height = parseDim(f.height);
     return f;
   }
   _readFiles() {
@@ -84,12 +73,6 @@ export class JsonMetaStore {
       (f) => folderIdOf(f) === (folderId || null) && !isExpired(f) && (authed || f.visibility === 'public'),
     );
   }
-  // Raw list for admin/cleanup use (v2.8.4's loadMeta): includes expired files.
-  // Callers that show files to users must filter !isExpired themselves
-  // (listFiles/searchFiles already do; /api/files counts, search counts and
-  // folder-share listings filter in their routes). The cleanup relies on
-  // this returning expired files — filtering them here would make expiry
-  // cleanup a no-op.
   async listAllFiles({ authed } = {}) {
     return this._readFiles().filter((f) => authed || f.visibility === 'public');
   }
@@ -180,7 +163,6 @@ export class JsonMetaStore {
       return item;
     });
   }
-  // Empty-only (files AND subfolders block it); the route produces the message.
   async deleteFolder(id) {
     return this._enqueue(() => {
       const folders = this._readFolders();
@@ -199,8 +181,6 @@ export class JsonMetaStore {
   _normalizeShare(s) {
     if (!s || typeof s !== 'object') return null;
     const out = { ...s, code: typeof s.code === 'string' ? s.code : '', burn: s.burn === true };
-    // v3.1: maxDownloads 0 = unlimited; usedDownloads counts served downloads;
-    // pickupCode null = none (old shares).
     out.maxDownloads = (typeof s.maxDownloads === 'number' && Number.isFinite(s.maxDownloads) && s.maxDownloads >= 0)
       ? Math.floor(s.maxDownloads) : 0;
     out.usedDownloads = (typeof s.usedDownloads === 'number' && Number.isFinite(s.usedDownloads) && s.usedDownloads >= 0)
@@ -250,7 +230,6 @@ export class JsonMetaStore {
       const list = this._readShares();
       const item = list.find((x) => x.token === token);
       if (!item) return null;
-      // v2.8.4 semantics: code '' removes the code, burn false removes the flag.
       if (patch.code !== undefined) {
         if (patch.code) item.code = patch.code;
         else delete item.code;
@@ -273,11 +252,6 @@ export class JsonMetaStore {
       return this._normalizeShare(item);
     });
   }
-  /**
-   * Atomic download-count decrement (v3.1, JSON store): the serial write
-   * queue makes the check-then-increment indivisible. Returns 1 when the
-   * download was counted, 0 when the share is missing or the limit is spent.
-   */
   async incrementShareDownloads(token) {
     return this._enqueue(() => {
       const list = this._readShares();
@@ -326,7 +300,6 @@ export class JsonMetaStore {
         id: t.id, name: t.name, prefix: t.prefix, scope: t.scope || 'upload',
         lastUsedAt: null, createdAt: t.createdAt,
       });
-      // Keep the hash alongside the public fields (never returned by list/get).
       list.push({ ...item, tokenHash: t.tokenHash });
       this._writeApiTokens(list);
       return item;
@@ -361,7 +334,7 @@ export class JsonMetaStore {
     });
   }
 
-  // ---- sessions (in-memory Map, persisted to sessions.json) ----
+  // ---- sessions ----
   _loadSessions() {
     try {
       const arr = JSON.parse(fs.readFileSync(this.sessionsFile, 'utf8'));
@@ -369,12 +342,12 @@ export class JsonMetaStore {
       for (const [token, s] of arr) {
         if (s && s.createdAt && now - s.createdAt <= SESSION_TTL) this._sessions.set(token, s);
       }
-    } catch { /* no file or broken: start with no sessions */ }
+    } catch { /* start empty */ }
   }
   _saveSessions() {
     try {
       fs.writeFileSync(this.sessionsFile, JSON.stringify([...this._sessions.entries()]), 'utf8');
-    } catch { /* write failure must not break login; it only affects restart persistence */ }
+    } catch { /* ignore */ }
   }
   async getSession(token) {
     const s = this._sessions.get(token);
@@ -422,7 +395,7 @@ export class JsonMetaStore {
     });
   }
 
-  // ---- login brute-force (in-memory, v2.8.4 failMap semantics) ----
+  // ---- login brute-force ----
   async recordFailure(ip, at) {
     const now = at || Date.now();
     let rec = this._failures.get(ip);
@@ -448,15 +421,13 @@ export class JsonMetaStore {
     return !!(rec && rec.blockedUntil && Date.now() < rec.blockedUntil);
   }
 
-  // ---- chunk uploads (meta.json + part files under data/chunks/<uploadId>/) ----
+  // ---- chunk uploads ----
   _chunkDir(uploadId) {
     return path.join(this.chunksDir, uploadId);
   }
   _chunkMetaPath(uploadId) {
     return path.join(this._chunkDir(uploadId), 'meta.json');
   }
-  // Normalize: old meta.json files stored received as plain numbers and `expires`
-  // as hours; the new shape is received [{partNumber, etag}] + expiresHours.
   _normalizeChunkMeta(m) {
     if (!m || typeof m !== 'object') return null;
     const received = Array.isArray(m.received) ? m.received : [];
@@ -520,8 +491,6 @@ export class JsonMetaStore {
     return out;
   }
 
-  // ---- chunk part bytes (Node-only extras) ----
-  /** Write one part file and record it in the meta (atomic via the queue). */
   async writeChunkPart(uploadId, index, buffer) {
     return this._enqueue(() => {
       fs.mkdirSync(this._chunkDir(uploadId), { recursive: true });
@@ -551,7 +520,6 @@ export class JsonMetaStore {
       return false;
     }
   }
-  /** Stream all part files (in order) into tmpPath; returns the assembled size. */
   async assembleChunks(uploadId, tmpPath) {
     const meta = this._readChunkMeta(uploadId);
     if (!meta) throw new Error('chunk meta missing');

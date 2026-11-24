@@ -2,15 +2,15 @@
 // Behaviour mirrors v2.8.4 server.js exactly; the plan's contract defers to it
 // wherever the two disagree.
 
-export const CHUNK_SIZE = 5 * 1024 * 1024; // 分片上传：一片 5MB
-export const CHUNK_TTL_MS = 24 * 3600 * 1000; // 分片 24 小时内没拼完就清掉
+export const CHUNK_SIZE = 5 * 1024 * 1024;           // 分片上传：一片 5MB
+export const CHUNK_TTL_MS = 24 * 3600 * 1000;        // 分片 24 小时内没拼完就清掉
 export const R2_FREE_BYTES = 10 * 1024 * 1024 * 1024; // R2 免费额度 10GB
-export const MIN_FREE_BYTES = 500 * 1024 * 1024; // 磁盘剩余少于 500MB 时拒绝上传
-export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 管理员登录 7 天
-export const FAIL_WINDOW_MS = 10 * 60 * 1000; // 密码试错窗口 10 分钟
-export const FAIL_LIMIT = 5; // 10 分钟内错 5 次就封
-export const FAIL_BLOCK_MS = 10 * 60 * 1000; // 封 10 分钟
-export const MAX_JSON_BODY = 4096; // JSON 请求体上限（现状 readJsonBody 的 guard）
+export const MIN_FREE_BYTES = 500 * 1024 * 1024;     // 磁盘剩余少于 500MB 时拒绝上传
+export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;  // 管理员登录 7 天
+export const FAIL_WINDOW_MS = 10 * 60 * 1000;        // 密码试错窗口 10 分钟
+export const FAIL_LIMIT = 5;                         // 10 分钟内错 5 次就封
+export const FAIL_BLOCK_MS = 10 * 60 * 1000;         // 封 10 分钟
+export const MAX_JSON_BODY = 4096;                   // JSON 请求体上限（现状 readJsonBody 的 guard）
 
 export const MIME = {
   '.mp4': 'video/mp4', '.webm': 'video/webm', '.mkv': 'video/x-matroska',
@@ -52,9 +52,6 @@ export function kindOf(ext) {
 export function safeName(name) {
   const base = String(name || 'file').split(/[\\/]/).pop().replace(/[/\\?%*:|"<>]/g, '_').trim() || 'file';
   if (base.length <= 120) return base;
-  // 截断时必须保留扩展名：长文件名（尤其含中文转码后更长）被截掉 .mp4 后，
-  // extOf 会误取中间的点（如 www.98T.la@... 的 .la@...），kind 变成 file，
-  // 视频就无法预览、只能下载。
   const ext = extOf(base);
   if (ext && ext.length < 120) return base.slice(0, 120 - ext.length) + ext;
   return base.slice(0, 120);
@@ -63,6 +60,15 @@ export function safeName(name) {
 /** Flat physical key, v2.8.4 format (kept for VPS compat; see storageKey notes). */
 export function keyOf(id, name) {
   return `${id}_${name}`;
+}
+
+/** Parse positive integer media dimension (width/height, 1..65535); null otherwise. */
+export function parseDim(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.floor(n);
+  return (i >= 1 && i <= 65535) ? i : null;
 }
 
 // 有效期：只认 0（永久）/ 24 / 168 小时三档，其余一律按永久算。

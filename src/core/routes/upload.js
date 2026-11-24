@@ -1,15 +1,10 @@
 // RelayBox core routes — upload (local multipart / R2 presigned upload-url /
-// upload-complete). Mirrors v2.8.4's handleUpload / handleUploadUrl /
-// handleUploadComplete exactly. The local multipart path is VPS-only: the
-// busboy streaming parser is injected via deps.parseMultipart (Node adapter);
-// without it the endpoint answers 501.
+// upload-complete). Captures uploadIp, uploadGeo, width, height (v3.1.5).
 
-import { readJsonBody, kindOf, safeName, extOf, keyOf, parseExpiresHours, expiresAtOf, newId, MIN_FREE_BYTES, log } from '../lib/util.js';
-import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
+import { readJsonBody, kindOf, safeName, extOf, keyOf, parseDim, parseExpiresHours, expiresAtOf, newId, MIN_FREE_BYTES, log } from '../lib/util.js';
+import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
 
 export function registerUpload(app) {
-  // 上传：multipart/form-data，字段 password + 文件 file。
-  // 密码字段可能比文件流后到，所以先把文件写临时文件，收完再验密码，错了就删掉。
   app.post('/api/upload', async (c) => {
     const deps = c.get('deps');
     if (deps.local.freeBytes() < MIN_FREE_BYTES) {
@@ -42,7 +37,8 @@ export function registerUpload(app) {
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
     let folderId = (typeof fields.folderId === 'string' && fields.folderId) ? fields.folderId : null;
-    if (folderId && !(await deps.meta.getFolder(folderId))) folderId = null; // 文件夹没了就放根目录
+    if (folderId && !(await deps.meta.getFolder(folderId))) folderId = null;
+    const { uploadIp, uploadGeo } = clientMeta(c, deps);
     const item = {
       id: file.id, name: file.name, size: file.size,
       ext: file.ext, kind: kindOf(file.ext),
@@ -51,6 +47,9 @@ export function registerUpload(app) {
       expiresAt: expiresAtOf(parseExpiresHours(fields.expires || '0')),
       uploadedAt: new Date().toISOString(),
       downloads: 0,
+      uploadIp, uploadGeo,
+      width: parseDim(fields.width),
+      height: parseDim(fields.height),
     };
     try {
       await deps.meta.createFile(item);
@@ -63,7 +62,6 @@ export function registerUpload(app) {
     return c.json({ ok: true, file: item });
   });
 
-  // R2 直传第一步：验密码/登录态后，签一个 15 分钟有效的 PUT 链接，浏览器直接传给 R2。
   app.post('/api/upload-url', async (c) => {
     const deps = c.get('deps');
     if (!deps.r2.enabled) return c.json({ ok: false, error: 'R2 未配置' }, 501);
@@ -87,7 +85,6 @@ export function registerUpload(app) {
     }
   });
 
-  // R2 直传第二步：浏览器传完后登记。先向 R2 核对大小，确认无误才写入元数据。
   app.post('/api/upload-complete', async (c) => {
     const deps = c.get('deps');
     if (!deps.r2.enabled) return c.json({ ok: false, error: 'R2 未配置' }, 501);
@@ -101,7 +98,7 @@ export function registerUpload(app) {
       return c.json({ ok: false, error: '参数不对' }, 400);
     }
     const existing = await deps.meta.getFile(body.id);
-    if (existing) return c.json({ ok: true, file: existing }); // 幂等：重复确认直接返回
+    if (existing) return c.json({ ok: true, file: existing });
     let head;
     try {
       head = await deps.r2.head(body.key);
@@ -116,6 +113,7 @@ export function registerUpload(app) {
     }
     let folderId = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;
     if (folderId && !(await deps.meta.getFolder(folderId))) folderId = null;
+    const { uploadIp, uploadGeo } = clientMeta(c, deps);
     const item = {
       id: body.id, name: filename, size: n, ext, kind: kindOf(ext),
       visibility: body.visibility === 'public' ? 'public' : 'private', storage: 'r2',
@@ -123,6 +121,9 @@ export function registerUpload(app) {
       expiresAt: expiresAtOf(parseExpiresHours(body.expires)),
       uploadedAt: new Date().toISOString(),
       downloads: 0,
+      uploadIp, uploadGeo,
+      width: parseDim(body.width),
+      height: parseDim(body.height),
     };
     try {
       await deps.meta.createFile(item);

@@ -1,31 +1,8 @@
 // RelayBox Cloudflare adapter — D1MetaStore (Workers target).
 // Implements the MetaStore contract on D1 (SQLite) + the chunk-part bytes
 // via the R2 multipart API (through the injected R2Storage).
-//
-// Time convention: the app layer uses ISO strings for uploadedAt /
-// expiresAt / createdAt (v2.8.4 shape); D1 stores INTEGER milliseconds.
-// This adapter converts both ways, so API responses stay byte-identical
-// to the VPS target.
-//
-// Chunk uploads on CF (pitfall #1 — index mapping):
-// - The frontend sends a 0-based `index`; R2 Multipart partNumber is
-//   1-based. The mapping `partNumber = index + 1` happens ONLY at the R2
-//   API boundary (uploadPart / completeMultipartUpload).
-// - The `received` array keeps the 0-based index in its `partNumber`
-//   field (same convention as the Node JsonMetaStore), so the core
-//   routes' completeness check (`r.partNumber === i`) and the
-//   chunk-status response (plain 0-based numbers for the frontend's
-//   resume logic) work unchanged.
-// - The multipart upload is created lazily on the first part against a
-//   temp key `chunks/<uploadId>`; chunk-complete renames it to the final
-//   key (see the r2UploadId branch in core/routes/chunks.js).
-// - `storage` is normalised to 'r2' on create: CF has no local disk, so
-//   every chunk upload lands in R2 even if a client asked for 'local'.
-//
-// D1 handles concurrent writes itself (real database), so no serial
-// write queue is needed here (unlike the JSON store).
 
-import { FAIL_WINDOW_MS, FAIL_LIMIT, CHUNK_SIZE, MIME, extOf } from '../../core/lib/util.js';
+import { FAIL_WINDOW_MS, FAIL_LIMIT, CHUNK_SIZE, MIME, extOf, parseDim } from '../../core/lib/util.js';
 
 const CHUNK_TMP_PREFIX = 'chunks/';
 
@@ -42,10 +19,6 @@ function msToIso(v) {
 }
 
 export class D1MetaStore {
-  /**
-   * @param {D1Database} db          env.DB (D1 Binding)
-   * @param {R2Storage} r2storage    the CF R2Storage (for chunk multipart ops)
-   */
   constructor(db, r2storage) {
     if (!db) throw new Error('D1MetaStore requires a D1 database binding');
     this.db = db;
@@ -68,6 +41,10 @@ export class D1MetaStore {
       expiresAt: msToIso(r.expires_at),
       downloads: typeof r.downloads === 'number' ? r.downloads : 0,
       uploadedAt: msToIso(r.uploaded_at),
+      uploadIp: (typeof r.upload_ip === 'string' && r.upload_ip) ? r.upload_ip : null,
+      uploadGeo: (typeof r.upload_geo === 'string' && r.upload_geo) ? r.upload_geo : null,
+      width: parseDim(r.width),
+      height: parseDim(r.height),
     };
   }
   _rowToFolder(r) {
@@ -135,7 +112,6 @@ export class D1MetaStore {
     return (results || []).map((r) => this._rowToFile(r));
   }
 
-  // Raw list for admin/cleanup use (includes expired files, like v2.8.4 loadMeta).
   async listAllFiles({ authed } = {}) {
     const { results } = await this.db.prepare(
       'SELECT * FROM files WHERE (? OR visibility = ?)',
@@ -161,12 +137,17 @@ export class D1MetaStore {
       folder_id: file.folderId, visibility: file.visibility,
       expires_at: isoToMs(file.expiresAt), downloads: file.downloads || 0,
       uploaded_at: isoToMs(file.uploadedAt),
+      upload_ip: file.uploadIp || null,
+      upload_geo: file.uploadGeo || null,
+      width: parseDim(file.width),
+      height: parseDim(file.height),
     });
     await this.db.prepare(
-      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       item.id, item.name, item.size, item.ext, item.kind, item.storage, item.storageKey,
       item.folderId, item.visibility, isoToMs(item.expiresAt), item.downloads, isoToMs(item.uploadedAt),
+      item.uploadIp, item.uploadGeo, item.width, item.height,
     ).run();
     return item;
   }
@@ -175,19 +156,23 @@ export class D1MetaStore {
     const cur = await this.getFile(id);
     if (!cur) return null;
     const next = { ...cur, ...patch };
-    // Re-normalise through the row mapper so the returned shape is stable.
     const row = {
       id: next.id, name: next.name, size: next.size, ext: next.ext || '',
       kind: next.kind || 'file', storage: next.storage, storage_key: next.storageKey,
       folder_id: next.folderId, visibility: next.visibility,
       expires_at: isoToMs(next.expiresAt), downloads: next.downloads || 0,
       uploaded_at: isoToMs(next.uploadedAt),
+      upload_ip: (typeof next.uploadIp === 'string' && next.uploadIp) ? next.uploadIp : null,
+      upload_geo: (typeof next.uploadGeo === 'string' && next.uploadGeo) ? next.uploadGeo : null,
+      width: parseDim(next.width),
+      height: parseDim(next.height),
     };
     await this.db.prepare(
-      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ? WHERE id = ?',
+      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ?, upload_ip = ?, upload_geo = ?, width = ?, height = ? WHERE id = ?',
     ).bind(
       row.name, row.size, row.ext, row.kind, row.storage, row.storage_key,
-      row.folder_id, row.visibility, row.expires_at, row.downloads, row.uploaded_at, id,
+      row.folder_id, row.visibility, row.expires_at, row.downloads, row.uploaded_at,
+      row.upload_ip, row.upload_geo, row.width, row.height, id,
     ).run();
     return this._rowToFile(row);
   }
@@ -233,7 +218,6 @@ export class D1MetaStore {
     return next;
   }
 
-  // Empty-only (files AND subfolders block it); the route produces the message.
   async deleteFolder(id) {
     const cur = await this.getFolder(id);
     if (!cur) return false;
@@ -285,7 +269,6 @@ export class D1MetaStore {
     const cur = await this.getShareByToken(token);
     if (!cur) return null;
     const next = { ...cur };
-    // v2.8.4 semantics: code '' removes the code, burn false removes the flag.
     if (patch.code !== undefined) next.code = patch.code ? patch.code : '';
     if (patch.burn !== undefined) next.burn = !!patch.burn;
     if (patch.maxDownloads !== undefined) next.maxDownloads = Math.max(0, Math.floor(Number(patch.maxDownloads)) || 0);
@@ -296,11 +279,6 @@ export class D1MetaStore {
     ).bind(next.code, next.burn ? 1 : 0, next.maxDownloads, next.usedDownloads, next.pickupCode, token).run();
     return next;
   }
-  /**
-   * Atomic download-count decrement (v3.1): increments used_downloads only
-   * while under the limit. Returns the number of rows changed (1 = counted,
-   * 0 = share missing or limit exhausted). The caller treats 0 as 410 Gone.
-   */
   async incrementShareDownloads(token) {
     const out = await this.db.prepare(
       'UPDATE shares SET used_downloads = used_downloads + 1 WHERE token = ? AND (max_downloads = 0 OR used_downloads < max_downloads)',
@@ -370,7 +348,6 @@ export class D1MetaStore {
   }
   async deleteExpiredSessions(now) {
     await this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
-    // Prune stale brute-force records too (same cleanup pass).
     await this.db.prepare('DELETE FROM login_attempts WHERE at < ?').bind(now - FAIL_WINDOW_MS).run();
   }
 
@@ -385,7 +362,7 @@ export class D1MetaStore {
     ).bind(text).run();
   }
 
-  // ---- login brute-force (D1, replaces the in-memory failMap) ----
+  // ---- login brute-force ----
   async recordFailure(ip, at) {
     await this.db.prepare('INSERT INTO login_attempts (ip, at) VALUES (?, ?)').bind(ip, at || Date.now()).run();
   }
@@ -398,7 +375,6 @@ export class D1MetaStore {
     ).bind(ip, since).first();
     return (r && r.n) || 0;
   }
-  /** Blocked when >= FAIL_LIMIT failures landed inside the last FAIL_WINDOW_MS. */
   async isBlocked(ip) {
     const n = await this.countFailuresSince(ip, Date.now() - FAIL_WINDOW_MS);
     return n >= FAIL_LIMIT;
@@ -411,7 +387,6 @@ export class D1MetaStore {
   }
 
   async createChunkUpload(u) {
-    // CF has no local disk: every chunk upload lands in R2.
     const storage = 'r2';
     const item = this._rowToChunk({
       upload_id: u.uploadId, r2_upload_id: u.r2UploadId || null,
@@ -459,18 +434,11 @@ export class D1MetaStore {
     return (results || []).map((r) => this._rowToChunk(r));
   }
 
-  // ---- chunk part bytes (CF: R2 multipart via the injected R2Storage) ----
-  /**
-   * Receive one part (frontend 0-based `index`) and upload it to R2.
-   * Creates the R2 multipart upload lazily on the first part, against the
-   * temp key `chunks/<uploadId>`; the route renames it to the final key
-   * at chunk-complete time. Returns the updated chunk meta.
-   */
   async writeChunkPart(uploadId, index, buf) {
     if (!this.r2) throw new Error('R2 storage is required for chunk uploads on CF');
     let meta = await this.getChunkUpload(uploadId);
     if (!meta) return null;
-    const partNumber = index + 1; // pitfall #1: R2 partNumber is 1-based
+    const partNumber = index + 1;
     if (!meta.r2UploadId) {
       const tmpKey = CHUNK_TMP_PREFIX + uploadId;
       const contentType = MIME[extOf(meta.name)] || 'application/octet-stream';
@@ -484,7 +452,6 @@ export class D1MetaStore {
       meta.received.push({ partNumber: index, etag });
       meta.received.sort((a, b) => a.partNumber - b.partNumber);
     } else {
-      // Re-upload of the same part (retry): refresh its etag.
       const cur = meta.received.find((r) => r.partNumber === index);
       if (cur) cur.etag = etag;
     }
@@ -493,7 +460,6 @@ export class D1MetaStore {
   }
 
   async readChunkPart() {
-    // Parts live in R2 (not readable as local bytes); unused by the routes on CF.
     return null;
   }
 
@@ -502,11 +468,6 @@ export class D1MetaStore {
     return !!meta && meta.received.some((r) => r.partNumber === index);
   }
 
-  /**
-   * Finalise the R2 multipart upload (parts sorted by 1-based partNumber)
-   * and return the assembled size (verified against R2 afterwards).
-   * The object stays under the temp key; the route renames it to the final key.
-   */
   async assembleChunks(uploadId) {
     if (!this.r2) throw new Error('R2 storage is required for chunk uploads on CF');
     const meta = await this.getChunkUpload(uploadId);
