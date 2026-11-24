@@ -397,7 +397,7 @@ services:
 | 阶段 | 内容 | 验收 |
 |---|---|---|
 | **Phase 0** | 基线：给 v2.8.4 打 tag；新分支 `refactor/hono-dual`（或新仓库）；冻结新功能 | 线上站不动 |
-| **Phase 0 状态（2026-11-24）** | 基线已定：v2.8.4，提交 `a6444f2`；RelayBox 骨架已搭好（`~/workspace/relaybox/`：目录结构、package.json、schema.sql、wrangler.toml、docker-compose.yml、README、MIT LICENSE、contracts.js、前端 v2.8.4 基线）；初始版本定为 **v0.1.0**；**待 Jay 新建空的公开仓库 `HueGild/relaybox` 后推送初始版本** | — |
+| **Phase 0 状态（2026-11-24）** | 基线已定：v2.8.4，提交 `a6444f2`；RelayBox 骨架已搭好并推到公开仓库 `HueGild/relaybox`（初始提交 `1826706`，package.json 版本 v0.1.0）；**注意：这只是 main 上的初始代码，不作正式版——没打 tag、没发 GitHub Release**，等 Jay 说可以再发正式版；下一步进 Phase 1（core + Hono + Node 适配器） | — |
 | **Phase 1** | 抽 `MetaStore` / `StorageStore` 契约；core 路由迁到 Hono；先实现 Node 适配器（JsonMetaStore + Local/R2 Storage） | VPS 版跑通全部 jsdom 回归（v282/v283/v283-fixes/v284）+ 真实服务器接口测试，与 v2.8.4 行为一致 |
 | **Phase 2** | 实现 CF 适配器（D1MetaStore + R2 Binding Storage）；`entry-worker.js` + `wrangler.toml`；部署到测试子域名 | 同一套测试在 CF 测试站上全过；大文件（>32MB 分片、>100MB 直传）实测通过 |
 | **Phase 3** | `migrate.js`；线上数据迁移演练（先在测试环境跑）；**CF 版接管主域名 `wp.19660716.xyz`**，VPS 版切到独立域名并行运行 | 迁移后文件/分享/下载数与线上一致；主站切到 CF 后全功能正常；VPS 版独立域名可访问，数据完整 |

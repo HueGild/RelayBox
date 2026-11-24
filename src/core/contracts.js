@@ -53,18 +53,25 @@
  * deleteFolder refuses when the folder holds files OR subfolders (same rule as v2.8.4).
  * Shares have no independent expiry: a share follows its file (expired files take
  * their file-shares with them in cleanup; folder shares survive single-file expiry).
+ *
+ * Additions over the plan's §3.1 (kept minimal, all needed to reproduce v2.8.4):
+ * - listAllFiles: the /api/files folder counts and the cleanup need every file.
+ * - isBlocked: exact v2.8.4 failMap semantics (blockedUntil), used for the 429 check.
+ * - writeChunkPart / readChunkPart / chunkPartExists / assembleChunks:
+ *   chunk part bytes (Node: disk files under data/chunks/<uploadId>/).
  */
 export const MetaStoreMethods = [
-  'getFile', 'listFiles', 'searchFiles', 'createFile', 'updateFile', 'deleteFile',
+  'getFile', 'listFiles', 'listAllFiles', 'searchFiles', 'createFile', 'updateFile', 'deleteFile',
   'incrementDownloads',
   'listFolders', 'getFolder', 'createFolder', 'updateFolder', 'deleteFolder',
   'getShareByToken', 'getShareByFileId', 'getShareByFolderId',
   'createShare', 'updateShare', 'deleteShare',
   'getSession', 'createSession', 'deleteSession', 'deleteExpiredSessions',
   'getAnnouncement', 'setAnnouncement',
-  'recordFailure', 'countFailuresSince', 'clearFailures',
+  'recordFailure', 'countFailuresSince', 'clearFailures', 'isBlocked',
   'getChunkUpload', 'createChunkUpload', 'updateChunkUpload', 'deleteChunkUpload',
   'listStaleChunkUploads',
+  'writeChunkPart', 'readChunkPart', 'chunkPartExists', 'assembleChunks',
 ];
 
 /**
@@ -72,12 +79,27 @@ export const MetaStoreMethods = [
  * R2Storage (VPS via AWS SDK, CF via R2 Binding + aws4fetch for presigning).
  * The R2 driver behind both is { put, get, head, delete, copy,
  * signPut, signGet, createMultipart, signPart, completeMultipart, abortMultipart }.
+ *
+ * Notes on the signatures (all settled against v2.8.4):
+ * - get(key, opts): opts { start, end, contentType, disposition }; returns a
+ *   Web Response (200 / 206 / 416) or null when the object is missing.
+ *   R2 answers with a 302 to a presigned GET (Range is left to the browser).
+ * - presignedPutUrl(key, opts): opts { contentType, contentLength, expiresIn }.
+ * - presignedGetUrl(key, opts): opts { disposition, contentType, expiresIn }.
+ * - rename(srcKey, dstKey): local = fs.rename, R2 = copy + delete.
+ * - putFile(key, filePath, contentType): stream a local file to R2 (chunk assembly).
+ * - putThumb / getThumb / deleteThumb: thumbnails. Node stores them locally
+ *   (thumbs/<id>.jpg) even for R2 files, exactly like v2.8.4; CF stores them
+ *   in R2 under the thumbs/ prefix (Phase 2).
+ * - LocalStorage extras: importTempFile(tmpPath, key), tempFilePath(name),
+ *   freeBytes(), totalBytes() (disk-space guard + quota line).
  */
 export const StorageStoreMethods = [
-  'put', 'get', 'head', 'delete', 'copy',
+  'put', 'get', 'head', 'delete', 'copy', 'rename',
   'presignedPutUrl', 'presignedGetUrl',
   'createMultipartUpload', 'presignedPartUrl',
   'completeMultipartUpload', 'abortMultipartUpload',
+  'putFile', 'putThumb', 'getThumb', 'deleteThumb',
 ];
 
 /** Throws unless `impl` provides every method in `methods`. */
