@@ -37,6 +37,9 @@ npx wrangler secret put R2_ACCOUNT_ID
 npx wrangler deploy
 ```
 
+Or connect the Worker to this repo via Git integration (production branch `main`,
+deploy command `npx wrangler deploy`) — every push to `main` then auto-deploys.
+
 Set the bucket CORS to allow `PUT, GET, HEAD` from your domain and expose the `ETag`
 header (browsers need it to complete multipart uploads).
 
