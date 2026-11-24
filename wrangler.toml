@@ -23,7 +23,7 @@ bucket_name = "relaybox"
 [[d1_databases]]
 binding = "DB"
 database_name = "relaybox"
-database_id = "<YOUR_D1_DATABASE_ID>"
+database_id = "883a23d5-8649-46a2-856d-7a5a200c1e1d"
 
 # Upload size cap (bytes). CF default 5GB.
 # R2_BUCKET is the bucket name for presigned URLs (the R2 Binding itself

@@ -14,7 +14,7 @@
 // The test password is 'testpass123' (see .dev.vars).
 
 const BASE = process.argv[2];
-const PW = 'testpass123';
+const PW = process.env.CF_TEST_PW || 'testpass123'; // override via CF_TEST_PW for deployed Workers
 if (!BASE) {
   console.error('usage: node test-api.js <baseUrl>');
   process.exit(1);
