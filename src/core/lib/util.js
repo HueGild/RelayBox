@@ -50,8 +50,14 @@ export function kindOf(ext) {
 
 /** Sanitize a file/folder name (path.basename + illegal-char strip, no node:path). */
 export function safeName(name) {
-  const base = String(name || 'file').split(/[\\/]/).pop().replace(/[/\\?%*:|"<>]/g, '_').trim();
-  return (base || 'file').slice(0, 120);
+  const base = String(name || 'file').split(/[\\/]/).pop().replace(/[/\\?%*:|"<>]/g, '_').trim() || 'file';
+  if (base.length <= 120) return base;
+  // 截断时必须保留扩展名：长文件名（尤其含中文转码后更长）被截掉 .mp4 后，
+  // extOf 会误取中间的点（如 www.98T.la@... 的 .la@...），kind 变成 file，
+  // 视频就无法预览、只能下载。
+  const ext = extOf(base);
+  if (ext && ext.length < 120) return base.slice(0, 120 - ext.length) + ext;
+  return base.slice(0, 120);
 }
 
 /** Flat physical key, v2.8.4 format (kept for VPS compat; see storageKey notes). */
