@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI (2026-11-24 · 修复桌面视频预览视口溢出；新增全屏拖拽、可取消队列、文本/PDF预览、视频首帧截帧、骨架屏、纯R2自适应、大小前置校验、PWA支持) -->
+<!-- RelayBox v3.0 UI r3 (2026-11-24 · 修复底部操作表删除按钮红底红字不显示及全局 button:hover 权重覆盖问题；包含 r2 全部修复：列表勾选框布局、预览点空白关闭、上传缩略图等待、文档预览避让、全屏拖拽兜底、搜索清空与全局 Esc) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -84,7 +84,11 @@
   .up-row #uploadBtn { flex: 1 1 auto; min-width: 0; height: 38px; border-radius: 10px; font-weight: 600; }
   .up-row #uploadBtn:disabled { opacity: .45; }
   .toolbar-row { display: flex; gap: 8px; align-items: center; }
-  .toolbar-row .search { flex: 1; min-width: 0; width: auto; margin: 0; height: 38px; }
+  .search-wrap { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; }
+  .search-wrap .search { width: 100%; margin: 0; height: 38px; padding-right: 32px; }
+  .search-clear { position: absolute; right: 6px; width: 24px; height: 24px; padding: 0; border-radius: 50%; background: transparent; color: var(--muted); display: none; align-items: center; justify-content: center; font-size: 16px; line-height: 1; }
+  .search-clear:hover { background: var(--btn-bg); color: var(--text); }
+  .search-clear.show { display: inline-flex; }
   .toolbar-row .icon-btn { flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; }
   .toolbar-row .icon-btn.active { background: var(--accent); color: #fff; }
   .filter-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
@@ -103,12 +107,12 @@
   input[type=password], input[type=text] { flex: 1; min-width: 140px; padding: 9px 12px; border: 1px solid var(--input-border); border-radius: 10px; font-size: 14px; background: var(--input-bg); color: var(--text); outline: none; transition: border-color .16s, box-shadow .16s; }
   input[type=password]:focus, input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   button { padding: 9px 16px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 14px; cursor: pointer; transition: background .15s, opacity .15s, transform .1s; }
-  button:hover:not(:disabled) { background: var(--accent-hover); }
+  button:where(:hover:not(:disabled)) { background: var(--accent-hover); }
   button:disabled { background: var(--btn-disabled); opacity: .55; cursor: not-allowed; }
   button.ghost { background: var(--btn-bg); color: var(--btn-text); }
-  button.ghost:hover:not(:disabled) { background: var(--btn-hover); }
+  button.ghost:where(:hover:not(:disabled)) { background: var(--btn-hover); }
   button.danger { background: #EF4444; }
-  button.danger:hover:not(:disabled) { background: #DC2626; }
+  button.danger:where(:hover:not(:disabled)) { background: #DC2626; }
   .progress { height: 6px; background: var(--border); border-radius: 999px; margin-top: 12px; overflow: hidden; display: none; }
   .progress > div { height: 100%; background: linear-gradient(90deg, #3B82F6, #2563EB); width: 0%; border-radius: 999px; transition: width .2s ease; }
   .msg { margin-top: 8px; font-size: 13px; min-height: 18px; color: var(--muted); }
@@ -159,7 +163,7 @@
   .icon { font-size: 24px; width: 34px; text-align: center; flex-shrink: 0; }
   .icon svg { width: 24px; height: 24px; vertical-align: middle; color: var(--muted); }
   .share-folder-head svg { width: 20px; height: 20px; vertical-align: -3px; }
-  .info { flex: 1; min-width: 0; padding-right: 26px; }
+  .info { flex: 1; min-width: 0; }
   .name { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; line-height: 1.4; }
   .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .actions { display: flex; gap: 4px; flex-shrink: 0; align-items: center; flex-wrap: nowrap; }
@@ -182,7 +186,7 @@
   button.badge { border: 0; font-family: inherit; cursor: pointer; }
   .expiring-soon { color: #D97706; font-weight: 600; }
   html[data-theme="dark"] .expiring-soon { color: #FBBF24; }
-  .sel { position: absolute; top: 12px; right: 6px; width: 20px; height: 20px; appearance: none; -webkit-appearance: none; margin: 0; padding: 0; border: 1.8px solid var(--input-border); border-radius: 50%; background: var(--surface); cursor: pointer; transition: background-color .15s, border-color .15s, transform .15s; }
+  .sel { width: 20px; height: 20px; flex-shrink: 0; appearance: none; -webkit-appearance: none; margin: 0; padding: 0; border: 1.8px solid var(--input-border); border-radius: 50%; background: var(--surface); cursor: pointer; transition: background-color .15s, border-color .15s, transform .15s; }
   .sel:checked { background-color: var(--accent); border-color: var(--accent); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E"); background-size: 13px; background-position: center; background-repeat: no-repeat; }
   .bulkbar { display: flex; position: fixed; left: 50%; transform: translateX(-50%) translateY(14px); bottom: max(16px, calc(12px + env(safe-area-inset-bottom))); z-index: 20; background: var(--bulk-bg); color: var(--bulk-text); border: 1px solid var(--bulk-border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 999px; padding: 7px 12px; align-items: center; gap: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.22); max-width: calc(100vw - 24px); opacity: 0; pointer-events: none; transition: opacity .24s ease, transform .28s cubic-bezier(.22,1,.36,1); }
   .bulkbar.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
@@ -274,7 +278,8 @@
   .sheet-item:hover { background: var(--btn-bg); }
   .sheet-item:active { transform: scale(.985); }
   .sheet-item svg { width: 19px; height: 19px; flex-shrink: 0; color: var(--accent); }
-  .sheet-item.danger { color: var(--danger-text); }
+  .sheet-item.danger { color: var(--danger-text); background: var(--danger-bg); }
+  .sheet-item.danger:hover { background: var(--danger-hover); }
   .sheet-item.danger svg { color: var(--danger-text); }
   /* 预览弹窗（修复桌面端高分辨率视频撑破视口 + 文本/PDF 预览） */
   .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.78); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 50; align-items: center; justify-content: center; padding: 16px; }
@@ -283,7 +288,7 @@
   .modal video, .modal img { display: block; max-width: 100%; max-height: calc(100vh - 120px); width: auto; height: auto; object-fit: contain; border-radius: 10px; }
   #shareCard video, #shareCard img { display: block; max-height: 75vh; width: 100%; object-fit: contain; background: #000; border-radius: 10px; margin-top: 12px; }
   #modalBody img { touch-action: none; user-select: none; -webkit-user-drag: none; }
-  .pv-doc { width: min(920px, calc(100vw - 32px)); height: min(82vh, 760px); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.45); }
+  .pv-doc { width: min(860px, calc(100vw - 124px)); height: min(82vh, 760px); background: var(--surface); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.45); }
   .pv-doc-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
   .pv-doc-title { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .pv-doc-btn { padding: 5px 12px; font-size: 12px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; flex-shrink: 0; border: 0; cursor: pointer; }
@@ -303,7 +308,8 @@
   .pv-speed { display: flex; gap: 6px; justify-content: center; margin-top: 10px; flex-shrink: 0; }
   .pv-speed button { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; }
   .pv-speed button.on { background: #fff; color: #111; border-color: #fff; }
-  .modal .close { position: absolute; top: 14px; right: 18px; color: #fff; font-size: 28px; cursor: pointer; line-height: 1; padding: 4px; z-index: 3; }
+  .modal .close { position: absolute; top: 14px; right: 16px; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,.48); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: #fff; font-size: 22px; cursor: pointer; line-height: 1; display: flex; align-items: center; justify-content: center; z-index: 5; transition: background .15s; }
+  .modal .close:hover { background: rgba(0,0,0,.72); }
   .search { width: 100%; padding: 9px 12px; border: 1px solid var(--input-border); border-radius: 10px; font-size: 14px; margin-bottom: 6px; background: var(--input-bg); color: var(--text); }
   .pill { padding: 5px 12px; font-size: 12px; font-weight: 500; border-radius: 999px; background: var(--btn-bg); color: var(--btn-text); }
   .pill:hover { background: var(--btn-hover); }
@@ -350,6 +356,8 @@
     .bulkbar .bulk-actions::-webkit-scrollbar { display: none; }
     .bulk-btn, .bulk-x { width: 32px; height: 32px; min-width: 32px; }
     .bulkbar .bulk-count { min-width: 24px; height: 26px; font-size: 12px; }
+    .pv-doc { width: calc(100vw - 24px); height: 80vh; }
+    .modal .pnav { width: 36px; height: 36px; font-size: 22px; }
   }
 </style>
 </head>
@@ -435,7 +443,7 @@
     <div class="stats" id="stats">加载中…</div>
     <div style="height:10px"></div>
     <div class="toolbar-row">
-      <input type="text" class="search" id="search" placeholder="搜索文件名">
+      <div class="search-wrap"><input type="text" class="search" id="search" placeholder="搜索文件名"><button type="button" class="search-clear" id="searchClear" title="清空搜索" aria-label="清空搜索">×</button></div>
       <button class="icon-btn" id="newFolderBtn" style="display:none" title="新建文件夹" aria-label="新建文件夹"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
       <button class="icon-btn" id="viewToggleBtn" title="切换视图" aria-label="切换视图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></button>
       <button class="icon-btn" id="selectAllBtn" style="display:none" title="全选本页" aria-label="全选本页"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
@@ -567,7 +575,7 @@ function getDropDefaultHtml() {
 let storageChoice = 'r2';
 try { storageChoice = localStorage.getItem('fs-storage') || 'r2'; } catch {}
 if (storageChoice !== 'local') storageChoice = 'r2';
-function uploadToR2() { return r2On && storageChoice === 'r2'; }
+function uploadToR2() { return r2On && (!hasLocalStorage || storageChoice === 'r2'); }
 function updateR2Hint() {
   $('storageRow').style.display = (r2On && hasLocalStorage) ? '' : 'none';
   if (!hasLocalStorage && r2On) { storageChoice = 'r2'; applyStorageChoice(); }
@@ -876,7 +884,7 @@ function flashCopied(btn) {
   setTimeout(() => { btn.innerHTML = old; btn.classList.remove('copied'); }, 2000);
 }
 function openFolder(id) {
-  if (searchResults !== null) { $('search').value = ''; searchResults = null; }
+  if (searchResults !== null) { $('search').value = ''; syncSearchClear(); searchResults = null; }
   currentFolderId = id || null;
   clearSelection();
   loadList(true);
@@ -1115,9 +1123,11 @@ function storageBadge(f) {
 function videoThumbFallback(img, id) {
   if (!img || !img.parentNode) return;
   const v = document.createElement('video');
-  v.src = '/f/' + id;
+  v.src = '/f/' + id + '#t=0.1';
   v.preload = 'metadata';
   v.muted = true;
+  v.playsInline = true;
+  v.style.background = '#000';
   v.onmouseenter = function() { this.play().catch(() => {}); };
   v.onmouseleave = function() { this.pause(); this.currentTime = 0; };
   img.replaceWith(v);
@@ -1180,7 +1190,7 @@ async function loadList(showSkel) {
     $('announceBtn').style.display = authed ? '' : 'none';
     const r2Pct = r2On && d.r2Total ? Math.min(100, (d.r2Used || 0) / d.r2Total * 100) : 0;
     const localPct = d.diskTotal ? Math.min(100, (d.localUsed || 0) / d.diskTotal * 100) : 0;
-    let quotaHtml = `<div>共 ${allFiles.length} 个文件</div>`;
+    let quotaHtml = `<div>${currentFolders.length ? `共 ${currentFolders.length} 个文件夹 · ` : '共 '}${allFiles.length} 个文件</div>`;
     if (authed) {
       quotaHtml += `<div class="quota">`;
       if (r2On) quotaHtml += `<div class="quota-row"><span class="q-label">R2</span><div class="q-bar r2"><div style="width:${r2Pct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(d.r2Used || 0)} / ${fmtSize(d.r2Total || 0)}</span></div>`;
@@ -1548,13 +1558,20 @@ function pvBindGestures() {
   img.addEventListener('pointercancel', pvOnPointerUp);
 }
 document.addEventListener('keydown', (e) => {
-  if (!$('modal').classList.contains('open')) return;
-  if (e.key === 'ArrowLeft') previewStep(-1);
-  else if (e.key === 'ArrowRight') previewStep(1);
-  else if (e.key === 'Escape') closePreviewModal();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && $('sheetOverlay').classList.contains('open')) closeSheet();
+  if ($('modal').classList.contains('open')) {
+    if (e.key === 'ArrowLeft') { previewStep(-1); return; }
+    if (e.key === 'ArrowRight') { previewStep(1); return; }
+    if (e.key === 'Escape') { closePreviewModal(); return; }
+  }
+  if (e.key !== 'Escape') return;
+  if ($('globalDrop').classList.contains('show')) { dragDepth = 0; $('globalDrop').classList.remove('show'); return; }
+  if ($('sheetOverlay').classList.contains('open')) { closeSheet(); return; }
+  if ($('inputModal').classList.contains('open')) { closeInputModal(null); return; }
+  if ($('moveModal').classList.contains('open')) { $('moveModal').classList.remove('open'); return; }
+  if ($('expireEditModal').classList.contains('open')) { closeExpireEdit(); return; }
+  if ($('shareSettingsModal').classList.contains('open')) { closeShareSettings(); return; }
+  if ($('downloadConfirmModal').classList.contains('open')) { closeDownloadConfirm(); return; }
+  if ($('qrModal').classList.contains('open')) { $('qrModal').classList.remove('open'); return; }
 });
 
 async function copyFolderLink(id, btn) {
@@ -1578,7 +1595,7 @@ async function revokeFolderShare(id) {
   loadList();
 }
 $('modalClose').onclick = () => closePreviewModal();
-$('modal').onclick = (e) => { if (e.target.id === 'modal') closePreviewModal(); };
+$('modal').onclick = (e) => { if (e.target.id === 'modal' || e.target.id === 'modalBody') closePreviewModal(); };
 
 let lpTimer = null, lpFired = false;
 function cardTouchStart(e, id, kind) {
@@ -1805,6 +1822,7 @@ function closeShareSettings() { $('shareSettingsModal').classList.remove('open')
 $('shareSettingsClose').onclick = closeShareSettings;
 $('shareSettingsCancel').onclick = closeShareSettings;
 $('shareSettingsModal').onclick = (e) => { if (e.target.id === 'shareSettingsModal') closeShareSettings(); };
+$('shareCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('shareSettingsOk').click(); });
 $('shareSettingsOk').onclick = async () => {
   if (!shareSettingsTarget) return;
   const { id, isFolder } = shareSettingsTarget;
@@ -1841,7 +1859,9 @@ drop.onclick = () => fi.click();
 fi.onchange = () => { if (fi.files.length) pickFiles([...fi.files]); };
 ['dragover', 'dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
-drop.addEventListener('drop', e => { const fs = [...e.dataTransfer.files]; if (fs.length) pickFiles(fs); });
+drop.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); dragDepth = 0; $('globalDrop').classList.remove('show'); const fs = [...e.dataTransfer.files]; if (fs.length) pickFiles(fs); });
+$('globalDrop').onclick = () => { dragDepth = 0; $('globalDrop').classList.remove('show'); };
+window.addEventListener('dragend', () => { dragDepth = 0; $('globalDrop').classList.remove('show'); });
 
 // 全屏拖拽投放
 let dragDepth = 0;
@@ -2072,6 +2092,7 @@ async function processQueue() {
 }
 
 // 图片 & 视频自动生成 320px 缩略图上传到 /api/thumbs/:id（视频自动截取 0.5s 首帧，告别黑屏）
+async function waitThumb(fileObj, file) { await Promise.race([maybeUploadThumb(fileObj, file), new Promise(r => setTimeout(r, 1800))]); }
 async function maybeUploadThumb(fileObj, file) {
   if (!fileObj || (fileObj.kind !== 'image' && fileObj.kind !== 'video')) return;
   try {
@@ -2239,7 +2260,7 @@ async function uploadChunked(job, idx, total, targetFolderId, pw) {
       localStorage.removeItem(resumeKey);
       job.pct = 100; job.status = 'done';
       setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok');
-      maybeUploadThumb(d.file, f);
+      await waitThumb(d.file, f);
     } catch (e) {
       job.status = 'error';
       setMsg(`第 ${idx} 个合并失败：` + (e && e.message ? e.message : '网络错误'), 'err');
@@ -2299,7 +2320,7 @@ function uploadOne(job, idx, total) {
         });
         const d2 = await r2.json();
         if (!d2.ok) { job.status = 'error'; setMsg(`第 ${idx} 个登记失败：` + (d2.error || ('HTTP ' + r2.status)), 'err'); }
-        else { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok'); maybeUploadThumb(d2.file, f); }
+        else { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok'); await waitThumb(d2.file, f); }
       } catch (e) {
         if (job.canceled || (e && e.message === 'ABORTED')) return;
         job.status = 'error';
@@ -2318,10 +2339,10 @@ function uploadOne(job, idx, total) {
     job.abortFn = () => xhr.abort();
     xhr.open('POST', '/api/upload');
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) showProgress(e.loaded, e.total); };
-    xhr.onload = () => {
+    xhr.onload = async () => {
       let d = {};
       try { d = JSON.parse(xhr.responseText); } catch {}
-      if (xhr.status === 200 && d.ok) { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok'); maybeUploadThumb(d.file, f); }
+      if (xhr.status === 200 && d.ok) { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok'); await waitThumb(d.file, f); }
       else { job.status = 'error'; setMsg(`第 ${idx} 个上传失败：` + (d.error || ('HTTP ' + xhr.status)), 'err'); }
       resolve();
     };
@@ -2342,7 +2363,13 @@ $('uploadBtn').onclick = () => {
 let searchResults = null;
 let searchSeq = 0;
 let searchTimer = null;
+function syncSearchClear() {
+  const b = $('searchClear');
+  if (b) b.classList.toggle('show', !!$('search').value);
+}
+if ($('searchClear')) $('searchClear').onclick = () => clearSearch();
 $('search').oninput = () => {
+  syncSearchClear();
   const q = $('search').value.trim();
   clearTimeout(searchTimer);
   if (!q) { searchResults = null; loadList(); return; }
@@ -2358,6 +2385,7 @@ $('search').oninput = () => {
 };
 function clearSearch() {
   $('search').value = '';
+  syncSearchClear();
   searchResults = null;
   loadList();
 }
