@@ -1,0 +1,33 @@
+name = "relaybox"
+main = "src/entry-worker.js"
+compatibility_date = "2024-11-01"
+
+# Static Assets: serves public/ (the frontend) from the same Worker — no CORS split.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# R2 bucket for all file blobs (CF target has no local disk).
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "relaybox"
+
+# D1 database for all metadata.
+[[d1_databases]]
+binding = "DB"
+database_name = "relaybox"
+database_id = "<YOUR_D1_DATABASE_ID>"
+
+# Upload size cap (bytes). CF default 5GB.
+[vars]
+MAX_UPLOAD_SIZE = "5368709120"
+
+# Expiry + stale-chunk cleanup every 5 minutes (mirrors the VPS setInterval).
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Secrets (set with `wrangler secret put` — never commit):
+#   UPLOAD_PASSWORD        admin password
+#   R2_ACCESS_KEY_ID       R2 S3 API key id (only used to sign presigned URLs via aws4fetch)
+#   R2_SECRET_ACCESS_KEY   R2 S3 API secret (only used to sign presigned URLs via aws4fetch)
+#   R2_ACCOUNT_ID          R2 account id (S3 endpoint host)

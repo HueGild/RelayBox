@@ -1,0 +1,18 @@
+services:
+  relaybox:
+    build: .
+    ports:
+      - "80:80"
+    volumes:
+      - ./data:/app/data
+      - ./files:/app/files
+      - ./thumbs:/app/thumbs
+    environment:
+      - UPLOAD_PASSWORD=${UPLOAD_PASSWORD:?set UPLOAD_PASSWORD in .env}
+      - MAX_UPLOAD_SIZE=${MAX_UPLOAD_SIZE:-10737418240} # VPS default 10GB
+      # Optional R2 (second storage pool; omit for local-only):
+      # - R2_BUCKET=${R2_BUCKET}
+      # - R2_ENDPOINT=${R2_ENDPOINT}
+      # - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      # - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+    restart: unless-stopped

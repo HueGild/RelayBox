@@ -1,0 +1,10 @@
+node_modules/
+.wrangler/
+.dev.vars
+data/
+files/
+thumbs/
+config.json
+.env
+*.log
+.DS_Store
