@@ -17,6 +17,7 @@ export class JsonMetaStore {
     this.apiTokensFile = path.join(dataDir, 'api_tokens.json');
     this.settingsFile = path.join(dataDir, 'settings.json');
     this.poolsFile = path.join(dataDir, 'storage_pools.json');
+    this.dropLinksFile = path.join(dataDir, 'drop_links.json');
     this.chunksDir = path.join(dataDir, 'chunks');
     fs.mkdirSync(dataDir, { recursive: true });
     fs.mkdirSync(this.chunksDir, { recursive: true });
@@ -479,6 +480,67 @@ export class JsonMetaStore {
       if (next.length === list.length) return false;
       this._writePools(next);
       return true;
+    });
+  }
+
+  // ---- drop links / file collection boxes (v3.3.1) ----
+  _normalizeDropLink(d) {
+    if (!d || typeof d !== 'object') return null;
+    return {
+      token: d.token,
+      folderId: (typeof d.folderId === 'string' && d.folderId) ? d.folderId : null,
+      title: d.title || '文件收集',
+      passwordHash: typeof d.passwordHash === 'string' ? d.passwordHash : '',
+      maxFiles: (typeof d.maxFiles === 'number' && Number.isFinite(d.maxFiles) && d.maxFiles >= 0) ? Math.floor(d.maxFiles) : 0,
+      usedFiles: (typeof d.usedFiles === 'number' && Number.isFinite(d.usedFiles) && d.usedFiles >= 0) ? Math.floor(d.usedFiles) : 0,
+      maxFileSize: (typeof d.maxFileSize === 'number' && Number.isFinite(d.maxFileSize) && d.maxFileSize > 0) ? Math.floor(d.maxFileSize) : 104857600,
+      visibility: d.visibility === 'public' ? 'public' : 'private',
+      expiresAt: d.expiresAt || null,
+      createdAt: d.createdAt || new Date().toISOString(),
+    };
+  }
+  _readDropLinks() {
+    const list = this._readJson(this.dropLinksFile, []);
+    if (!Array.isArray(list)) return [];
+    return list.map((d) => this._normalizeDropLink(d)).filter(Boolean);
+  }
+  _writeDropLinks(list) {
+    this._writeJson(this.dropLinksFile, list);
+  }
+  async listDropLinks() {
+    return this._readDropLinks().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  async getDropLink(token) {
+    if (!token) return null;
+    return this._readDropLinks().find((d) => d.token === token) || null;
+  }
+  async createDropLink(d) {
+    return this._enqueue(() => {
+      const list = this._readDropLinks();
+      const item = this._normalizeDropLink({ ...d });
+      list.unshift(item);
+      this._writeDropLinks(list);
+      return item;
+    });
+  }
+  async deleteDropLink(token) {
+    return this._enqueue(() => {
+      const list = this._readDropLinks();
+      const next = list.filter((d) => d.token !== token);
+      if (next.length === list.length) return false;
+      this._writeDropLinks(next);
+      return true;
+    });
+  }
+  async incrementDropLinkFiles(token) {
+    return this._enqueue(() => {
+      const list = this._readDropLinks();
+      const item = list.find((d) => d.token === token);
+      if (!item) return 0;
+      if (!(item.maxFiles === 0 || item.usedFiles < item.maxFiles)) return 0;
+      item.usedFiles = (item.usedFiles || 0) + 1;
+      this._writeDropLinks(list);
+      return 1;
     });
   }
 

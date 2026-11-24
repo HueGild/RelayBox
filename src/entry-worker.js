@@ -73,7 +73,7 @@ export default {
     }
 
     // 2) SPA entry points: `/` and share pages `/s/:token` — index.html.
-    if (path === '/' || path.startsWith('/s/')) {
+    if (path === '/' || path.startsWith('/s/') || path.startsWith('/d/')) {
       return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
     }
 

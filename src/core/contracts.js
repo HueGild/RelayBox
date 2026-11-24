@@ -74,6 +74,7 @@ export const MetaStoreMethods = [
   'getAnnouncement', 'setAnnouncement',
   'getSetting', 'setSetting',
   'listStoragePools', 'getStoragePool', 'createStoragePool', 'updateStoragePool', 'deleteStoragePool',
+  'listDropLinks', 'getDropLink', 'createDropLink', 'deleteDropLink', 'incrementDropLinkFiles',
   'recordFailure', 'countFailuresSince', 'clearFailures', 'isBlocked',
   'getChunkUpload', 'createChunkUpload', 'updateChunkUpload', 'deleteChunkUpload',
   'listStaleChunkUploads',

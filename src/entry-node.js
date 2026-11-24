@@ -93,6 +93,7 @@ function serveFile(c, file, contentType, cache) {
 }
 app.get('/', (c) => serveFile(c, 'index.html', 'text/html; charset=utf-8'));
 app.get('/s/*', (c) => serveFile(c, 'index.html', 'text/html; charset=utf-8'));
+app.get('/d/*', (c) => serveFile(c, 'index.html', 'text/html; charset=utf-8'));
 app.get('/qrcode.min.js', (c) => serveFile(c, 'qrcode.min.js', 'application/javascript; charset=utf-8', true));
 app.get('/jszip.min.js', (c) => serveFile(c, 'jszip.min.js', 'application/javascript; charset=utf-8', true));
 

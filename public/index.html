@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r9 (2026-11-24 · v3.2 多存储池管理与选择 + 去除 CF 假本地盘 + 双端壁纸/毛玻璃/自定义站点头像与图标 + 统一精致 SVG 下拉箭头) -->
+<!-- RelayBox v3.0 UI r10 (2026-11-24 · v3.3.1 文件收集箱 Drop Links：反向收件链接、口令保护、份数/大小/过期控制与访客只写投递页) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -612,6 +612,19 @@
   .form-grid2 { grid-template-columns: 1fr; }
  }
 
+ /* r10: 文件收集箱（Drop Links）访客投递页与管理样式 */
+ .drop-view-wrap { max-width: 640px; }
+ .drop-box-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+ .drop-box-title { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.35; word-break: break-word; }
+ .drop-privacy-note { display: flex; align-items: center; gap: 7px; padding: 9px 12px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; margin-bottom: 12px; }
+ .drop-privacy-note svg { width: 16px; height: 16px; flex-shrink: 0; }
+ .drop-sender-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+ .drop-sender-row input { width: 100%; }
+ .drop-done-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+ .drop-done-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 11px; border-radius: 10px; background: var(--ok-bg); color: var(--ok-text); font-size: 12.5px; font-weight: 500; }
+ .drop-done-item span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .pool-tag.ok { background: var(--ok-bg); color: var(--ok-text); }
+
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
   .mob-only-wrap { display: inline-flex; }
@@ -644,6 +657,7 @@
  <button class="ghost" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg> 自动</button>
  <button class="icon-btn desk-only-btn" id="copyFmtBtn" style="width:30px;height:30px;border-radius:999px" title="默认复制格式" aria-label="默认复制格式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="dropsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="文件收集箱" aria-label="文件收集箱"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="poolsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="存储池管理" aria-label="存储池管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></button>
  <button class="icon-btn desk-only-btn" id="appearanceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="外观与壁纸" aria-label="外观与壁纸"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
  <button class="icon-btn desk-only-btn" id="transferModeBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="R2 传输模式" aria-label="R2 传输模式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
@@ -653,6 +667,7 @@
   <div class="top-more-menu" id="topMoreMenu">
    <button type="button" id="mobCopyFmtBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认复制格式</button>
    <button type="button" id="mobAnnounceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> 设置站点公告</button>
+   <button type="button" id="mobDropsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> 文件收集箱</button>
    <button type="button" id="mobPoolsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> 存储池管理</button>
    <button type="button" id="mobAppearanceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> 外观与壁纸</button>
    <button type="button" id="mobTransferModeBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> R2 传输模式</button>
@@ -804,6 +819,7 @@
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
 <div class="modal" id="tokensModal"><span class="close" id="tokensClose">×</span><div class="card token-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">API 密钥管理</div><div class="meta" style="margin-bottom:12px">用于 curl、ShareX、PicGo、iOS 快捷指令一键直传（单文件 ≤ 32MB，默认公开直链）。</div><div class="row" style="margin-top:0"><input type="text" id="tokenNameInput" placeholder="备注名，如 Mac ShareX / 快捷指令" maxlength="40"><button id="tokenCreateBtn" type="button">生成密钥</button></div><div class="token-created" id="tokenCreatedBox" style="display:none"><div style="font-size:12px;font-weight:600;color:var(--ok-text)">已生成新密钥（明文仅展示这一次，请立即保存）：</div><div class="token-created-val" id="tokenCreatedVal"></div><div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tokenCopyKeyBtn" style="flex:1;padding:7px 10px;font-size:12px">复制密钥</button><button type="button" id="tokenCopyCurlBtn" style="flex:1;padding:7px 10px;font-size:12px">复制 curl 上传命令</button></div></div><div class="token-list" id="tokenList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="token-curl"><div style="font-weight:600;color:var(--text)">极客上传接口示例（POST /api/raw-upload）</div><pre id="tokenCurlExample"></pre></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="tokensDoneBtn" type="button">关闭</button></div></div></div>
 <div class="modal" id="detailModal"><span class="close" id="detailClose">×</span><div class="card detail-card" id="detailCardBody"></div></div>
+<div class="modal" id="dropsModal"><span class="close" id="dropsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">文件收集箱</div><button type="button" id="dropAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新建收集箱</button></div><div class="meta" style="margin-bottom:12px">生成反向收件链接发给他人，对方无需登录即可投递文件到指定目录，且彼此不可见已交文件。</div><div class="pool-list" id="dropListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="dropFormBox"><div style="font-size:13.5px;font-weight:600">新建文件收集箱</div><div class="form-grid2"><div class="form-field"><label>收集箱标题 *</label><input type="text" id="dfTitle" placeholder="如 作业提交 / 活动素材收集" maxlength="60"></div><div class="form-field"><label>文件存入目录</label><select id="dfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2"><div class="form-field"><label>提交口令（留空 = 免密）</label><input type="text" id="dfPassword" placeholder="可选，如 2026" maxlength="64" autocomplete="off"></div><div class="form-field"><label>最大收集份数（0 = 不限）</label><input type="number" id="dfMaxFiles" value="0" min="0" max="100000"></div></div><div class="form-grid2"><div class="form-field"><label>单文件上限</label><select id="dfMaxSize"><option value="10485760">10 MB</option><option value="52428800">50 MB</option><option value="104857600" selected>100 MB</option><option value="524288000">500 MB</option><option value="1073741824">1 GB</option></select></div><div class="form-field"><label>链接有效期</label><select id="dfExpires"><option value="24">24 小时</option><option value="72">3 天</option><option value="168" selected>7 天</option><option value="720">30 天</option><option value="0">永久有效</option></select></div></div><div class="form-field"><label>收到的文件默认可见性</label><select id="dfVis"><option value="private" selected>私密（推荐：仅管理员可见）</option><option value="public">公开（任何人可访问）</option></select></div><div class="msg" id="dfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="dfCancelBtn">取消</button><button type="button" id="dfCreateBtn">创建并复制链接</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="dropsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="poolsModal"><span class="close" id="poolsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储池管理</div><button type="button" id="poolAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新增外部桶</button></div><div class="meta" style="margin-bottom:12px">支持内置 R2 与任意外部 Cloudflare R2 / S3 兼容桶（如亚太桶、B2、MinIO），新增即用无需重新部署。</div><div class="pool-list" id="poolListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="poolFormBox"><div style="font-size:13.5px;font-weight:600" id="poolFormTitle">新增外部存储池</div><input type="hidden" id="pfId"><div class="form-grid2"><div class="form-field"><label>显示名称 *</label><input type="text" id="pfName" placeholder="如 亚太 R2 桶" maxlength="40"></div><div class="form-field"><label>存储桶名 (Bucket) *</label><input type="text" id="pfBucket" placeholder="如 relaybox-apac" maxlength="100"></div></div><div class="form-field"><label>S3 Endpoint *</label><input type="text" id="pfEndpoint" placeholder="https://&lt;AccountID&gt;.r2.cloudflarestorage.com"></div><div class="form-grid2"><div class="form-field"><label>Access Key ID *</label><input type="text" id="pfAk" placeholder="S3 Access Key ID" autocomplete="off"></div><div class="form-field"><label>Secret Access Key <span id="pfSkHint">*</span></label><input type="password" id="pfSk" placeholder="加密存库，绝不回传明文" autocomplete="new-password"></div></div><div class="form-grid2"><div class="form-field"><label>Region（R2 填 auto）</label><input type="text" id="pfRegion" value="auto" placeholder="auto"></div><div class="form-field"><label>显示配额（GB）</label><input type="number" id="pfQuotaGb" value="10" min="1" max="100000"></div></div><div class="form-grid2"><div class="form-field"><label>传输模式</label><select id="pfMode"><option value="proxy">Worker 中转（校园网/图床推荐）</option><option value="presign">预签名直传（大文件模式）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="pfDefault" style="width:auto"> 设为默认上传池</label></div></div><div class="msg" id="pfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="pfCancelBtn">取消</button><button type="button" class="ghost" id="pfTestBtn">测试连接</button><button type="button" id="pfSaveBtn">保存存储池</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="poolsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="appearanceModal"><span class="close" id="appearanceClose">×</span><div class="card appear-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">外观与壁纸设置</div><div class="meta" style="margin-bottom:12px">支持桌面端与手机端分开设置壁纸，自定义左上角站点头像、标题与网页图标，保存后全站生效。</div><input type="file" id="appearUploadInput" accept="image/*" style="display:none"><div class="appear-field"><label>站点名称 <span>显示在左上角与浏览器标题</span></label><input type="text" id="apTitle" placeholder="RelayBox" maxlength="40" style="width:100%"></div><div class="appear-field"><label>桌面端背景图片 <span>横屏推荐 16:9</span></label><div class="appear-input-row"><input type="text" id="apBgDesktop" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgDesktop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev desk" id="prevBgDesktop"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgDesktop" title="清除">×</button></div></div><div class="appear-field"><label>手机端背景图片 <span>竖屏推荐 9:16，留空则沿用桌面壁纸</span></label><div class="appear-input-row"><input type="text" id="apBgMobile" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgMobile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev mob" id="prevBgMobile"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgMobile" title="清除">×</button></div></div><div class="appear-field"><label>左上角站点头像 / Logo <span>留空使用默认蓝色图标</span></label><div class="appear-input-row"><input type="text" id="apLogo" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev ico" id="prevLogo"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apLogo" title="清除">×</button></div></div><div class="appear-field"><label>网站图标 (Favicon) <span>浏览器标签页小图标</span></label><div class="appear-input-row"><input type="text" id="apFavicon" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apFavicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev ico" id="prevFavicon"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apFavicon" title="清除">×</button></div></div><div class="form-grid2"><div class="appear-field"><label>壁纸遮罩暗度 <span id="apOverlayVal">45%</span></label><input type="range" class="appear-range" id="apOverlay" min="0" max="85" value="45"></div><div class="appear-field"><label>卡片毛玻璃模糊 <span id="apBlurVal">14px</span></label><input type="range" class="appear-range" id="apBlur" min="0" max="24" value="14"></div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="apResetBtn">恢复默认</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="apCancelBtn">取消</button><button type="button" id="apSaveBtn">保存外观</button></div></div></div></div>
 <div class="modal" id="transferModeModal"><span class="close" id="transferModeClose">×</span><div class="card" style="max-width:440px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">R2 传输模式</div><div class="meta" style="margin-bottom:8px">根据网络环境与文件大小随时切换，保存后全站即时生效（无需重新部署）。</div><div class="mode-opts" id="transferModeOpts"><button type="button" class="mode-opt" data-mode="proxy"><div class="mode-opt-head"><strong>Worker 绑定中转（图床模式）</strong><span class="mode-opt-tag">校园网推荐</span></div><p>上传下载全程走当前自定义域名，绕开 r2.cloudflarestorage.com 阻断，支持公开文件边缘缓存与视频进度条拖动；零 S3 密钥、零 CORS；超过 20MB 自动分片。</p></button><button type="button" class="mode-opt" data-mode="presign" id="modeOptPresign"><div class="mode-opt-head"><strong>R2 预签名直传（大文件模式）</strong><span class="mode-opt-tag" id="modePresignTag">GB 级大文件</span></div><p>≤100MB 直连 R2 上传，下载 302 走 R2 边缘直出，最省 Worker 额度且大文件下载最稳；需要配置 R2 S3 密钥与桶 CORS。</p></button></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="transferModeCancel">取消</button><button type="button" id="transferModeSave">保存并生效</button></div></div></div>
@@ -814,6 +830,11 @@
  <div class="topbar"><h1><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span> 分享的文件</h1></div>
  <div class="sub">凭分享链接访问 · 仅此文件可见</div>
  <div class="card" id="shareCard">加载中…</div>
+</div>
+<div class="wrap drop-view-wrap" id="dropView" style="display:none">
+ <div class="topbar"><h1><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span> <span id="dropBrandTitle">文件收集箱</span></h1></div>
+ <div class="sub">安全反向投递 · 仅管理员可查看收到的文件</div>
+ <div class="card" id="dropCard">加载中…</div>
 </div>
 
 <script src="/qrcode.min.js"></script>
@@ -862,6 +883,7 @@ const ICONS = {
  zoomOut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>',
  rotL: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
  rotR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+ inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
  reset: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>',
 };
 const $ = (id) => document.getElementById(id);
@@ -1648,6 +1670,8 @@ async function loadList(showSkel) {
  if ($('tokensBtn')) $('tokensBtn').style.display = authed ? '' : 'none';
  if ($('mobAnnounceBtn')) $('mobAnnounceBtn').style.display = authed ? 'flex' : 'none';
  if ($('mobTokensBtn')) $('mobTokensBtn').style.display = authed ? 'flex' : 'none';
+ if ($('dropsBtn')) $('dropsBtn').style.display = authed ? '' : 'none';
+ if ($('mobDropsBtn')) $('mobDropsBtn').style.display = authed ? 'flex' : 'none';
  if ($('poolsBtn')) $('poolsBtn').style.display = authed ? '' : 'none';
  if ($('mobPoolsBtn')) $('mobPoolsBtn').style.display = authed ? 'flex' : 'none';
  if ($('appearanceBtn')) $('appearanceBtn').style.display = authed ? '' : 'none';
@@ -2092,6 +2116,7 @@ document.addEventListener('keydown', (e) => {
  if ($('copyFmtModal') && $('copyFmtModal').classList.contains('open')) { closeCopyFmtModal(); return; }
  if ($('transferModeModal') && $('transferModeModal').classList.contains('open')) { closeTransferModeModal(); return; }
  if ($('poolsModal') && $('poolsModal').classList.contains('open')) { closePoolsModal(); return; }
+ if ($('dropsModal') && $('dropsModal').classList.contains('open')) { closeDropsModal(); return; }
  if ($('appearanceModal') && $('appearanceModal').classList.contains('open')) { closeAppearanceModal(false); return; }
 });
 
@@ -2175,6 +2200,7 @@ function openSheet(id, kind) {
  items.push({ icon: ICONS.move, label: '移动文件夹', fn: () => openMoveModal([fd.id], 'folder', fd.name) });
  items.push({ icon: ICONS.pencil, label: '重命名', fn: () => renameFolder(fd.id, fd.name) });
  items.push({ icon: ICONS.lock, label: '分享设置（提取码/阅后即焚）', fn: () => openShareSettings(fd.id, 'folder') });
+ items.push({ icon: ICONS.inbox, label: '创建文件收集箱', fn: () => openDropsModal(fd.id) });
  if (fd.shareToken) items.push({ icon: ICONS.unlink, label: '取消文件夹分享', fn: () => revokeFolderShare(fd.id) });
  items.push({ icon: ICONS.trash, label: '删除文件夹', danger: true, fn: () => deleteFolder(fd.id, fd.name) });
  }
@@ -2321,6 +2347,21 @@ async function copyFormattedLink(id, format) {
 }
 
 let qrUrl = '';
+function showQRUrl(url) {
+ if (typeof qrcode === 'undefined') { setMsg('二维码组件未加载，请刷新页面再试', 'err'); return; }
+ if (!url) return;
+ qrUrl = url;
+ try {
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  $('qrBox').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 8 });
+ } catch {
+  $('qrBox').innerHTML = '<div class="empty">二维码生成失败</div>';
+ }
+ $('qrUrl').textContent = url;
+ $('qrModal').classList.add('open');
+}
 async function showQR(id) {
  if (typeof qrcode === 'undefined') { setMsg('二维码组件未加载，请刷新页面再试', 'err'); return; }
  const url = await fileUrl(id);
@@ -2582,13 +2623,13 @@ function hasDragFiles(e) {
  return !!(e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files'));
 }
 window.addEventListener('dragenter', (e) => {
- if ($('shareView').style.display === 'block' || !hasDragFiles(e)) return;
+ if ($('shareView').style.display === 'block' || $('dropView').style.display === 'block' || !hasDragFiles(e)) return;
  e.preventDefault();
  dragDepth++;
  $('globalDrop').classList.add('show');
 });
 window.addEventListener('dragover', (e) => {
- if ($('shareView').style.display === 'block' || !hasDragFiles(e)) return;
+ if ($('shareView').style.display === 'block' || $('dropView').style.display === 'block' || !hasDragFiles(e)) return;
  e.preventDefault();
 });
 window.addEventListener('dragleave', (e) => {
@@ -2601,7 +2642,7 @@ window.addEventListener('drop', (e) => {
  e.preventDefault();
  dragDepth = 0;
  $('globalDrop').classList.remove('show');
- if ($('shareView').style.display === 'block') return;
+ if ($('shareView').style.display === 'block' || $('dropView').style.display === 'block') return;
  const fs = [...(e.dataTransfer ? e.dataTransfer.files : [])];
  if (!fs.length) return;
  if (authed || $('password').value.trim()) {
@@ -2616,7 +2657,7 @@ window.addEventListener('drop', (e) => {
 document.addEventListener('paste', (e) => {
  const tag = (document.activeElement && document.activeElement.tagName) || '';
  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
- if ($('shareView').style.display === 'block') return;
+ if ($('shareView').style.display === 'block' || $('dropView').style.display === 'block') return;
  const files = [...(e.clipboardData ? e.clipboardData.files : [])];
  if (files.length) { e.preventDefault(); enqueueFiles(files); return; }
  const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
@@ -4070,7 +4111,437 @@ loadAppearance();
 initUploadCollapse();
 renderViewToggle();
 applyTheme();
-loadShareView().then(async (isShare) => { if (!isShare) { await refreshAuth(); loadList(true); loadAnnouncement(); } });
+
+// ===== r10: 文件收集箱（Drop Links）管理弹窗与访客 /d/:token 投递页 =====
+let adminDrops = [];
+let preselectDropFolderId = null;
+
+async function openDropsModal(folderId) {
+ if (!authed) return;
+ preselectDropFolderId = folderId !== undefined ? folderId : currentFolderId;
+ $('dropsModal').classList.add('open');
+ closeDropForm();
+ await Promise.all([loadAdminDrops(), populateDropFolderSelect()]);
+ if (folderId !== undefined) openDropForm(folderId);
+}
+function closeDropsModal() { $('dropsModal').classList.remove('open'); }
+function openDropForm(folderId) {
+ $('dfMsg').textContent = '';
+ $('dfMsg').className = 'msg';
+ $('dfTitle').value = '';
+ $('dfPassword').value = '';
+ $('dfMaxFiles').value = '0';
+ $('dfMaxSize').value = '104857600';
+ $('dfExpires').value = '168';
+ $('dfVis').value = 'private';
+ const fid = folderId !== undefined ? (folderId || '') : (preselectDropFolderId || '');
+ if ($('dfFolder')) $('dfFolder').value = fid;
+ $('dropFormBox').classList.add('open');
+ $('dropFormBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function closeDropForm() { $('dropFormBox').classList.remove('open'); }
+
+async function populateDropFolderSelect() {
+ const sel = $('dfFolder');
+ if (!sel) return;
+ try {
+  const r = await fetch('/api/folders');
+  const d = await r.json();
+  const all = d.folders || [];
+  const pathOf = (fd) => {
+   const names = [fd.name];
+   let cur = fd;
+   const seen = new Set([fd.id]);
+   while (cur.parentId) {
+    const p = all.find(x => x.id === cur.parentId);
+    if (!p || seen.has(p.id)) break;
+    seen.add(p.id);
+    names.unshift(p.name);
+    cur = p;
+   }
+   return names.join(' / ');
+  };
+  sel.innerHTML = '<option value="">根目录</option>' + all.map(fd =>
+   `<option value="${escapeHtml(fd.id)}">${escapeHtml(pathOf(fd))}</option>`
+  ).join('');
+  if (preselectDropFolderId) sel.value = preselectDropFolderId;
+ } catch {}
+}
+
+async function loadAdminDrops() {
+ const box = $('dropListBox');
+ box.innerHTML = '<div class="empty" style="padding:18px 0">加载中…</div>';
+ try {
+  const r = await fetch('/api/drops');
+  const d = await r.json();
+  if (!r.ok || !d.ok) { box.innerHTML = `<div class="empty" style="padding:18px 0">${escapeHtml(d.error || '加载失败')}</div>`; return; }
+  adminDrops = d.drops || [];
+  renderAdminDrops();
+ } catch {
+  box.innerHTML = '<div class="empty" style="padding:18px 0">加载失败</div>';
+ }
+}
+
+function renderAdminDrops() {
+ const box = $('dropListBox');
+ if (!adminDrops.length) {
+  box.innerHTML = '<div class="empty" style="padding:18px 0">还没有文件收集箱，点右上角「+ 新建收集箱」即可生成收件链接</div>';
+  return;
+ }
+ box.innerHTML = adminDrops.map(d => {
+  const url = location.origin + '/d/' + d.token;
+  const statusTag = d.expired
+   ? '<span class="pool-tag off">已过期</span>'
+   : d.full
+    ? '<span class="pool-tag off">已满</span>'
+    : '<span class="pool-tag ok">进行中</span>';
+  const countTxt = d.maxFiles > 0 ? `已收 ${d.usedFiles} / ${d.maxFiles} 份` : `已收 ${d.usedFiles} 份`;
+  const expTxt = d.expiresAt ? (d.expired ? '已过期' : expiryText(d.expiresAt)) : '永久有效';
+  return `<div class="pool-card-item">
+   <div class="pool-card-top">
+    <div class="pool-card-name">${escapeHtml(d.title)} ${statusTag} ${d.hasPassword ? '<span class="pool-tag">有口令</span>' : ''}</div>
+   </div>
+   <div class="pool-card-sub">存入：${escapeHtml(d.folderName || '根目录')} · ${countTxt} · 单文件 ≤ ${fmtSize(d.maxFileSize)} · ${expTxt} · ${d.visibility === 'public' ? '公开' : '私密'}</div>
+   <div class="pool-card-acts">
+    <button type="button" class="ghost" onclick="copyText('${escapeHtml(url)}', '收集箱链接已复制')">复制链接</button>
+    <button type="button" class="ghost" onclick="showQRUrl('${escapeHtml(url)}')">二维码</button>
+    <button type="button" class="ghost" onclick="window.open('${escapeHtml(url)}', '_blank', 'noopener')">打开</button>
+    <button type="button" class="danger" data-dtitle="${escapeHtml(d.title)}" onclick="removeDropLink('${escapeHtml(d.token)}', this.dataset.dtitle)">删除</button>
+   </div>
+  </div>`;
+ }).join('');
+}
+
+async function removeDropLink(token, title) {
+ if (!confirm(`确定删除收集箱「${title}」吗？（不会删除已收到的文件）`)) return;
+ try {
+  const r = await fetch('/api/drops/' + encodeURIComponent(token), { method: 'DELETE' });
+  const d = await r.json();
+  if (!r.ok || !d.ok) { showToast(d.error || '删除失败', 'err'); return; }
+  showToast('收集箱已关闭', 'ok');
+  loadAdminDrops();
+ } catch { showToast('网络错误', 'err'); }
+}
+
+if ($('dropsBtn')) $('dropsBtn').onclick = () => openDropsModal();
+if ($('mobDropsBtn')) $('mobDropsBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openDropsModal(); };
+if ($('dropsClose')) $('dropsClose').onclick = closeDropsModal;
+if ($('dropsDoneBtn')) $('dropsDoneBtn').onclick = closeDropsModal;
+if ($('dropsModal')) $('dropsModal').onclick = (e) => { if (e.target.id === 'dropsModal') closeDropsModal(); };
+if ($('dropAddToggleBtn')) $('dropAddToggleBtn').onclick = () => openDropForm();
+if ($('dfCancelBtn')) $('dfCancelBtn').onclick = closeDropForm;
+if ($('dfCreateBtn')) $('dfCreateBtn').onclick = async () => {
+ const btn = $('dfCreateBtn'), msg = $('dfMsg');
+ btn.disabled = true; msg.textContent = '正在创建…'; msg.className = 'msg';
+ try {
+  const payload = {
+   title: $('dfTitle').value.trim() || '文件收集',
+   folderId: $('dfFolder').value || null,
+   password: $('dfPassword').value.trim(),
+   maxFiles: Math.max(0, parseInt($('dfMaxFiles').value, 10) || 0),
+   maxFileSize: Number($('dfMaxSize').value) || 104857600,
+   expiresHours: Number($('dfExpires').value) || 0,
+   visibility: $('dfVis').value === 'public' ? 'public' : 'private',
+  };
+  const r = await fetch('/api/drops', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify(payload),
+  });
+  const d = await r.json();
+  if (!r.ok || !d.ok || !d.drop) { msg.textContent = d.error || '创建失败'; msg.className = 'msg err'; return; }
+  const url = location.origin + '/d/' + d.drop.token;
+  closeDropForm();
+  await loadAdminDrops();
+  copyText(url, '收集箱已创建并复制链接' + (payload.password ? `（口令 ${payload.password}）` : ''));
+ } catch {
+  msg.textContent = '网络错误'; msg.className = 'msg err';
+ } finally {
+  btn.disabled = false;
+ }
+};
+
+// ---- 访客 /d/:token 文件收集投递页 ----
+let dropPageToken = '';
+let dropPagePassword = '';
+let dropPageMeta = null;
+let dropDoneFiles = [];
+let dropUploading = false;
+
+async function loadDropView() {
+ const m = location.pathname.match(/^\/d\/([A-Za-z0-9_-]+)$/);
+ if (!m) return false;
+ dropPageToken = m[1];
+ $('mainWrap').style.display = 'none';
+ $('shareView').style.display = 'none';
+ $('dropView').style.display = 'block';
+ await fetchDropPageMeta();
+ return true;
+}
+
+async function fetchDropPageMeta() {
+ const card = $('dropCard');
+ const hdrs = dropPagePassword ? { 'X-Drop-Password': dropPagePassword } : {};
+ try {
+  const r = await fetch('/api/drop/' + encodeURIComponent(dropPageToken), { headers: hdrs });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+   if (d.needPassword) {
+    renderDropPasswordGate(dropPageMeta ? dropPageMeta.title : '文件收集箱', d.error || '提交口令不正确');
+    return;
+   }
+   card.innerHTML = `<div class="empty">${escapeHtml(d.error || (r.status === 410 ? '该文件收集箱已过期或份数已满' : '该文件收集箱不存在或已关闭'))}</div>`;
+   return;
+  }
+  dropPageMeta = d.drop;
+  if ($('dropBrandTitle')) $('dropBrandTitle').textContent = dropPageMeta.title || '文件收集箱';
+  document.title = (dropPageMeta.title || '文件收集箱') + ' · RelayBox';
+  if (dropPageMeta.needPassword && !dropPageMeta.unlocked) {
+   renderDropPasswordGate(dropPageMeta.title, '');
+   return;
+  }
+  renderDropUploader();
+ } catch {
+  card.innerHTML = '<div class="empty">加载失败，请稍后重试</div>';
+ }
+}
+
+function renderDropPasswordGate(title, errMsg) {
+ $('dropCard').innerHTML = `
+  <div class="drop-box-head"><div class="drop-box-title">${escapeHtml(title || '文件收集箱')}</div></div>
+  <div class="empty" style="padding:18px 0 8px">该收集箱已开启提交口令保护</div>
+  <div style="display:flex;gap:8px;max-width:340px;margin:10px auto 0">
+   <input type="text" id="dropPwField" placeholder="请输入提交口令" style="flex:1">
+   <button type="button" id="dropPwGo">进入</button>
+  </div>
+  <div class="msg err" id="dropPwMsg" style="text-align:center">${escapeHtml(errMsg || '')}</div>
+ `;
+ const go = () => {
+  const v = $('dropPwField').value.trim();
+  if (!v) { $('dropPwMsg').textContent = '请先输入提交口令'; return; }
+  dropPagePassword = v;
+  fetchDropPageMeta();
+ };
+ $('dropPwGo').onclick = go;
+ $('dropPwField').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+ $('dropPwField').focus();
+}
+
+function renderDropUploader() {
+ const m = dropPageMeta;
+ if (!m) return;
+ const remTxt = m.maxFiles > 0 ? `剩余 ${Math.max(0, m.maxFiles - m.usedFiles)} / ${m.maxFiles} 份` : `已收集 ${m.usedFiles} 份`;
+ const expTxt = m.expiresAt ? expiryText(m.expiresAt) : '长期有效';
+ const isFull = m.maxFiles > 0 && m.usedFiles >= m.maxFiles;
+ $('dropCard').innerHTML = `
+  <div class="drop-box-head"><div class="drop-box-title">${escapeHtml(m.title)}</div></div>
+  <div class="share-limit-bar">
+   <span class="share-chip${isFull ? ' warn' : ''}" id="dropQuotaChip">${remTxt}</span>
+   <span class="share-chip">单文件 ≤ ${fmtSize(m.maxFileSize)}</span>
+   <span class="share-chip">${expTxt}</span>
+  </div>
+  <div class="drop-privacy-note">${ICONS.lock}<span>你提交的文件将直接投递给管理员，其他访客无法查看已提交的内容。</span></div>
+  ${isFull ? '<div class="empty">该收集箱份数已满，感谢参与</div>' : `
+  <div class="drop-sender-row">
+   <input type="text" id="dropSenderInput" placeholder="你的姓名或备注（选填，将自动加在文件名前）" maxlength="24">
+  </div>
+  <div class="drop" id="dropZonePublic">
+   <div class="drop-icon">${ICONS.upload}</div>
+   <div class="drop-main">点击选择文件，或将文件拖到这里</div>
+   <div class="drop-sub">支持同时选择多个文件 · 单文件最大 ${fmtSize(m.maxFileSize)}</div>
+  </div>
+  <input type="file" id="dropFileInput" style="display:none" multiple>
+  <div class="progress" id="dropProgress"><div id="dropBar"></div></div>
+  <div class="msg" id="dropStatusMsg"></div>
+  `}
+  <div class="drop-done-list" id="dropDoneList"></div>
+ `;
+ renderDropDoneList();
+ if (isFull) return;
+ const dz = $('dropZonePublic'), fi = $('dropFileInput');
+ dz.onclick = () => { if (!dropUploading) fi.click(); };
+ fi.onchange = () => { if (fi.files.length) startDropFiles([...fi.files]); fi.value = ''; };
+ ['dragover', 'dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
+ ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('over'); }));
+ dz.addEventListener('drop', e => {
+  e.preventDefault();
+  if (dropUploading) return;
+  const fs = [...(e.dataTransfer ? e.dataTransfer.files : [])];
+  if (fs.length) startDropFiles(fs);
+ });
+}
+
+function renderDropDoneList() {
+ const box = $('dropDoneList');
+ if (!box) return;
+ box.innerHTML = dropDoneFiles.map(f =>
+  `<div class="drop-done-item"><span>✓ ${escapeHtml(f.name)}</span><span>${fmtSize(f.size)}</span></div>`
+ ).join('');
+}
+
+async function uploadDropSingleFile(file, sender, onPct) {
+ const m = dropPageMeta;
+ const dims = await probeMediaDims(file);
+ const baseHeaders = dropPagePassword ? { 'X-Drop-Password': dropPagePassword } : {};
+ const chunkSize = m.chunkSize || CHUNK_SIZE;
+ const threshold = m.chunkUploadThreshold || CHUNK_UPLOAD_THRESHOLD;
+
+ // 1) 大文件走分片（中转模式 > 20MB 或超出直传阈值）
+ if (file.size > threshold || (m.uploadMode === 'proxy' && file.size > (m.proxyMaxBytes || 20 * 1024 * 1024))) {
+  const totalChunks = Math.ceil(file.size / chunkSize);
+  const uploadId = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  for (let i = 0; i < totalChunks; i++) {
+   const start = i * chunkSize;
+   const blob = file.slice(start, Math.min(file.size, start + chunkSize));
+   const qs = new URLSearchParams({
+    uploadId, index: String(i), total: String(totalChunks),
+    name: file.name, size: String(file.size),
+    ...(sender ? { sender } : {}),
+   });
+   const r = await fetch(`/api/drop/${encodeURIComponent(dropPageToken)}/chunk?${qs.toString()}`, {
+    method: 'POST', headers: { ...baseHeaders, 'Content-Type': 'application/octet-stream' }, body: blob,
+   });
+   const d = await r.json().catch(() => ({}));
+   if (!r.ok || !d.ok) throw new Error(d.error || ('HTTP ' + r.status));
+   onPct(Math.round(((i + 1) / totalChunks) * 95));
+  }
+  const rc = await fetch(`/api/drop/${encodeURIComponent(dropPageToken)}/chunk-complete`, {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ uploadId, password: dropPagePassword || undefined, ...(dims.width ? { width: dims.width, height: dims.height } : {}) }),
+  });
+  const dc = await rc.json().catch(() => ({}));
+  if (!rc.ok || !dc.ok) throw new Error(dc.error || ('HTTP ' + rc.status));
+  onPct(100);
+  return dc;
+ }
+
+ // 2) VPS 本地 multipart
+ if (m.uploadMode === 'local') {
+  return new Promise((resolve, reject) => {
+   const fd = new FormData();
+   if (dropPagePassword) fd.append('password', dropPagePassword);
+   if (sender) fd.append('sender', sender);
+   if (dims.width) { fd.append('width', String(dims.width)); fd.append('height', String(dims.height)); }
+   fd.append('file', file);
+   const xhr = new XMLHttpRequest();
+   xhr.open('POST', `/api/drop/${encodeURIComponent(dropPageToken)}/upload`);
+   xhr.upload.onprogress = (e) => { if (e.lengthComputable) onPct(Math.round((e.loaded / e.total) * 100)); };
+   xhr.onload = () => {
+    let d = {}; try { d = JSON.parse(xhr.responseText); } catch {}
+    if (xhr.status === 200 && d.ok) resolve(d);
+    else reject(new Error(d.error || ('HTTP ' + xhr.status)));
+   };
+   xhr.onerror = () => reject(new Error('网络错误'));
+   xhr.send(fd);
+  });
+ }
+
+ // 3) Worker / S3 中转直传 (<= 20MB)
+ if (m.uploadMode === 'proxy') {
+  return new Promise((resolve, reject) => {
+   const qs = new URLSearchParams({
+    name: file.name, size: String(file.size),
+    ...(sender ? { sender } : {}),
+    ...(dims.width ? { width: String(dims.width), height: String(dims.height) } : {}),
+   });
+   const xhr = new XMLHttpRequest();
+   xhr.open('POST', `/api/drop/${encodeURIComponent(dropPageToken)}/upload-proxy?${qs.toString()}`);
+   if (dropPagePassword) xhr.setRequestHeader('X-Drop-Password', dropPagePassword);
+   xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+   xhr.upload.onprogress = (e) => { if (e.lengthComputable) onPct(Math.round((e.loaded / e.total) * 100)); };
+   xhr.onload = () => {
+    let d = {}; try { d = JSON.parse(xhr.responseText); } catch {}
+    if (xhr.status === 200 && d.ok) resolve(d);
+    else reject(new Error(d.error || ('HTTP ' + xhr.status)));
+   };
+   xhr.onerror = () => reject(new Error('网络错误'));
+   xhr.send(file);
+  });
+ }
+
+ // 4) 预签名直传 R2 / S3
+ const r1 = await fetch(`/api/drop/${encodeURIComponent(dropPageToken)}/upload-url`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: file.name, size: file.size, sender: sender || undefined, password: dropPagePassword || undefined }),
+ });
+ const d1 = await r1.json().catch(() => ({}));
+ if (!r1.ok || !d1.ok) throw new Error(d1.error || ('HTTP ' + r1.status));
+ await new Promise((resolve, reject) => {
+  const xhr = new XMLHttpRequest();
+  xhr.open('PUT', d1.uploadUrl);
+  xhr.upload.onprogress = (e) => { if (e.lengthComputable) onPct(Math.round((e.loaded / e.total) * 95)); };
+  xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('HTTP ' + xhr.status));
+  xhr.onerror = () => reject(new Error('网络错误'));
+  xhr.send(file);
+ });
+ const r2 = await fetch(`/api/drop/${encodeURIComponent(dropPageToken)}/upload-complete`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+   id: d1.id, key: d1.key, name: d1.name || file.name, size: file.size,
+   poolId: d1.poolId || undefined, password: dropPagePassword || undefined,
+   ...(dims.width ? { width: dims.width, height: dims.height } : {}),
+  }),
+ });
+ const d2 = await r2.json().catch(() => ({}));
+ if (!r2.ok || !d2.ok) throw new Error(d2.error || ('HTTP ' + r2.status));
+ onPct(100);
+ return d2;
+}
+
+async function startDropFiles(files) {
+ if (dropUploading || !dropPageMeta) return;
+ dropUploading = true;
+ const sender = ($('dropSenderInput') ? $('dropSenderInput').value : '').trim();
+ const prog = $('dropProgress'), bar = $('dropBar'), msg = $('dropStatusMsg');
+ prog.style.display = 'block';
+ let okCount = 0;
+ for (let i = 0; i < files.length; i++) {
+  const f = files[i];
+  if (f.size > dropPageMeta.maxFileSize) {
+   msg.textContent = `已跳过「${f.name}」：超过单文件上限 ${fmtSize(dropPageMeta.maxFileSize)}`;
+   msg.className = 'msg err';
+   showToast(msg.textContent, 'err');
+   continue;
+  }
+  bar.style.width = '0%';
+  msg.textContent = `正在投递 (${i + 1}/${files.length})：${f.name}…`;
+  msg.className = 'msg';
+  try {
+   const res = await uploadDropSingleFile(f, sender, (pct) => { bar.style.width = pct + '%'; });
+   okCount++;
+   if (res.file) dropDoneFiles.unshift(res.file);
+   if (typeof res.usedFiles === 'number') dropPageMeta.usedFiles = res.usedFiles;
+   renderDropDoneList();
+   const chip = $('dropQuotaChip');
+   if (chip && dropPageMeta) {
+    chip.textContent = dropPageMeta.maxFiles > 0
+     ? `剩余 ${Math.max(0, dropPageMeta.maxFiles - dropPageMeta.usedFiles)} / ${dropPageMeta.maxFiles} 份`
+     : `已收集 ${dropPageMeta.usedFiles} 份`;
+   }
+  } catch (e) {
+   msg.textContent = `投递失败（${f.name}）：` + ((e && e.message) || '网络错误');
+   msg.className = 'msg err';
+   showToast(msg.textContent, 'err');
+   break;
+  }
+ }
+ dropUploading = false;
+ prog.style.display = 'none';
+ bar.style.width = '0%';
+ if (okCount > 0) {
+  msg.textContent = `已成功投递 ${okCount} 个文件，感谢提交！`;
+  msg.className = 'msg ok';
+  showToast(msg.textContent, 'ok');
+  if (dropPageMeta.maxFiles > 0 && dropPageMeta.usedFiles >= dropPageMeta.maxFiles) {
+   renderDropUploader();
+  }
+ }
+}
+
+loadDropView().then(async (isDrop) => {
+ if (isDrop) return;
+ const isShare = await loadShareView();
+ if (!isShare) { await refreshAuth(); loadList(true); loadAnnouncement(); }
+});
 </script>
 </body>
 </html>

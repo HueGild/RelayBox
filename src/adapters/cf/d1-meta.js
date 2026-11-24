@@ -477,6 +477,74 @@ export class D1MetaStore {
     return (out.meta && out.meta.changes > 0) || false;
   }
 
+  // ---- drop links / file collection boxes (v3.3.1) ----
+  _rowToDropLink(r) {
+    if (!r) return null;
+    return {
+      token: r.token,
+      folderId: (typeof r.folder_id === 'string' && r.folder_id) ? r.folder_id : null,
+      title: r.title || '文件收集',
+      passwordHash: typeof r.password_hash === 'string' ? r.password_hash : '',
+      maxFiles: typeof r.max_files === 'number' ? r.max_files : 0,
+      usedFiles: typeof r.used_files === 'number' ? r.used_files : 0,
+      maxFileSize: typeof r.max_file_size === 'number' && r.max_file_size > 0 ? r.max_file_size : 104857600,
+      visibility: r.visibility === 'public' ? 'public' : 'private',
+      expiresAt: msToIso(r.expires_at),
+      createdAt: msToIso(r.created_at),
+    };
+  }
+  async listDropLinks() {
+    try {
+      const { results } = await this.db.prepare(
+        'SELECT * FROM drop_links ORDER BY created_at DESC',
+      ).all();
+      return (results || []).map((r) => this._rowToDropLink(r));
+    } catch {
+      return [];
+    }
+  }
+  async getDropLink(token) {
+    if (!token) return null;
+    try {
+      const r = await this.db.prepare('SELECT * FROM drop_links WHERE token = ?').bind(String(token)).first();
+      return this._rowToDropLink(r);
+    } catch {
+      return null;
+    }
+  }
+  async createDropLink(d) {
+    const item = this._rowToDropLink({
+      token: d.token,
+      folder_id: d.folderId || null,
+      title: d.title || '文件收集',
+      password_hash: d.passwordHash || '',
+      max_files: typeof d.maxFiles === 'number' && d.maxFiles >= 0 ? Math.floor(d.maxFiles) : 0,
+      used_files: typeof d.usedFiles === 'number' && d.usedFiles >= 0 ? Math.floor(d.usedFiles) : 0,
+      max_file_size: typeof d.maxFileSize === 'number' && d.maxFileSize > 0 ? Math.floor(d.maxFileSize) : 104857600,
+      visibility: d.visibility === 'public' ? 'public' : 'private',
+      expires_at: isoToMs(d.expiresAt),
+      created_at: isoToMs(d.createdAt) || Date.now(),
+    });
+    await this.db.prepare(
+      'INSERT INTO drop_links (token, folder_id, title, password_hash, max_files, used_files, max_file_size, visibility, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      item.token, item.folderId, item.title, item.passwordHash,
+      item.maxFiles, item.usedFiles, item.maxFileSize, item.visibility,
+      isoToMs(item.expiresAt), isoToMs(item.createdAt),
+    ).run();
+    return item;
+  }
+  async deleteDropLink(token) {
+    const out = await this.db.prepare('DELETE FROM drop_links WHERE token = ?').bind(String(token)).run();
+    return (out.meta && out.meta.changes > 0) || false;
+  }
+  async incrementDropLinkFiles(token) {
+    const out = await this.db.prepare(
+      'UPDATE drop_links SET used_files = used_files + 1 WHERE token = ? AND (max_files = 0 OR used_files < max_files)',
+    ).bind(String(token)).run();
+    return (out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
+  }
+
   // ---- login brute-force ----
   async recordFailure(ip, at) {
     await this.db.prepare('INSERT INTO login_attempts (ip, at) VALUES (?, ?)').bind(ip, at || Date.now()).run();
