@@ -103,7 +103,13 @@ export function registerChunks(app) {
     try {
       const assembled = await deps.meta.assembleChunks(cleanId, tmpPath);
       if (assembled !== meta.size) throw new Error('assembled size mismatch');
-      if (meta.storage === 'r2') {
+      if (meta.r2UploadId) {
+        // CF (D1MetaStore): the object already lives in R2 — assembleChunks
+        // completed the multipart under the temp key meta.storageKey
+        // (`chunks/<uploadId>`); rename it to the final storage key.
+        // No temp file exists, so putFile / importTempFile are skipped.
+        await deps.r2.rename(meta.storageKey, keyOf(id, meta.name));
+      } else if (meta.storage === 'r2') {
         if (!deps.r2.enabled) throw new Error('R2 未配置');
         await deps.r2.putFile(keyOf(id, meta.name), tmpPath, MIME[ext] || 'application/octet-stream');
         await deps.local.removeTempFile(tmpPath);

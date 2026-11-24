@@ -1,1 +1,454 @@
-// RelayBox Cloudflare adapter (Phase 2): implements the MetaStore/StorageStore contract on Workers + R2 + D1.
+// RelayBox Cloudflare adapter — D1MetaStore (Workers target).
+// Implements the MetaStore contract on D1 (SQLite) + the chunk-part bytes
+// via the R2 multipart API (through the injected R2Storage).
+//
+// Time convention: the app layer uses ISO strings for uploadedAt /
+// expiresAt / createdAt (v2.8.4 shape); D1 stores INTEGER milliseconds.
+// This adapter converts both ways, so API responses stay byte-identical
+// to the VPS target.
+//
+// Chunk uploads on CF (pitfall #1 — index mapping):
+// - The frontend sends a 0-based `index`; R2 Multipart partNumber is
+//   1-based. The mapping `partNumber = index + 1` happens ONLY at the R2
+//   API boundary (uploadPart / completeMultipartUpload).
+// - The `received` array keeps the 0-based index in its `partNumber`
+//   field (same convention as the Node JsonMetaStore), so the core
+//   routes' completeness check (`r.partNumber === i`) and the
+//   chunk-status response (plain 0-based numbers for the frontend's
+//   resume logic) work unchanged.
+// - The multipart upload is created lazily on the first part against a
+//   temp key `chunks/<uploadId>`; chunk-complete renames it to the final
+//   key (see the r2UploadId branch in core/routes/chunks.js).
+// - `storage` is normalised to 'r2' on create: CF has no local disk, so
+//   every chunk upload lands in R2 even if a client asked for 'local'.
+//
+// D1 handles concurrent writes itself (real database), so no serial
+// write queue is needed here (unlike the JSON store).
+
+import { FAIL_WINDOW_MS, FAIL_LIMIT, CHUNK_SIZE, MIME, extOf } from '../../core/lib/util.js';
+
+const CHUNK_TMP_PREFIX = 'chunks/';
+
+/** ISO string -> ms (null stays null). */
+function isoToMs(v) {
+  if (v === null || v === undefined) return null;
+  const n = new Date(v).getTime();
+  return Number.isFinite(n) ? n : null;
+}
+/** ms -> ISO string (null stays null). */
+function msToIso(v) {
+  if (v === null || v === undefined) return null;
+  return new Date(v).toISOString();
+}
+
+export class D1MetaStore {
+  /**
+   * @param {D1Database} db          env.DB (D1 Binding)
+   * @param {R2Storage} r2storage    the CF R2Storage (for chunk multipart ops)
+   */
+  constructor(db, r2storage) {
+    if (!db) throw new Error('D1MetaStore requires a D1 database binding');
+    this.db = db;
+    this.r2 = r2storage || null;
+  }
+
+  // ---- row mapping ----
+  _rowToFile(r) {
+    if (!r) return null;
+    return {
+      id: r.id,
+      name: r.name,
+      size: r.size,
+      ext: r.ext || '',
+      kind: r.kind || 'file',
+      storage: r.storage === 'r2' ? 'r2' : 'local',
+      storageKey: r.storage_key || `${r.id}_${r.name}`,
+      folderId: (typeof r.folder_id === 'string' && r.folder_id) ? r.folder_id : null,
+      visibility: r.visibility === 'private' ? 'private' : 'public',
+      expiresAt: msToIso(r.expires_at),
+      downloads: typeof r.downloads === 'number' ? r.downloads : 0,
+      uploadedAt: msToIso(r.uploaded_at),
+    };
+  }
+  _rowToFolder(r) {
+    if (!r) return null;
+    return {
+      id: r.id,
+      name: r.name,
+      parentId: (typeof r.parent_id === 'string' && r.parent_id) ? r.parent_id : null,
+      createdAt: msToIso(r.created_at),
+    };
+  }
+  _rowToShare(r) {
+    if (!r) return null;
+    return {
+      token: r.token,
+      fileId: r.file_id || null,
+      folderId: r.folder_id || null,
+      code: typeof r.code === 'string' ? r.code : '',
+      burn: r.burn === 1,
+      createdAt: msToIso(r.created_at),
+    };
+  }
+  _rowToChunk(r) {
+    if (!r) return null;
+    let received = [];
+    try {
+      const v = JSON.parse(r.received || '[]');
+      if (Array.isArray(v)) received = v;
+    } catch { received = []; }
+    received = received
+      .map((x) => (typeof x === 'number' ? { partNumber: x, etag: null } : x))
+      .filter((x) => x && Number.isInteger(x.partNumber))
+      .sort((a, b) => a.partNumber - b.partNumber);
+    return {
+      uploadId: r.upload_id,
+      r2UploadId: r.r2_upload_id || null,
+      storageKey: r.storage_key || null,
+      name: r.name,
+      size: r.size,
+      total: r.total,
+      received,
+      storage: r.storage === 'r2' ? 'r2' : 'local',
+      folderId: (typeof r.folder_id === 'string' && r.folder_id) ? r.folder_id : null,
+      visibility: r.visibility === 'private' ? 'private' : 'public',
+      expiresHours: typeof r.expires_hours === 'number' ? r.expires_hours : 0,
+      createdAt: r.created_at,
+      chunkSize: CHUNK_SIZE,
+    };
+  }
+
+  // ---- files ----
+  async getFile(id) {
+    const r = await this.db.prepare('SELECT * FROM files WHERE id = ?').bind(id).first();
+    return this._rowToFile(r);
+  }
+
+  async listFiles(folderId, { authed } = {}) {
+    const now = Date.now();
+    const { results } = await this.db.prepare(
+      'SELECT * FROM files WHERE folder_id IS ? AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)',
+    ).bind(folderId || null, now, authed ? 1 : 0, 'public').all();
+    return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  // Raw list for admin/cleanup use (includes expired files, like v2.8.4 loadMeta).
+  async listAllFiles({ authed } = {}) {
+    const { results } = await this.db.prepare(
+      'SELECT * FROM files WHERE (? OR visibility = ?)',
+    ).bind(authed ? 1 : 0, 'public').all();
+    return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  async searchFiles(q, { authed } = {}) {
+    const needle = String(q || '').toLowerCase();
+    if (!needle) return [];
+    const now = Date.now();
+    const esc = needle.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+    const { results } = await this.db.prepare(
+      "SELECT * FROM files WHERE lower(name) LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)",
+    ).bind(`%${esc}%`, now, authed ? 1 : 0, 'public').all();
+    return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  async createFile(file) {
+    const item = this._rowToFile({
+      id: file.id, name: file.name, size: file.size, ext: file.ext || '',
+      kind: file.kind || 'file', storage: file.storage, storage_key: file.storageKey,
+      folder_id: file.folderId, visibility: file.visibility,
+      expires_at: isoToMs(file.expiresAt), downloads: file.downloads || 0,
+      uploaded_at: isoToMs(file.uploadedAt),
+    });
+    await this.db.prepare(
+      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      item.id, item.name, item.size, item.ext, item.kind, item.storage, item.storageKey,
+      item.folderId, item.visibility, isoToMs(item.expiresAt), item.downloads, isoToMs(item.uploadedAt),
+    ).run();
+    return item;
+  }
+
+  async updateFile(id, patch) {
+    const cur = await this.getFile(id);
+    if (!cur) return null;
+    const next = { ...cur, ...patch };
+    // Re-normalise through the row mapper so the returned shape is stable.
+    const row = {
+      id: next.id, name: next.name, size: next.size, ext: next.ext || '',
+      kind: next.kind || 'file', storage: next.storage, storage_key: next.storageKey,
+      folder_id: next.folderId, visibility: next.visibility,
+      expires_at: isoToMs(next.expiresAt), downloads: next.downloads || 0,
+      uploaded_at: isoToMs(next.uploadedAt),
+    };
+    await this.db.prepare(
+      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ? WHERE id = ?',
+    ).bind(
+      row.name, row.size, row.ext, row.kind, row.storage, row.storage_key,
+      row.folder_id, row.visibility, row.expires_at, row.downloads, row.uploaded_at, id,
+    ).run();
+    return this._rowToFile(row);
+  }
+
+  async deleteFile(id) {
+    const out = await this.db.prepare('DELETE FROM files WHERE id = ?').bind(id).run();
+    return (out.meta && out.meta.changes > 0) || false;
+  }
+
+  async incrementDownloads(id) {
+    await this.db.prepare('UPDATE files SET downloads = downloads + 1 WHERE id = ?').bind(id).run();
+  }
+
+  // ---- folders ----
+  async listFolders() {
+    const { results } = await this.db.prepare('SELECT * FROM folders').all();
+    return (results || []).map((r) => this._rowToFolder(r));
+  }
+
+  async getFolder(id) {
+    const r = await this.db.prepare('SELECT * FROM folders WHERE id = ?').bind(id).first();
+    return this._rowToFolder(r);
+  }
+
+  async createFolder(folder) {
+    const item = this._rowToFolder({
+      id: folder.id, name: folder.name, parent_id: folder.parentId,
+      created_at: isoToMs(folder.createdAt),
+    });
+    await this.db.prepare(
+      'INSERT INTO folders (id, name, parent_id, created_at) VALUES (?, ?, ?, ?)',
+    ).bind(item.id, item.name, item.parentId, isoToMs(item.createdAt)).run();
+    return item;
+  }
+
+  async updateFolder(id, patch) {
+    const cur = await this.getFolder(id);
+    if (!cur) return null;
+    const next = { ...cur, ...patch };
+    await this.db.prepare(
+      'UPDATE folders SET name = ?, parent_id = ? WHERE id = ?',
+    ).bind(next.name, next.parentId || null, id).run();
+    return next;
+  }
+
+  // Empty-only (files AND subfolders block it); the route produces the message.
+  async deleteFolder(id) {
+    const cur = await this.getFolder(id);
+    if (!cur) return false;
+    const hasFiles = await this.db.prepare('SELECT 1 FROM files WHERE folder_id = ? LIMIT 1').bind(id).first();
+    if (hasFiles) return false;
+    const hasSubs = await this.db.prepare('SELECT 1 FROM folders WHERE parent_id = ? LIMIT 1').bind(id).first();
+    if (hasSubs) return false;
+    const out = await this.db.prepare('DELETE FROM folders WHERE id = ?').bind(id).run();
+    return (out.meta && out.meta.changes > 0) || false;
+  }
+
+  // ---- shares ----
+  async getShareByToken(token) {
+    const r = await this.db.prepare('SELECT * FROM shares WHERE token = ?').bind(token).first();
+    return this._rowToShare(r);
+  }
+  async getShareByFileId(fileId) {
+    const r = await this.db.prepare('SELECT * FROM shares WHERE file_id = ?').bind(fileId).first();
+    return this._rowToShare(r);
+  }
+  async getShareByFolderId(folderId) {
+    const r = await this.db.prepare('SELECT * FROM shares WHERE folder_id = ?').bind(folderId).first();
+    return this._rowToShare(r);
+  }
+  async createShare(share) {
+    const item = this._rowToShare({
+      token: share.token, file_id: share.fileId || null, folder_id: share.folderId || null,
+      code: share.code || '', burn: share.burn ? 1 : 0, created_at: isoToMs(share.createdAt),
+    });
+    await this.db.prepare(
+      'INSERT INTO shares (token, file_id, folder_id, code, burn, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    ).bind(item.token, item.fileId, item.folderId, item.code, item.burn ? 1 : 0, isoToMs(item.createdAt)).run();
+    return item;
+  }
+  async updateShare(token, patch) {
+    const cur = await this.getShareByToken(token);
+    if (!cur) return null;
+    const next = { ...cur };
+    // v2.8.4 semantics: code '' removes the code, burn false removes the flag.
+    if (patch.code !== undefined) next.code = patch.code ? patch.code : '';
+    if (patch.burn !== undefined) next.burn = !!patch.burn;
+    await this.db.prepare(
+      'UPDATE shares SET code = ?, burn = ? WHERE token = ?',
+    ).bind(next.code, next.burn ? 1 : 0, token).run();
+    return next;
+  }
+  async deleteShare(token) {
+    const out = await this.db.prepare('DELETE FROM shares WHERE token = ?').bind(token).run();
+    return (out.meta && out.meta.changes > 0) || false;
+  }
+
+  // ---- sessions ----
+  async getSession(token) {
+    const r = await this.db.prepare('SELECT * FROM sessions WHERE token = ?').bind(token).first();
+    if (!r) return null;
+    if (Date.now() > r.expires_at) {
+      await this.db.prepare('DELETE FROM sessions WHERE token = ?').bind(token).run();
+      return null;
+    }
+    return { token, username: 'admin', expiresAt: r.expires_at };
+  }
+  async createSession(token, expiresAt) {
+    await this.db.prepare(
+      'INSERT OR REPLACE INTO sessions (token, expires_at) VALUES (?, ?)',
+    ).bind(token, expiresAt).run();
+  }
+  async deleteSession(token) {
+    await this.db.prepare('DELETE FROM sessions WHERE token = ?').bind(token).run();
+  }
+  async deleteExpiredSessions(now) {
+    await this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
+    // Prune stale brute-force records too (same cleanup pass).
+    await this.db.prepare('DELETE FROM login_attempts WHERE at < ?').bind(now - FAIL_WINDOW_MS).run();
+  }
+
+  // ---- announcement ----
+  async getAnnouncement() {
+    const r = await this.db.prepare('SELECT text FROM announcement WHERE id = 1').first();
+    return (r && typeof r.text === 'string') ? r.text : '';
+  }
+  async setAnnouncement(text) {
+    await this.db.prepare(
+      'INSERT OR REPLACE INTO announcement (id, text) VALUES (1, ?)',
+    ).bind(text).run();
+  }
+
+  // ---- login brute-force (D1, replaces the in-memory failMap) ----
+  async recordFailure(ip, at) {
+    await this.db.prepare('INSERT INTO login_attempts (ip, at) VALUES (?, ?)').bind(ip, at || Date.now()).run();
+  }
+  async clearFailures(ip) {
+    await this.db.prepare('DELETE FROM login_attempts WHERE ip = ?').bind(ip).run();
+  }
+  async countFailuresSince(ip, since) {
+    const r = await this.db.prepare(
+      'SELECT COUNT(*) AS n FROM login_attempts WHERE ip = ? AND at >= ?',
+    ).bind(ip, since).first();
+    return (r && r.n) || 0;
+  }
+  /** Blocked when >= FAIL_LIMIT failures landed inside the last FAIL_WINDOW_MS. */
+  async isBlocked(ip) {
+    const n = await this.countFailuresSince(ip, Date.now() - FAIL_WINDOW_MS);
+    return n >= FAIL_LIMIT;
+  }
+
+  // ---- chunk uploads ----
+  async getChunkUpload(uploadId) {
+    const r = await this.db.prepare('SELECT * FROM chunk_uploads WHERE upload_id = ?').bind(uploadId).first();
+    return this._rowToChunk(r);
+  }
+
+  async createChunkUpload(u) {
+    // CF has no local disk: every chunk upload lands in R2.
+    const storage = 'r2';
+    const item = this._rowToChunk({
+      upload_id: u.uploadId, r2_upload_id: u.r2UploadId || null,
+      storage_key: u.storageKey || null, name: u.name, size: u.size, total: u.total,
+      received: JSON.stringify(u.received || []), storage,
+      folder_id: u.folderId || null, visibility: u.visibility || 'public',
+      expires_hours: u.expiresHours || 0, created_at: u.createdAt || Date.now(),
+    });
+    await this.db.prepare(
+      'INSERT INTO chunk_uploads (upload_id, r2_upload_id, storage_key, name, size, total, received, storage, folder_id, visibility, expires_hours, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      item.uploadId, item.r2UploadId, item.storageKey, item.name, item.size, item.total,
+      JSON.stringify(item.received), item.storage, item.folderId, item.visibility,
+      item.expiresHours, item.createdAt,
+    ).run();
+  }
+
+  async updateChunkUpload(uploadId, patch) {
+    const cur = await this.getChunkUpload(uploadId);
+    if (!cur) return;
+    const next = { ...cur, ...patch };
+    await this.db.prepare(
+      'UPDATE chunk_uploads SET r2_upload_id = ?, storage_key = ?, received = ?, storage = ?, folder_id = ?, visibility = ?, expires_hours = ? WHERE upload_id = ?',
+    ).bind(
+      next.r2UploadId || null, next.storageKey || null, JSON.stringify(next.received || []),
+      next.storage || 'r2', next.folderId || null, next.visibility || 'public',
+      next.expiresHours || 0, uploadId,
+    ).run();
+  }
+
+  async deleteChunkUpload(uploadId) {
+    const meta = await this.getChunkUpload(uploadId);
+    if (meta && meta.r2UploadId && this.r2) {
+      try {
+        await this.r2.abortMultipartUpload(meta.r2UploadId, meta.storageKey || (CHUNK_TMP_PREFIX + uploadId));
+      } catch { /* already gone is fine */ }
+    }
+    await this.db.prepare('DELETE FROM chunk_uploads WHERE upload_id = ?').bind(uploadId).run();
+  }
+
+  async listStaleChunkUploads(before) {
+    const { results } = await this.db.prepare(
+      'SELECT * FROM chunk_uploads WHERE created_at < ?',
+    ).bind(before).all();
+    return (results || []).map((r) => this._rowToChunk(r));
+  }
+
+  // ---- chunk part bytes (CF: R2 multipart via the injected R2Storage) ----
+  /**
+   * Receive one part (frontend 0-based `index`) and upload it to R2.
+   * Creates the R2 multipart upload lazily on the first part, against the
+   * temp key `chunks/<uploadId>`; the route renames it to the final key
+   * at chunk-complete time. Returns the updated chunk meta.
+   */
+  async writeChunkPart(uploadId, index, buf) {
+    if (!this.r2) throw new Error('R2 storage is required for chunk uploads on CF');
+    let meta = await this.getChunkUpload(uploadId);
+    if (!meta) return null;
+    const partNumber = index + 1; // pitfall #1: R2 partNumber is 1-based
+    if (!meta.r2UploadId) {
+      const tmpKey = CHUNK_TMP_PREFIX + uploadId;
+      const contentType = MIME[extOf(meta.name)] || 'application/octet-stream';
+      const r2UploadId = await this.r2.createMultipartUpload(tmpKey, contentType);
+      meta.r2UploadId = r2UploadId;
+      meta.storageKey = tmpKey;
+      await this.updateChunkUpload(uploadId, { r2UploadId, storageKey: tmpKey });
+    }
+    const { etag } = await this.r2.uploadPart(meta.r2UploadId, meta.storageKey, partNumber, buf);
+    if (!meta.received.some((r) => r.partNumber === index)) {
+      meta.received.push({ partNumber: index, etag });
+      meta.received.sort((a, b) => a.partNumber - b.partNumber);
+    } else {
+      // Re-upload of the same part (retry): refresh its etag.
+      const cur = meta.received.find((r) => r.partNumber === index);
+      if (cur) cur.etag = etag;
+    }
+    await this.updateChunkUpload(uploadId, { received: meta.received });
+    return meta;
+  }
+
+  async readChunkPart() {
+    // Parts live in R2 (not readable as local bytes); unused by the routes on CF.
+    return null;
+  }
+
+  async chunkPartExists(uploadId, index) {
+    const meta = await this.getChunkUpload(uploadId);
+    return !!meta && meta.received.some((r) => r.partNumber === index);
+  }
+
+  /**
+   * Finalise the R2 multipart upload (parts sorted by 1-based partNumber)
+   * and return the assembled size (verified against R2 afterwards).
+   * The object stays under the temp key; the route renames it to the final key.
+   */
+  async assembleChunks(uploadId) {
+    if (!this.r2) throw new Error('R2 storage is required for chunk uploads on CF');
+    const meta = await this.getChunkUpload(uploadId);
+    if (!meta || !meta.r2UploadId) throw new Error('chunk meta missing');
+    const parts = meta.received
+      .map((p) => ({ partNumber: p.partNumber + 1, etag: p.etag }))
+      .sort((a, b) => a.partNumber - b.partNumber);
+    await this.r2.completeMultipartUpload(meta.r2UploadId, meta.storageKey, parts);
+    const head = await this.r2.head(meta.storageKey);
+    if (!head) throw new Error('assembled object missing after complete');
+    return head.size;
+  }
+}
