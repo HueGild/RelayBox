@@ -51,10 +51,13 @@ function buildDeps(env) {
     config: {
       uploadPassword: env.UPLOAD_PASSWORD || '',
       maxUploadSize,
-      // CF 保持原策略不变：32MB 以上分片，每片 5MB（Workers 单请求上限 100MB，
-      // 直传阈值不能超过它；R2 分片上传的每片也至少 5MB）。
-      chunkUploadThreshold: 32 * 1024 * 1024,
-      chunkSize: 5 * 1024 * 1024,
+      // CF 上传策略（2026-11-24 Jay 要求调大）：100MB 以下直传（R2 预签名直传，
+      // 不经过 Worker，所以不受 Workers 100MB 单请求上限约束），超过 100MB 才分片，
+      // 每片 20MB。片大小的上限：必须 <100MB（发往 Worker 的单请求上限），
+      // 且 ≥5MB（R2 分片每片最少 5MB）；20MB 留足 Worker 内存余量（128MB 上限，
+      // 后端读片会先拼成 Buffer，50MB 的片峰值内存可能超限，所以 CF 不用 50MB）。
+      chunkUploadThreshold: 100 * 1024 * 1024,
+      chunkSize: 20 * 1024 * 1024,
     },
     // Client IP for the rate limiter (Cloudflare sets cf-connecting-ip;
     // clientIp() already prefers X-Forwarded-For when present).

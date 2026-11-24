@@ -200,7 +200,8 @@ export class R2Storage {
   /**
    * Direct part upload through the Worker (the live CF chunk flow: the
    * frontend POSTs chunk bytes to /api/upload/chunk and the Worker proxies
-   * them to R2 — 5MB per part, far under the 100MB Worker body limit).
+   * them to R2 — 20MB per part, far under the 100MB Worker body limit and
+   * above the 5MB R2 multipart minimum).
    * partNumber is the R2 1-based number (callers map frontend index + 1).
    * Returns { etag }.
    */

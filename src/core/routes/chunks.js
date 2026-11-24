@@ -13,7 +13,7 @@ export function registerChunks(app) {
   // 收一片：POST /api/upload/chunk?uploadId&index&total&name&size&visibility&expires&storage&folderId，body 是分片原字节。
   app.post('/api/upload/chunk', async (c) => {
     const deps = c.get('deps');
-    // 分片大小由部署端配置决定（VPS 50MB，CF 5MB），与前端下发的 chunkSize 一致；
+    // 分片大小由部署端配置决定（VPS 50MB，CF 20MB），与前端下发的 chunkSize 一致；
     // 用配置值校验，否则 50MB 的片会被当成“分片太大”拒掉。
     const chunkSize = Number(deps.config.chunkSize) > 0 ? Number(deps.config.chunkSize) : CHUNK_SIZE;
     if (deps.local.freeBytes() < MIN_FREE_BYTES) {
