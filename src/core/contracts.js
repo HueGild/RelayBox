@@ -73,6 +73,7 @@ export const MetaStoreMethods = [
   'getSession', 'createSession', 'deleteSession', 'deleteExpiredSessions',
   'getAnnouncement', 'setAnnouncement',
   'getSetting', 'setSetting',
+  'listStoragePools', 'getStoragePool', 'createStoragePool', 'updateStoragePool', 'deleteStoragePool',
   'recordFailure', 'countFailuresSince', 'clearFailures', 'isBlocked',
   'getChunkUpload', 'createChunkUpload', 'updateChunkUpload', 'deleteChunkUpload',
   'listStaleChunkUploads',

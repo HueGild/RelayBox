@@ -1,18 +1,64 @@
-// RelayBox core routes — runtime settings (v3.1.6: adaptive R2 transfer mode).
-// Supports 'presign' (direct to R2 via presigned URL) and 'proxy' (Worker R2
-// binding streaming relay, zero S3 credentials / zero CORS required).
+// RelayBox core routes — runtime settings & site appearance (v3.1.6 + v3.2).
+// - R2 transfer mode ('presign' | 'proxy') stored in settings table.
+// - Site appearance (desktop/mobile wallpaper, overlay opacity, card blur,
+//   custom brand title, logo/avatar, favicon) stored in settings table.
 
 import { readJsonBody, log } from '../lib/util.js';
 import { isAuthed } from '../lib/auth.js';
 
 export const SETTING_R2_TRANSFER_MODE = 'r2_transfer_mode';
+export const SETTING_SITE_APPEARANCE = 'site_appearance';
 
-/**
- * Resolve effective R2 transfer mode and runtime capabilities.
- * - VPS (proxySupported === false): always 'presign'.
- * - CF without S3 secrets (presignEnabled === false): auto-degrades to 'proxy'.
- * - CF with both binding and S3 secrets: honors saved DB setting, else config default ('presign').
- */
+const DEFAULT_APPEARANCE = {
+  siteTitle: 'RelayBox',
+  siteLogo: '',
+  siteFavicon: '',
+  bgDesktop: '',
+  bgMobile: '',
+  bgOverlay: 45,
+  cardBlur: 14,
+};
+
+function sanitizeImageUrl(v) {
+  const s = String(v || '').trim().slice(0, 500);
+  if (!s) return '';
+  if (s.startsWith('/') && !s.startsWith('//')) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  return '';
+}
+
+function clampInt(v, min, max, fallback) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+export function normalizeAppearance(raw) {
+  const o = (raw && typeof raw === 'object') ? raw : {};
+  const title = (typeof o.siteTitle === 'string' && o.siteTitle.trim())
+    ? o.siteTitle.trim().slice(0, 40)
+    : DEFAULT_APPEARANCE.siteTitle;
+  return {
+    siteTitle: title,
+    siteLogo: sanitizeImageUrl(o.siteLogo),
+    siteFavicon: sanitizeImageUrl(o.siteFavicon),
+    bgDesktop: sanitizeImageUrl(o.bgDesktop),
+    bgMobile: sanitizeImageUrl(o.bgMobile),
+    bgOverlay: clampInt(o.bgOverlay, 0, 85, DEFAULT_APPEARANCE.bgOverlay),
+    cardBlur: clampInt(o.cardBlur, 0, 24, DEFAULT_APPEARANCE.cardBlur),
+  };
+}
+
+export async function getAppearance(deps) {
+  try {
+    const raw = await deps.meta.getSetting(SETTING_SITE_APPEARANCE);
+    if (!raw) return { ...DEFAULT_APPEARANCE };
+    return normalizeAppearance(JSON.parse(raw));
+  } catch {
+    return { ...DEFAULT_APPEARANCE };
+  }
+}
+
 export async function getTransferModeState(deps) {
   const presignAvailable = !!(deps.r2 && deps.r2.presignEnabled);
   const proxyAvailable = !!(deps.r2 && deps.r2.proxySupported);
@@ -76,5 +122,23 @@ export function registerSettings(app) {
       presignAvailable: next.presignAvailable,
       proxyAvailable: next.proxyAvailable,
     });
+  });
+
+  // 站点外观（公开读，管理员写）：支持双端壁纸、遮罩、毛玻璃、站点头像与 Favicon。
+  app.get('/api/appearance', async (c) => {
+    const deps = c.get('deps');
+    const appearance = await getAppearance(deps);
+    return c.json({ ok: true, appearance });
+  });
+
+  app.post('/api/appearance', async (c) => {
+    const deps = c.get('deps');
+    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const body = await readJsonBody(c);
+    const current = await getAppearance(deps);
+    const merged = normalizeAppearance({ ...current, ...body });
+    await deps.meta.setSetting(SETTING_SITE_APPEARANCE, JSON.stringify(merged));
+    log('appearance updated:', merged.siteTitle);
+    return c.json({ ok: true, appearance: merged });
   });
 }

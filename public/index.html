@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r8 (2026-11-24 · v3.1.6 自适应 R2 传输双模式：预签名直传 / Worker 绑定中转图床模式一键切换 + 无 S3 密钥自动降级 + 完整保留 r7 动效与文件详情) -->
+<!-- RelayBox v3.0 UI r9 (2026-11-24 · v3.2 多存储池管理与选择 + 去除 CF 假本地盘 + 双端壁纸/毛玻璃/自定义站点头像与图标 + 统一精致 SVG 下拉箭头) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -533,6 +533,85 @@
  .mode-badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 600; border: 0; cursor: pointer; flex-shrink: 0; margin-left: 2px; }
  .mode-badge:hover { background: var(--accent); color: #fff; }
 
+ /* r9: 双端全屏壁纸 + 深浅毛玻璃适配 + 统一 SVG 下拉箭头 + 多存储池/外观弹窗 */
+ :root { --bg-overlay: .45; --card-blur: 14px; }
+ .bg-layer, .bg-mask { position: fixed; inset: 0; pointer-events: none; z-index: -2; display: none; }
+ .bg-layer { background-size: cover; background-position: center; background-repeat: no-repeat; transform: scale(1.01); }
+ .bg-mask { z-index: -1; }
+ body.has-wallpaper { background: transparent; }
+ body.has-wallpaper .bg-layer, body.has-wallpaper .bg-mask { display: block; }
+ body.has-wallpaper .bg-layer { background-image: var(--bg-desktop); }
+ body.has-wallpaper .bg-mask { background: rgba(244, 246, 249, var(--bg-overlay)); }
+ html[data-theme="dark"] body.has-wallpaper .bg-mask { background: rgba(8, 11, 18, var(--bg-overlay)); }
+ body.has-wallpaper .card { background: var(--glass-bg); border-color: var(--glass-border); backdrop-filter: blur(var(--card-blur)) saturate(175%); -webkit-backdrop-filter: blur(var(--card-blur)) saturate(175%); box-shadow: 0 0 0 1px var(--glass-stroke), var(--glass-shadow); }
+ body.has-wallpaper .card .cinfo { background: transparent; }
+ body.has-wallpaper .drop, body.has-wallpaper .seg, body.has-wallpaper .uq-item, body.has-wallpaper .detail-kv, body.has-wallpaper .pool-card-item { background: var(--glass-input-bg); }
+ @media (max-width: 768px) {
+  body.has-wallpaper .bg-layer { background-image: var(--bg-mobile, var(--bg-desktop)); }
+ }
+
+ /* 自定义站点头像 / 品牌图标 */
+ .brand-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+
+ /* 统一精致线性 SVG 下拉折线 */
+ .dd-chev { display: inline-flex; align-items: center; justify-content: center; margin-left: 3px; opacity: .78; transition: transform .2s cubic-bezier(.22,1,.36,1), opacity .15s; vertical-align: middle; flex-shrink: 0; }
+ .dd-chev svg { width: 13px; height: 13px; stroke-width: 2.25; display: block; }
+ .dd-open .dd-chev { transform: rotate(180deg); opacity: 1; }
+ .crumb-drop { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; margin-left: 1px; }
+ .crumb-drop .dd-chev { margin-left: 0; }
+ #filterBtn, #sortBtn { display: inline-flex; align-items: center; gap: 2px; }
+ #expireBtn { display: inline-flex; align-items: center; gap: 4px; }
+
+ /* 存储池选择器（>=3 池时使用紧凑下拉） */
+ .pool-select-wrap { position: relative; flex: 1 1 0; min-width: 0; }
+ .pool-select-btn { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; height: 100%; min-height: 36px; padding: 6px 12px; border: 1px solid var(--input-border); border-radius: 10px; background: var(--surface-soft); color: var(--text); font-size: 13px; font-weight: 500; }
+ .pool-select-btn:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+ .pool-select-btn .ps-left { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
+ .pool-select-btn .ps-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .pool-select-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+ .quota-row .q-label { width: auto; min-width: 44px; max-width: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .quota-row .q-bar.s3 > div { background: linear-gradient(90deg, #6366F1, #8B5CF6); }
+ .badge.s3 { background: rgba(99,102,241,.88); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+ .file .badge.s3 { background: rgba(99,102,241,.14); color: #6366F1; backdrop-filter: none; }
+ html[data-theme="dark"] .file .badge.s3 { color: #A5B4FC; }
+
+ /* 存储池管理 & 外观设置弹窗 */
+ .pool-modal-card, .appear-modal-card { max-width: 540px; width: 100%; max-height: 88vh; overflow-y: auto; }
+ .pool-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+ .pool-card-item { padding: 11px 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--border); }
+ .pool-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+ .pool-card-name { font-size: 13.5px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+ .pool-card-sub { font-size: 11.5px; color: var(--muted); margin-top: 4px; word-break: break-all; }
+ .pool-card-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+ .pool-card-acts button { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+ .pool-tag { font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--btn-bg); color: var(--muted); font-weight: 600; }
+ .pool-tag.def { background: var(--accent); color: #fff; }
+ .pool-tag.off { background: var(--danger-bg); color: var(--danger-text); }
+ .pool-form { margin-top: 10px; padding: 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--border); display: none; flex-direction: column; gap: 9px; }
+ .pool-form.open { display: flex; }
+ .form-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+ .form-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+ .form-field input, .form-field select { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--input-border); border-radius: 9px; font-size: 13px; background: var(--input-bg); color: var(--text); outline: none; }
+ .form-field input:focus, .form-field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+ .appear-field { margin-bottom: 12px; }
+ .appear-field label { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+ .appear-field label span { font-weight: 400; font-size: 11.5px; color: var(--muted); }
+ .appear-input-row { display: flex; gap: 6px; align-items: center; }
+ .appear-input-row input { flex: 1; min-width: 0; font-size: 13px; padding: 8px 10px; }
+ .appear-up-btn { padding: 8px 11px; font-size: 12px; border-radius: 9px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+ .appear-up-btn svg { width: 14px; height: 14px; }
+ .appear-prev { margin-top: 7px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: var(--surface-soft); display: none; position: relative; }
+ .appear-prev.show { display: inline-block; }
+ .appear-prev.desk img { width: 168px; height: 96px; object-fit: cover; display: block; }
+ .appear-prev.mob img { width: 82px; height: 128px; object-fit: cover; display: block; }
+ .appear-prev.ico img { width: 46px; height: 46px; object-fit: cover; display: block; }
+ .appear-prev-clear { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; border-radius: 50%; background: rgba(0,0,0,.62); color: #fff; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+ .appear-range { width: 100%; accent-color: var(--accent); cursor: pointer; }
+ @media (max-width: 600px) {
+  .form-grid2 { grid-template-columns: 1fr; }
+ }
+
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
   .mob-only-wrap { display: inline-flex; }
@@ -546,6 +625,8 @@
 </style>
 </head>
 <body>
+<div class="bg-layer" id="bgLayer" aria-hidden="true"></div>
+<div class="bg-mask" id="bgMask" aria-hidden="true"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="ui-tip" id="uiTip" role="tooltip"></div>
 <div class="global-drop" id="globalDrop">
@@ -558,11 +639,13 @@
 
 <div class="wrap" id="mainWrap">
  <div class="topbar">
- <h1><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span> RelayBox</h1>
+ <h1><span class="brand-mark" id="brandMark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span> <span id="brandTitleText">RelayBox</span></h1>
  <div class="top-actions">
  <button class="ghost" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg> 自动</button>
  <button class="icon-btn desk-only-btn" id="copyFmtBtn" style="width:30px;height:30px;border-radius:999px" title="默认复制格式" aria-label="默认复制格式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="poolsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="存储池管理" aria-label="存储池管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="appearanceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="外观与壁纸" aria-label="外观与壁纸"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
  <button class="icon-btn desk-only-btn" id="transferModeBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="R2 传输模式" aria-label="R2 传输模式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
  <button class="icon-btn desk-only-btn" id="tokensBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="API 密钥管理" aria-label="API 密钥管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></button>
  <span class="top-more-wrap mob-only-wrap">
@@ -570,6 +653,8 @@
   <div class="top-more-menu" id="topMoreMenu">
    <button type="button" id="mobCopyFmtBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认复制格式</button>
    <button type="button" id="mobAnnounceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> 设置站点公告</button>
+   <button type="button" id="mobPoolsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> 存储池管理</button>
+   <button type="button" id="mobAppearanceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> 外观与壁纸</button>
    <button type="button" id="mobTransferModeBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> R2 传输模式</button>
    <button type="button" id="mobTokensBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API 密钥管理</button>
   </div>
@@ -606,7 +691,7 @@
  <div class="upload-body" id="uploadBody">
  <div class="upload-dest-row" id="uploadDestRow" style="display:none">
   <span>上传目标目录</span>
-  <button type="button" class="upload-dest-btn" id="uploadDestBtn" title="点击切换上传目标目录"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span id="uploadDestLabel">当前目录</span><span>▾</span></button>
+  <button type="button" class="upload-dest-btn" id="uploadDestBtn" title="点击切换上传目标目录"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span id="uploadDestLabel">当前目录</span><span class="dd-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
  </div>
  <div class="drop" id="drop">
  <div class="drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
@@ -628,7 +713,7 @@
  </div>
  <div class="up-row">
  <span style="position:relative;flex-shrink:0">
- <button class="pill" id="expireBtn" type="button" style="height:38px;padding:0 14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 永久 ⌄</button>
+ <button class="pill" id="expireBtn" type="button" style="height:38px;padding:0 14px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 永久<span class="dd-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
  <span id="expireMenu" class="sort-menu" style="display:none;left:0;right:auto">
  <button data-exp="0">永久 <span class="tick"></span></button>
  <button data-exp="24">24 小时 <span class="tick"></span></button>
@@ -666,7 +751,7 @@
  <button class="pill" data-filter="archive">压缩包</button>
  </div>
  <span style="position:relative;flex-shrink:0">
- <button class="pill" id="filterBtn">筛选 ⌄</button>
+ <button class="pill" id="filterBtn">筛选<span class="dd-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
  <span id="filterMenu" class="sort-menu" style="display:none">
  <div id="filterStoreGroup">
  <div class="filter-group">存储</div>
@@ -679,7 +764,7 @@
  </span>
  </span>
  <span style="position:relative;flex-shrink:0">
- <button class="pill" id="sortBtn">最新上传 ⌄</button>
+ <button class="pill" id="sortBtn">最新上传<span class="dd-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
  <span id="sortMenu" class="sort-menu" style="display:none">
  <button data-sort="time-desc">最新上传<span class="tick"></span></button>
  <button data-sort="time-asc">最早上传<span class="tick"></span></button>
@@ -719,6 +804,8 @@
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
 <div class="modal" id="tokensModal"><span class="close" id="tokensClose">×</span><div class="card token-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">API 密钥管理</div><div class="meta" style="margin-bottom:12px">用于 curl、ShareX、PicGo、iOS 快捷指令一键直传（单文件 ≤ 32MB，默认公开直链）。</div><div class="row" style="margin-top:0"><input type="text" id="tokenNameInput" placeholder="备注名，如 Mac ShareX / 快捷指令" maxlength="40"><button id="tokenCreateBtn" type="button">生成密钥</button></div><div class="token-created" id="tokenCreatedBox" style="display:none"><div style="font-size:12px;font-weight:600;color:var(--ok-text)">已生成新密钥（明文仅展示这一次，请立即保存）：</div><div class="token-created-val" id="tokenCreatedVal"></div><div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tokenCopyKeyBtn" style="flex:1;padding:7px 10px;font-size:12px">复制密钥</button><button type="button" id="tokenCopyCurlBtn" style="flex:1;padding:7px 10px;font-size:12px">复制 curl 上传命令</button></div></div><div class="token-list" id="tokenList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="token-curl"><div style="font-weight:600;color:var(--text)">极客上传接口示例（POST /api/raw-upload）</div><pre id="tokenCurlExample"></pre></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="tokensDoneBtn" type="button">关闭</button></div></div></div>
 <div class="modal" id="detailModal"><span class="close" id="detailClose">×</span><div class="card detail-card" id="detailCardBody"></div></div>
+<div class="modal" id="poolsModal"><span class="close" id="poolsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储池管理</div><button type="button" id="poolAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新增外部桶</button></div><div class="meta" style="margin-bottom:12px">支持内置 R2 与任意外部 Cloudflare R2 / S3 兼容桶（如亚太桶、B2、MinIO），新增即用无需重新部署。</div><div class="pool-list" id="poolListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="poolFormBox"><div style="font-size:13.5px;font-weight:600" id="poolFormTitle">新增外部存储池</div><input type="hidden" id="pfId"><div class="form-grid2"><div class="form-field"><label>显示名称 *</label><input type="text" id="pfName" placeholder="如 亚太 R2 桶" maxlength="40"></div><div class="form-field"><label>存储桶名 (Bucket) *</label><input type="text" id="pfBucket" placeholder="如 relaybox-apac" maxlength="100"></div></div><div class="form-field"><label>S3 Endpoint *</label><input type="text" id="pfEndpoint" placeholder="https://&lt;AccountID&gt;.r2.cloudflarestorage.com"></div><div class="form-grid2"><div class="form-field"><label>Access Key ID *</label><input type="text" id="pfAk" placeholder="S3 Access Key ID" autocomplete="off"></div><div class="form-field"><label>Secret Access Key <span id="pfSkHint">*</span></label><input type="password" id="pfSk" placeholder="加密存库，绝不回传明文" autocomplete="new-password"></div></div><div class="form-grid2"><div class="form-field"><label>Region（R2 填 auto）</label><input type="text" id="pfRegion" value="auto" placeholder="auto"></div><div class="form-field"><label>显示配额（GB）</label><input type="number" id="pfQuotaGb" value="10" min="1" max="100000"></div></div><div class="form-grid2"><div class="form-field"><label>传输模式</label><select id="pfMode"><option value="proxy">Worker 中转（校园网/图床推荐）</option><option value="presign">预签名直传（大文件模式）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="pfDefault" style="width:auto"> 设为默认上传池</label></div></div><div class="msg" id="pfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="pfCancelBtn">取消</button><button type="button" class="ghost" id="pfTestBtn">测试连接</button><button type="button" id="pfSaveBtn">保存存储池</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="poolsDoneBtn">关闭</button></div></div></div>
+<div class="modal" id="appearanceModal"><span class="close" id="appearanceClose">×</span><div class="card appear-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">外观与壁纸设置</div><div class="meta" style="margin-bottom:12px">支持桌面端与手机端分开设置壁纸，自定义左上角站点头像、标题与网页图标，保存后全站生效。</div><input type="file" id="appearUploadInput" accept="image/*" style="display:none"><div class="appear-field"><label>站点名称 <span>显示在左上角与浏览器标题</span></label><input type="text" id="apTitle" placeholder="RelayBox" maxlength="40" style="width:100%"></div><div class="appear-field"><label>桌面端背景图片 <span>横屏推荐 16:9</span></label><div class="appear-input-row"><input type="text" id="apBgDesktop" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgDesktop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev desk" id="prevBgDesktop"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgDesktop" title="清除">×</button></div></div><div class="appear-field"><label>手机端背景图片 <span>竖屏推荐 9:16，留空则沿用桌面壁纸</span></label><div class="appear-input-row"><input type="text" id="apBgMobile" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgMobile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev mob" id="prevBgMobile"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgMobile" title="清除">×</button></div></div><div class="appear-field"><label>左上角站点头像 / Logo <span>留空使用默认蓝色图标</span></label><div class="appear-input-row"><input type="text" id="apLogo" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev ico" id="prevLogo"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apLogo" title="清除">×</button></div></div><div class="appear-field"><label>网站图标 (Favicon) <span>浏览器标签页小图标</span></label><div class="appear-input-row"><input type="text" id="apFavicon" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apFavicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev ico" id="prevFavicon"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apFavicon" title="清除">×</button></div></div><div class="form-grid2"><div class="appear-field"><label>壁纸遮罩暗度 <span id="apOverlayVal">45%</span></label><input type="range" class="appear-range" id="apOverlay" min="0" max="85" value="45"></div><div class="appear-field"><label>卡片毛玻璃模糊 <span id="apBlurVal">14px</span></label><input type="range" class="appear-range" id="apBlur" min="0" max="24" value="14"></div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="apResetBtn">恢复默认</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="apCancelBtn">取消</button><button type="button" id="apSaveBtn">保存外观</button></div></div></div></div>
 <div class="modal" id="transferModeModal"><span class="close" id="transferModeClose">×</span><div class="card" style="max-width:440px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">R2 传输模式</div><div class="meta" style="margin-bottom:8px">根据网络环境与文件大小随时切换，保存后全站即时生效（无需重新部署）。</div><div class="mode-opts" id="transferModeOpts"><button type="button" class="mode-opt" data-mode="proxy"><div class="mode-opt-head"><strong>Worker 绑定中转（图床模式）</strong><span class="mode-opt-tag">校园网推荐</span></div><p>上传下载全程走当前自定义域名，绕开 r2.cloudflarestorage.com 阻断，支持公开文件边缘缓存与视频进度条拖动；零 S3 密钥、零 CORS；超过 20MB 自动分片。</p></button><button type="button" class="mode-opt" data-mode="presign" id="modeOptPresign"><div class="mode-opt-head"><strong>R2 预签名直传（大文件模式）</strong><span class="mode-opt-tag" id="modePresignTag">GB 级大文件</span></div><p>≤100MB 直连 R2 上传，下载 302 走 R2 边缘直出，最省 Worker 额度且大文件下载最稳；需要配置 R2 S3 密钥与桶 CORS。</p></button></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="transferModeCancel">取消</button><button type="button" id="transferModeSave">保存并生效</button></div></div></div>
 <div class="modal" id="copyFmtModal"><span class="close" id="copyFmtClose">×</span><div class="card" style="max-width:400px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">默认复制链接格式</div><div class="meta" style="margin-bottom:8px">点击文件上的“复制链接”图标时，自动按所选格式复制（仅保存在本机浏览器）。</div><div class="fmt-opts" id="copyFmtOpts"><button type="button" class="fmt-opt" data-fmt="raw"><strong>原始直链</strong><span>https://.../f/id</span></button><button type="button" class="fmt-opt" data-fmt="md"><strong>Markdown</strong><span>![name](url)</span></button><button type="button" class="fmt-opt" data-fmt="html"><strong>HTML</strong><span>&lt;img src="url"&gt;</span></button><button type="button" class="fmt-opt" data-fmt="bb"><strong>BBCode</strong><span>[img]url[/img]</span></button></div><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">自定义链接前缀（留空 = 使用当前站点域名）</label><input type="text" id="copyPrefixInput" placeholder="例如 https://relaybox.19660716.xyz" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="copyFmtCancel">取消</button><button type="button" id="copyFmtSave">保存设置</button></div></div></div>
 <div class="modal" id="qrModal"><span class="close" id="qrClose">×</span><div class="card" style="max-width:320px;width:100%;text-align:center"><div id="qrBox"></div><div class="meta" id="qrUrl" style="word-break:break-all;font-size:12px;margin-top:10px"></div><button id="qrCopy" style="margin-top:12px">复制链接</button></div></div>
@@ -786,6 +873,72 @@ let r2On = false;
 let r2TransferMode = 'presign';
 let r2PresignAvailable = true;
 let r2ProxyAvailable = false;
+let allPools = [];
+let defaultPoolId = 'builtin-r2';
+let selectedPoolId = '';
+try { selectedPoolId = localStorage.getItem('fs-pool') || ''; } catch {}
+const poolFilter = {};
+function chevHtml() { return '<span class="dd-chev">' + ICONS.chevronDown + '</span>'; }
+function getEnabledPools() { return allPools.filter(p => p.enabled !== false); }
+function getActivePool() {
+ const enabled = getEnabledPools();
+ if (!enabled.length) return null;
+ return enabled.find(p => p.id === selectedPoolId) || enabled.find(p => p.id === defaultPoolId) || enabled[0];
+}
+function selectPool(id) {
+ selectedPoolId = id;
+ try { localStorage.setItem('fs-pool', id); } catch {}
+ const p = getActivePool();
+ if (p) {
+  storageChoice = p.type === 'local' ? 'local' : 'r2';
+  try { localStorage.setItem('fs-storage', storageChoice); } catch {}
+ }
+ renderPoolSelector();
+}
+function renderPoolSelector() {
+ const row = $('storageRow');
+ if (!row) return;
+ const enabled = getEnabledPools();
+ if (enabled.length <= 1) {
+  row.style.display = 'none';
+  row.className = 'seg';
+  if (enabled.length === 1) {
+   selectedPoolId = enabled[0].id;
+   storageChoice = enabled[0].type === 'local' ? 'local' : 'r2';
+  }
+  return;
+ }
+ const active = getActivePool();
+ if (active) selectedPoolId = active.id;
+ row.style.display = '';
+ if (enabled.length === 2) {
+  row.className = 'seg';
+  row.innerHTML = enabled.map(p => {
+   const ico = p.type === 'local' ? ICONS.hardDrive : ICONS.cloud;
+   const checked = active && p.id === active.id ? ' checked' : '';
+   return `<label class="seg-opt"><input type="radio" name="poolSelect" value="${escapeHtml(p.id)}"${checked}><span>${ico} ${escapeHtml(p.name)}</span></label>`;
+  }).join('');
+  row.querySelectorAll('input[name="poolSelect"]').forEach(r => {
+   r.onchange = () => selectPool(r.value);
+  });
+ } else {
+  row.className = 'pool-select-wrap';
+  const ico = active && active.type === 'local' ? ICONS.hardDrive : ICONS.cloud;
+  row.innerHTML = `<button type="button" class="pool-select-btn" id="poolDropBtn"><span class="ps-left">${ico}<span class="ps-name">${escapeHtml(active ? active.name : '选择存储池')}</span></span>${chevHtml()}</button><span id="poolDropMenu" class="sort-menu" style="display:none;left:0;right:auto;min-width:100%">${enabled.map(p => `<button type="button" data-pid="${escapeHtml(p.id)}">${escapeHtml(p.name)}<span class="tick">${active && p.id === active.id ? '✓' : ''}</span></button>`).join('')}</span>`;
+  const btn = $('poolDropBtn'), menu = $('poolDropMenu');
+  if (btn && menu) {
+   btn.onclick = (e) => {
+    e.stopPropagation();
+    const open = menu.style.display === 'none';
+    menu.style.display = open ? 'block' : 'none';
+    btn.classList.toggle('dd-open', open);
+   };
+   menu.querySelectorAll('button[data-pid]').forEach(b => {
+    b.onclick = () => { menu.style.display = 'none'; btn.classList.remove('dd-open'); selectPool(b.dataset.pid); };
+   });
+  }
+ }
+}
 let hasLocalStorage = true;
 let maxUploadSize = 0;
 
@@ -797,8 +950,9 @@ function getDropDefaultHtml() {
 let storageChoice = 'r2';
 try { storageChoice = localStorage.getItem('fs-storage') || 'r2'; } catch {}
 if (storageChoice !== 'local') storageChoice = 'r2';
-function uploadToR2() { return r2On && (!hasLocalStorage || storageChoice === 'r2'); }
+function uploadToR2() { const p = getActivePool(); if (p) return p.type !== 'local'; return r2On && (!hasLocalStorage || storageChoice === 'r2'); }
 function updateR2Hint() {
+ if (allPools.length) { renderPoolSelector(); return; }
  $('storageRow').style.display = (r2On && hasLocalStorage) ? '' : 'none';
  if (!hasLocalStorage && r2On) { storageChoice = 'r2'; applyStorageChoice(); }
 }
@@ -888,7 +1042,7 @@ function sortFolders(a, b) {
 }
 const SORT_LABELS = { 'time-desc': '最新上传', 'time-asc': '最早上传', 'name-asc': '名称 A→Z', 'name-desc': '名称 Z→A', 'size-desc': '最大', 'size-asc': '最小' };
 function renderSortBtn() {
- $('sortBtn').textContent = (SORT_LABELS[sortMode] || '最新上传') + ' ⌄';
+ $('sortBtn').innerHTML = escapeHtml(SORT_LABELS[sortMode] || '最新上传') + chevHtml();
  document.querySelectorAll('#sortMenu button').forEach(b => {
  const t = b.querySelector('.tick');
  if (t) t.textContent = b.dataset.sort === sortMode ? '✓' : '';
@@ -897,7 +1051,7 @@ function renderSortBtn() {
 $('sortBtn').onclick = (e) => {
  e.stopPropagation();
  const m = $('sortMenu');
- m.style.display = m.style.display === 'none' ? 'block' : 'none';
+ const open = m.style.display === 'none'; m.style.display = open ? 'block' : 'none'; $('sortBtn').classList.toggle('dd-open', open);
 };
 
 async function toggleCrumbDrop(e, idx) {
@@ -931,20 +1085,23 @@ document.querySelectorAll('#sortMenu button').forEach(b => {
  b.onclick = () => {
  sortMode = b.dataset.sort;
  try { localStorage.setItem('fs-sort', sortMode); } catch {}
- $('sortMenu').style.display = 'none';
+ $('sortMenu').style.display = 'none'; $('sortBtn').classList.remove('dd-open');
  renderSortBtn();
  renderList();
  };
 });
 document.addEventListener('click', (e) => {
  const m = $('sortMenu');
- if (m && m.style.display !== 'none' && !e.target.closest('#sortMenu') && e.target.id !== 'sortBtn') m.style.display = 'none';
+ if (m && m.style.display !== 'none' && !e.target.closest('#sortMenu') && !e.target.closest('#sortBtn')) { m.style.display = 'none'; $('sortBtn').classList.remove('dd-open'); }
+ const pm = $('poolDropMenu'); if (pm && pm.style.display !== 'none' && !e.target.closest('.pool-select-wrap')) { pm.style.display = 'none'; const pb = $('poolDropBtn'); if (pb) pb.classList.remove('dd-open'); }
 });
 
 $('filterBtn').onclick = (e) => {
  e.stopPropagation();
  const m = $('filterMenu');
- m.style.display = m.style.display === 'none' ? 'block' : 'none';
+ const open = m.style.display === 'none';
+ m.style.display = open ? 'block' : 'none';
+ $('filterBtn').classList.toggle('dd-open', open);
 };
 document.querySelectorAll('#filterMenu input').forEach(cb => {
  cb.onchange = () => {
@@ -955,21 +1112,24 @@ document.querySelectorAll('#filterMenu input').forEach(cb => {
  };
 });
 function updateFilterBtn() {
- const off = (hasLocalStorage ? ['r2', 'local'].filter(k => !storeFilter[k]).length : 0) + ['public', 'private'].filter(k => !visFilter[k]).length;
+ const poolOff = allPools.length > 1
+  ? allPools.filter(p => poolFilter[p.id] === false).length
+  : (hasLocalStorage ? ['r2', 'local'].filter(k => !storeFilter[k]).length : 0);
+ const off = poolOff + ['public', 'private'].filter(k => !visFilter[k]).length;
  const b = $('filterBtn');
- b.textContent = off ? `筛选(${off}) ⌄` : '筛选 ⌄';
+ b.innerHTML = (off ? `筛选(${off})` : '筛选') + chevHtml();
  b.classList.toggle('active', off > 0);
 }
 document.addEventListener('click', (e) => {
  const m = $('filterMenu');
- if (m && m.style.display !== 'none' && !e.target.closest('#filterMenu') && e.target.id !== 'filterBtn') m.style.display = 'none';
+ if (m && m.style.display !== 'none' && !e.target.closest('#filterMenu') && !e.target.closest('#filterBtn')) { m.style.display = 'none'; $('filterBtn').classList.remove('dd-open'); }
 });
 renderSortBtn();
 
 let expireHours = 0;
 const EXPIRE_LABELS = { 0: '永久', 24: '24 小时', 168: '7 天' };
 function renderExpireBtn() {
- $('expireBtn').innerHTML = ICONS.clock + ' ' + (EXPIRE_LABELS[expireHours] || '永久') + ' ⌄';
+ $('expireBtn').innerHTML = ICONS.clock + ' ' + escapeHtml(EXPIRE_LABELS[expireHours] || '永久') + chevHtml();
  document.querySelectorAll('#expireMenu button').forEach(b => {
  const t = b.querySelector('.tick');
  if (t) t.textContent = Number(b.dataset.exp) === expireHours ? '✓' : '';
@@ -978,18 +1138,20 @@ function renderExpireBtn() {
 $('expireBtn').onclick = (e) => {
  e.stopPropagation();
  const m = $('expireMenu');
- m.style.display = m.style.display === 'none' ? 'block' : 'none';
+ const open = m.style.display === 'none';
+ m.style.display = open ? 'block' : 'none';
+ $('expireBtn').classList.toggle('dd-open', open);
 };
 document.querySelectorAll('#expireMenu button').forEach(b => {
  b.onclick = () => {
  expireHours = Number(b.dataset.exp);
- $('expireMenu').style.display = 'none';
+ $('expireMenu').style.display = 'none'; $('expireBtn').classList.remove('dd-open');
  renderExpireBtn();
  };
 });
 document.addEventListener('click', (e) => {
  const m = $('expireMenu');
- if (m && m.style.display !== 'none' && !e.target.closest('#expireMenu') && e.target.id !== 'expireBtn') m.style.display = 'none';
+ if (m && m.style.display !== 'none' && !e.target.closest('#expireMenu') && !e.target.closest('#expireBtn')) { m.style.display = 'none'; $('expireBtn').classList.remove('dd-open'); }
 });
 renderExpireBtn();
 
@@ -1390,7 +1552,8 @@ function isTextFile(f) { return !!(f && f.name && TEXT_PREVIEW_RE.test(f.name));
 function isPdfFile(f) { return !!(f && f.name && /\.pdf$/i.test(f.name)); }
 function isPreviewable(f) { return !!(f && (f.kind === 'video' || f.kind === 'image' || f.kind === 'audio' || isTextFile(f) || isPdfFile(f))); }
 function storageBadge(f) {
- if (!hasLocalStorage) return '';
+ if (allPools.length <= 1 && !f.poolId) return '';
+ if (f.poolId) return `<span class="badge s3">${escapeHtml(f.poolName || 'S3')}</span>`;
  return f.storage === 'r2' ? '<span class="badge r2">R2</span>' : '<span class="badge local">本地</span>';
 }
 function videoThumbFallback(img, id) {
@@ -1453,14 +1616,30 @@ async function loadList(showSkel) {
  r2TransferMode = d.r2TransferMode === 'proxy' ? 'proxy' : 'presign';
  r2PresignAvailable = d.r2PresignAvailable !== false;
  r2ProxyAvailable = d.r2ProxyAvailable === true;
- hasLocalStorage = !!(d.diskTotal && d.diskTotal > 0);
+ hasLocalStorage = d.hasLocal !== undefined ? !!d.hasLocal : !!(d.diskTotal && d.diskTotal > 0);
+ allPools = Array.isArray(d.pools) ? d.pools : [];
+ defaultPoolId = d.defaultPoolId || 'builtin-r2';
+ allPools.forEach(p => { if (poolFilter[p.id] === undefined) poolFilter[p.id] = true; });
  maxUploadSize = Number(d.maxUploadSize || d.maxFileSize || 0);
  if (Number(d.chunkUploadThreshold) > 0) CHUNK_UPLOAD_THRESHOLD = Number(d.chunkUploadThreshold);
  if (Number(d.chunkSize) > 0) CHUNK_SIZE = Number(d.chunkSize);
  if (!selectedFiles.length && !uploading) drop.innerHTML = getDropDefaultHtml();
  const fsg = $('filterStoreGroup');
- if (fsg) fsg.style.display = hasLocalStorage ? '' : 'none';
- if (!hasLocalStorage) { storeFilter.r2 = true; storeFilter.local = true; updateFilterBtn(); }
+ if (fsg) {
+  if (allPools.length > 1) {
+   fsg.style.display = '';
+   fsg.innerHTML = '<div class="filter-group">存储池</div>' + allPools.map(p => {
+    const ico = p.type === 'local' ? ICONS.hardDrive : ICONS.cloud;
+    return `<label><input type="checkbox" data-pool="${escapeHtml(p.id)}" ${poolFilter[p.id] !== false ? 'checked' : ''}> ${ico} ${escapeHtml(p.name)}</label>`;
+   }).join('');
+   fsg.querySelectorAll('input[data-pool]').forEach(cb => {
+    cb.onchange = () => { poolFilter[cb.dataset.pool] = cb.checked; updateFilterBtn(); renderList(); };
+   });
+  } else {
+   fsg.style.display = 'none';
+  }
+  updateFilterBtn();
+ }
  updateR2Hint();
  $('newFolderBtn').style.display = authed ? '' : 'none';
  $('folderBtn').style.display = authed ? '' : 'none';
@@ -1469,17 +1648,39 @@ async function loadList(showSkel) {
  if ($('tokensBtn')) $('tokensBtn').style.display = authed ? '' : 'none';
  if ($('mobAnnounceBtn')) $('mobAnnounceBtn').style.display = authed ? 'flex' : 'none';
  if ($('mobTokensBtn')) $('mobTokensBtn').style.display = authed ? 'flex' : 'none';
+ if ($('poolsBtn')) $('poolsBtn').style.display = authed ? '' : 'none';
+ if ($('mobPoolsBtn')) $('mobPoolsBtn').style.display = authed ? 'flex' : 'none';
+ if ($('appearanceBtn')) $('appearanceBtn').style.display = authed ? '' : 'none';
+ if ($('mobAppearanceBtn')) $('mobAppearanceBtn').style.display = authed ? 'flex' : 'none';
  if ($('transferModeBtn')) $('transferModeBtn').style.display = (authed && r2ProxyAvailable) ? '' : 'none';
  if ($('mobTransferModeBtn')) $('mobTransferModeBtn').style.display = (authed && r2ProxyAvailable) ? 'flex' : 'none';
  updateUploadDestUI();
- const r2Pct = r2On && d.r2Total ? Math.min(100, (d.r2Used || 0) / d.r2Total * 100) : 0;
- const localPct = d.diskTotal ? Math.min(100, (d.localUsed || 0) / d.diskTotal * 100) : 0;
  let quotaHtml = `<div>${currentFolders.length ? `共 ${currentFolders.length} 个文件夹 · ` : '共 '}${allFiles.length} 个文件</div>`;
  if (authed) {
- quotaHtml += `<div class="quota">`;
- if (r2On) quotaHtml += `<div class="quota-row"><span class="q-label">R2</span><div class="q-bar r2"><div style="width:${r2Pct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(d.r2Used || 0)} / ${fmtSize(d.r2Total || 0)}</span>${r2ProxyAvailable ? `<button type="button" class="mode-badge" onclick="openTransferModeModal()" title="点击切换 R2 传输模式">${r2TransferMode === 'proxy' ? '中转' : '直传'}</button>` : ''}</div>`;
- if (d.diskTotal) quotaHtml += `<div class="quota-row"><span class="q-label">本地</span><div class="q-bar local"><div style="width:${localPct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(d.localUsed || 0)} / ${fmtSize(d.diskTotal || 0)}</span></div>`;
- quotaHtml += `</div>`;
+  quotaHtml += `<div class="quota">`;
+  if (allPools.length) {
+   for (const p of allPools) {
+    if (p.enabled === false) continue;
+    const used = p.usedBytes || 0;
+    const cap = p.quotaBytes || 0;
+    const pct = cap > 0 ? Math.min(100, used / cap * 100) : 0;
+    const barCls = p.type === 'local' ? 'local' : (p.builtin ? 'r2' : 's3');
+    const modeBtn = p.type !== 'local'
+     ? (p.builtin && r2ProxyAvailable
+        ? `<button type="button" class="mode-badge" onclick="openTransferModeModal()" title="点击切换内置 R2 传输模式">${p.transferMode === 'proxy' ? '中转' : '直传'}</button>`
+        : (!p.builtin ? `<button type="button" class="mode-badge" onclick="openPoolsModal()" title="管理存储池">${p.transferMode === 'proxy' ? '中转' : '直传'}</button>` : ''))
+     : '';
+    quotaHtml += `<div class="quota-row"><span class="q-label" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span><div class="q-bar ${barCls}"><div style="width:${pct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(used)}${cap ? ' / ' + fmtSize(cap) : ''}</span>${modeBtn}</div>`;
+   }
+  } else {
+   const r2Pct = r2On && d.r2Total ? Math.min(100, (d.r2Used || 0) / d.r2Total * 100) : 0;
+   if (r2On) quotaHtml += `<div class="quota-row"><span class="q-label">R2</span><div class="q-bar r2"><div style="width:${r2Pct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(d.r2Used || 0)} / ${fmtSize(d.r2Total || 0)}</span>${r2ProxyAvailable ? `<button type="button" class="mode-badge" onclick="openTransferModeModal()" title="点击切换 R2 传输模式">${r2TransferMode === 'proxy' ? '中转' : '直传'}</button>` : ''}</div>`;
+   if (hasLocalStorage && d.diskTotal) {
+    const localPct = Math.min(100, (d.localUsed || 0) / d.diskTotal * 100);
+    quotaHtml += `<div class="quota-row"><span class="q-label">本地</span><div class="q-bar local"><div style="width:${localPct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(d.localUsed || 0)} / ${fmtSize(d.diskTotal || 0)}</span></div>`;
+   }
+  }
+  quotaHtml += `</div>`;
  }
  $('stats').innerHTML = quotaHtml;
  renderList();
@@ -1515,7 +1716,13 @@ function renderList() {
  if (typeFilter === 'archive') return /\.(zip|rar|7z|tar|gz)$/i.test(f.name);
  return true;
  };
- const storeOk = (f) => (!hasLocalStorage || (f.storage === 'r2' ? storeFilter.r2 : storeFilter.local));
+ const storeOk = (f) => {
+  if (allPools.length > 1) {
+   const pid = f.poolId || (f.storage === 'r2' ? 'builtin-r2' : 'builtin-local');
+   return poolFilter[pid] !== false;
+  }
+  return (!hasLocalStorage || (f.storage === 'r2' ? storeFilter.r2 : storeFilter.local));
+ };
  const visOk = (f) => (f.visibility === 'private' ? visFilter.private : visFilter.public);
  const list = (searching ? searchResults.files : allFiles.filter(f => !q || f.name.toLowerCase().includes(q))).filter(typeOk).filter(storeOk).filter(visOk).sort(sortFiles);
  viewFiles = list;
@@ -1536,7 +1743,7 @@ function renderList() {
  const nameHtml = last
  ? `<span class="cur">${escapeHtml(p.name)}</span>`
  : `<button onclick="openFolder(${p.id ? `'${p.id}'` : 'null'})">${escapeHtml(p.name)}</button>`;
- return (i ? '<span class="sep">/</span>' : '') + `<span class="crumb-wrap">${nameHtml}<button class="crumb-drop" title="同级文件夹" aria-label="同级文件夹" onclick="toggleCrumbDrop(event, ${i})">▾</button><span class="crumb-menu" id="crumbMenu-${i}" style="display:none"></span></span>`;
+ return (i ? '<span class="sep">/</span>' : '') + `<span class="crumb-wrap">${nameHtml}<button class="crumb-drop" title="同级文件夹" aria-label="同级文件夹" onclick="toggleCrumbDrop(event, ${i})">${chevHtml()}</button><span class="crumb-menu" id="crumbMenu-${i}" style="display:none"></span></span>`;
  }).join('');
  }
  const el = $('list');
@@ -1884,6 +2091,8 @@ document.addEventListener('keydown', (e) => {
  if ($('detailModal') && $('detailModal').classList.contains('open')) { closeDetailModal(); return; }
  if ($('copyFmtModal') && $('copyFmtModal').classList.contains('open')) { closeCopyFmtModal(); return; }
  if ($('transferModeModal') && $('transferModeModal').classList.contains('open')) { closeTransferModeModal(); return; }
+ if ($('poolsModal') && $('poolsModal').classList.contains('open')) { closePoolsModal(); return; }
+ if ($('appearanceModal') && $('appearanceModal').classList.contains('open')) { closeAppearanceModal(false); return; }
 });
 
 async function copyFolderLink(id, btn) {
@@ -2746,12 +2955,15 @@ async function uploadChunked(job, idx, total, targetFolderId, pw) {
  if (job.canceled) return;
  try {
  ac = new AbortController();
+ const activePool = getActivePool();
+ const customPoolId = (activePool && !activePool.builtin) ? activePool.id : '';
  const qs = new URLSearchParams({
  uploadId, index: String(i), total: String(totalChunks),
  name: f.name, size: String(f.size),
  visibility: job.visibility, expires: String(job.expires),
  storage: uploadToR2() ? 'r2' : 'local',
  folderId: targetFolderId || '',
+ ...(customPoolId ? { poolId: customPoolId } : {}),
  });
  const r = await fetch('/api/upload/chunk?' + qs.toString(), {
  method: 'POST', headers: { ...headers, 'Content-Type': 'application/octet-stream' }, body: blob, signal: ac.signal,
@@ -2814,7 +3026,11 @@ async function uploadOne(job, idx, total) {
  job.dims = await probeMediaDims(f);
  const pw = authed ? '' : $('password').value.trim();
  if (!authed && !pw) { job.status = 'error'; setMsg('请先填上传密码', 'err'); return Promise.resolve(); }
- if (f.size > CHUNK_UPLOAD_THRESHOLD) return uploadChunked(job, idx, total, targetFolderId, pw);
+ const activePool = getActivePool();
+ const customPoolId = (activePool && !activePool.builtin) ? activePool.id : '';
+ const activeMode = (activePool && activePool.transferMode) ? activePool.transferMode : r2TransferMode;
+ const effectiveThreshold = (activePool && Number(activePool.chunkUploadThreshold) > 0) ? Number(activePool.chunkUploadThreshold) : CHUNK_UPLOAD_THRESHOLD;
+ if (f.size > effectiveThreshold) return uploadChunked(job, idx, total, targetFolderId, pw);
  const startedAt = Date.now();
  let lastShown = 0;
  const showProgress = (loaded, size) => {
@@ -2832,7 +3048,7 @@ async function uploadOne(job, idx, total) {
  }
  };
  $('progress').style.display = 'block';
- if (uploadToR2() && r2TransferMode === 'proxy') {
+ if (uploadToR2() && activeMode === 'proxy') {
  return new Promise((resolve) => {
   const qs = new URLSearchParams({
    name: f.name,
@@ -2840,6 +3056,7 @@ async function uploadOne(job, idx, total) {
    visibility: job.visibility,
    expires: String(job.expires),
    folderId: targetFolderId || '',
+   ...(customPoolId ? { poolId: customPoolId } : {}),
    ...(job.dims && job.dims.width ? { width: String(job.dims.width), height: String(job.dims.height) } : {}),
   });
   const xhr = new XMLHttpRequest();
@@ -2872,7 +3089,7 @@ async function uploadOne(job, idx, total) {
  setMsg(`正在获取上传链接 ${idx}/${total}…`, '');
  const r = await fetch('/api/upload-url', {
  method: 'POST', headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ name: f.name, size: f.size, visibility: job.visibility, expires: job.expires, password: pw || undefined }),
+ body: JSON.stringify({ name: f.name, size: f.size, visibility: job.visibility, expires: job.expires, password: pw || undefined, ...(customPoolId ? { poolId: customPoolId } : {}) }),
  });
  const d = await r.json();
  if (job.canceled) return;
@@ -2890,7 +3107,7 @@ async function uploadOne(job, idx, total) {
  if (job.canceled) return;
  const r2 = await fetch('/api/upload-complete', {
  method: 'POST', headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ id: d.id, key: d.key, name: f.name, size: f.size, visibility: job.visibility, expires: job.expires, folderId: targetFolderId, password: pw || undefined, ...(job.dims && job.dims.width ? { width: job.dims.width, height: job.dims.height } : {}) }),
+ body: JSON.stringify({ id: d.id, key: d.key, name: f.name, size: f.size, visibility: job.visibility, expires: job.expires, folderId: targetFolderId, password: pw || undefined, ...(customPoolId ? { poolId: customPoolId } : {}), ...(job.dims && job.dims.width ? { width: job.dims.width, height: job.dims.height } : {}) }),
  });
  const d2 = await r2.json();
  if (!d2.ok) { job.status = 'error'; setMsg(`第 ${idx} 个登记失败：` + (d2.error || ('HTTP ' + r2.status)), 'err'); }
@@ -3225,7 +3442,7 @@ async function openDetailModal(id) {
    <div class="detail-kv"><div class="detail-k">文件大小</div><div class="detail-v">${fmtSize(f.size)}</div></div>
    <div class="detail-kv"><div class="detail-k">媒体分辨率</div><div class="detail-v">${resText}</div></div>
    <div class="detail-kv"><div class="detail-k">类型 / 扩展名</div><div class="detail-v">${kindLabels[f.kind] || '文件'} ${f.ext ? '(' + escapeHtml(f.ext) + ')' : ''}</div></div>
-   <div class="detail-kv"><div class="detail-k">存储 / 可见性</div><div class="detail-v">${f.storage === 'r2' ? 'Cloudflare R2' : '本地磁盘'} · ${f.visibility === 'private' ? '私密' : '公开'}</div></div>
+   <div class="detail-kv"><div class="detail-k">存储 / 可见性</div><div class="detail-v">${escapeHtml(f.poolName || (f.storage === 'r2' ? '内置 R2' : '本地磁盘'))} · ${f.visibility === 'private' ? '私密' : '公开'}</div></div>
    <div class="detail-kv"><div class="detail-k">下载次数</div><div class="detail-v">${f.downloads || 0} 次</div></div>
    <div class="detail-kv"><div class="detail-k">有效期</div><div class="detail-v">${f.expiresAt ? expiryText(f.expiresAt) : '永久有效'}</div></div>
    <div class="detail-kv"><div class="detail-k">上传时间</div><div class="detail-v">${fmtDate(f.uploadedAt)}</div></div>
@@ -3462,6 +3679,394 @@ document.addEventListener('pointerdown', (e) => {
  window.addEventListener('scroll', hideTip, { passive: true });
 })();
 
+
+// ===== r9: 存储池管理弹窗 =====
+let adminPools = [];
+function openPoolsModal() {
+ if (!authed) return;
+ closePoolForm();
+ $('poolsModal').classList.add('open');
+ loadAdminPools();
+}
+function closePoolsModal() { $('poolsModal').classList.remove('open'); }
+async function loadAdminPools() {
+ const box = $('poolListBox');
+ box.innerHTML = '<div class="empty" style="padding:18px 0">加载中…</div>';
+ try {
+  const r = await fetch('/api/pools');
+  const d = await r.json();
+  if (!r.ok || !d.ok) { box.innerHTML = `<div class="empty" style="padding:18px 0">${escapeHtml(d.error || '加载失败')}</div>`; return; }
+  adminPools = d.pools || [];
+  renderAdminPools();
+ } catch {
+  box.innerHTML = '<div class="empty" style="padding:18px 0">加载失败</div>';
+ }
+}
+function renderAdminPools() {
+ const box = $('poolListBox');
+ if (!adminPools.length) { box.innerHTML = '<div class="empty" style="padding:18px 0">暂无存储池</div>'; return; }
+ box.innerHTML = adminPools.map(p => {
+  const modeLabel = p.type === 'local' ? '本地直写' : (p.transferMode === 'proxy' ? '中转模式' : '预签名直传');
+  const sub = p.builtin
+   ? (p.type === 'local' ? `VPS 本地磁盘 · 已用 ${fmtSize(p.usedBytes || 0)}` : `Workers R2 绑定 · 已用 ${fmtSize(p.usedBytes || 0)} / ${fmtSize(p.quotaBytes || 0)}`)
+   : `${escapeHtml(p.bucket || '')} · ${escapeHtml(p.endpoint || '')} · AK ${escapeHtml(p.accessKeyPreview || '')} · 已用 ${fmtSize(p.usedBytes || 0)} / ${fmtSize(p.quotaBytes || 0)}（${p.fileCount || 0} 个文件）`;
+  const acts = [];
+  if (!p.isDefault && p.enabled && p.type !== 'local') {
+   acts.push(`<button type="button" class="ghost" onclick="setPoolDefault('${escapeHtml(p.id)}')">设为默认</button>`);
+  }
+  if (p.builtin && p.id === 'builtin-r2' && p.proxyAvailable) {
+   acts.push(`<button type="button" class="ghost" onclick="closePoolsModal(); openTransferModeModal()">切换模式</button>`);
+  }
+  if (!p.builtin) {
+   acts.push(`<button type="button" class="ghost" onclick="editPoolForm('${escapeHtml(p.id)}')">编辑</button>`);
+   acts.push(`<button type="button" class="ghost" onclick="quickTestPool('${escapeHtml(p.id)}', this)">测试连接</button>`);
+   acts.push(`<button type="button" class="ghost" onclick="togglePoolEnabled('${escapeHtml(p.id)}', ${p.enabled ? 'false' : 'true'})">${p.enabled ? '停用' : '启用'}</button>`);
+   acts.push(`<button type="button" class="danger" data-pname="${escapeHtml(p.name)}" onclick="removePool('${escapeHtml(p.id)}', this.dataset.pname)">删除</button>`);
+  }
+  return `<div class="pool-card-item">
+   <div class="pool-card-top">
+    <div class="pool-card-name">${escapeHtml(p.name)} ${p.isDefault ? '<span class="pool-tag def">默认</span>' : ''} <span class="pool-tag">${modeLabel}</span> ${p.enabled === false ? '<span class="pool-tag off">已停用</span>' : ''}</div>
+   </div>
+   <div class="pool-card-sub">${sub}</div>
+   ${acts.length ? `<div class="pool-card-acts">${acts.join('')}</div>` : ''}
+  </div>`;
+ }).join('');
+}
+function openPoolForm(pool) {
+ const form = $('poolFormBox');
+ $('pfMsg').textContent = '';
+ $('pfMsg').className = 'msg';
+ if (pool) {
+  $('poolFormTitle').textContent = '编辑外部存储池：' + pool.name;
+  $('pfId').value = pool.id;
+  $('pfName').value = pool.name || '';
+  $('pfBucket').value = pool.bucket || '';
+  $('pfEndpoint').value = pool.endpoint || '';
+  $('pfAk').value = pool.accessKeyId || '';
+  $('pfSk').value = '';
+  $('pfSkHint').textContent = '（留空保持原密钥）';
+  $('pfRegion').value = pool.region || 'auto';
+  $('pfQuotaGb').value = Math.max(1, Math.round((pool.quotaBytes || 10737418240) / 1073741824));
+  $('pfMode').value = pool.transferMode === 'proxy' ? 'proxy' : 'presign';
+  $('pfDefault').checked = !!pool.isDefault;
+ } else {
+  $('poolFormTitle').textContent = '新增外部存储池（R2 / S3 兼容）';
+  $('pfId').value = '';
+  $('pfName').value = '';
+  $('pfBucket').value = '';
+  $('pfEndpoint').value = '';
+  $('pfAk').value = '';
+  $('pfSk').value = '';
+  $('pfSkHint').textContent = '*';
+  $('pfRegion').value = 'auto';
+  $('pfQuotaGb').value = '10';
+  $('pfMode').value = 'proxy';
+  $('pfDefault').checked = false;
+ }
+ form.classList.add('open');
+ form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function closePoolForm() { $('poolFormBox').classList.remove('open'); }
+function editPoolForm(id) {
+ const p = adminPools.find(x => x.id === id);
+ if (p) openPoolForm(p);
+}
+async function setPoolDefault(id) {
+ try {
+  const r = await fetch('/api/pools/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isDefault: true }) });
+  const d = await r.json();
+  if (!r.ok || !d.ok) { showToast(d.error || '设置失败', 'err'); return; }
+  adminPools = d.pools || [];
+  renderAdminPools();
+  showToast('默认存储池已更新', 'ok');
+  loadList();
+ } catch { showToast('网络错误', 'err'); }
+}
+async function togglePoolEnabled(id, enabled) {
+ try {
+  const r = await fetch('/api/pools/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) });
+  const d = await r.json();
+  if (!r.ok || !d.ok) { showToast(d.error || '操作失败', 'err'); return; }
+  adminPools = d.pools || [];
+  renderAdminPools();
+  showToast(enabled ? '存储池已启用' : '存储池已停用', 'ok');
+  loadList();
+ } catch { showToast('网络错误', 'err'); }
+}
+async function removePool(id, name) {
+ if (!confirm(`确定删除外部存储池「${name}」吗？（仅当池内无文件时可删）`)) return;
+ try {
+  const r = await fetch('/api/pools/' + encodeURIComponent(id), { method: 'DELETE' });
+  const d = await r.json();
+  if (!r.ok || !d.ok) { showToast(d.error || '删除失败', 'err'); return; }
+  adminPools = d.pools || [];
+  renderAdminPools();
+  showToast('存储池已删除', 'ok');
+  loadList();
+ } catch { showToast('网络错误', 'err'); }
+}
+async function quickTestPool(id, btn) {
+ if (btn) { btn.disabled = true; btn.textContent = '测试中…'; }
+ try {
+  const r = await fetch('/api/pools/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+  const d = await r.json();
+  if (r.ok && d.ok) showToast(`连接成功（${d.latencyMs}ms）`, 'ok');
+  else showToast(d.error || '连接失败', 'err');
+ } catch { showToast('测试失败：网络错误', 'err'); }
+ finally { if (btn) { btn.disabled = false; btn.textContent = '测试连接'; } }
+}
+function collectPoolPayload() {
+ return {
+  id: $('pfId').value.trim() || undefined,
+  name: $('pfName').value.trim(),
+  bucket: $('pfBucket').value.trim(),
+  endpoint: $('pfEndpoint').value.trim(),
+  accessKeyId: $('pfAk').value.trim(),
+  secretAccessKey: $('pfSk').value.trim(),
+  region: $('pfRegion').value.trim() || 'auto',
+  quotaBytes: Math.max(1, Number($('pfQuotaGb').value) || 10) * 1073741824,
+  transferMode: $('pfMode').value === 'presign' ? 'presign' : 'proxy',
+  isDefault: $('pfDefault').checked,
+ };
+}
+if ($('poolsBtn')) $('poolsBtn').onclick = openPoolsModal;
+if ($('mobPoolsBtn')) $('mobPoolsBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openPoolsModal(); };
+if ($('poolsClose')) $('poolsClose').onclick = closePoolsModal;
+if ($('poolsDoneBtn')) $('poolsDoneBtn').onclick = closePoolsModal;
+if ($('poolsModal')) $('poolsModal').onclick = (e) => { if (e.target.id === 'poolsModal') closePoolsModal(); };
+if ($('poolAddToggleBtn')) $('poolAddToggleBtn').onclick = () => openPoolForm(null);
+if ($('pfCancelBtn')) $('pfCancelBtn').onclick = closePoolForm;
+if ($('pfTestBtn')) $('pfTestBtn').onclick = async () => {
+ const btn = $('pfTestBtn'), msg = $('pfMsg');
+ btn.disabled = true; msg.textContent = '正在测试连接…'; msg.className = 'msg';
+ try {
+  const r = await fetch('/api/pools/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(collectPoolPayload()) });
+  const d = await r.json();
+  if (r.ok && d.ok) { msg.textContent = `连接成功（延迟 ${d.latencyMs}ms）`; msg.className = 'msg ok'; }
+  else { msg.textContent = d.error || '连接失败'; msg.className = 'msg err'; }
+ } catch { msg.textContent = '网络错误'; msg.className = 'msg err'; }
+ finally { btn.disabled = false; }
+};
+if ($('pfSaveBtn')) $('pfSaveBtn').onclick = async () => {
+ const btn = $('pfSaveBtn'), msg = $('pfMsg');
+ const payload = collectPoolPayload();
+ btn.disabled = true; msg.textContent = '正在保存…'; msg.className = 'msg';
+ try {
+  const isEdit = !!payload.id;
+  const url = isEdit ? ('/api/pools/' + encodeURIComponent(payload.id)) : '/api/pools';
+  const r = await fetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const d = await r.json();
+  if (!r.ok || !d.ok) { msg.textContent = d.error || '保存失败'; msg.className = 'msg err'; return; }
+  adminPools = d.pools || [];
+  closePoolForm();
+  renderAdminPools();
+  showToast(isEdit ? '存储池已更新' : '新存储池已添加', 'ok');
+  loadList();
+ } catch { msg.textContent = '网络错误'; msg.className = 'msg err'; }
+ finally { btn.disabled = false; }
+};
+
+// ===== r9: 外观、双端壁纸与站点头像/图标设置 =====
+const DEFAULT_FAVICON = (document.querySelector('link[rel="icon"]') || {}).href || '';
+const DEFAULT_BRAND_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+let siteAppearance = { siteTitle: 'RelayBox', siteLogo: '', siteFavicon: '', bgDesktop: '', bgMobile: '', bgOverlay: 45, cardBlur: 14 };
+let appearanceSnapshot = null;
+
+function applyAppearance(ap) {
+ const a = ap || siteAppearance;
+ const title = (a.siteTitle || 'RelayBox').trim() || 'RelayBox';
+ const titleEl = $('brandTitleText');
+ if (titleEl) titleEl.textContent = title;
+ document.title = title + ' · 文件传输助手';
+ const mark = $('brandMark');
+ if (mark) {
+  if (a.siteLogo) {
+   mark.innerHTML = `<img src="${escapeHtml(a.siteLogo)}" alt="" onerror="this.parentNode.innerHTML=DEFAULT_BRAND_SVG">`;
+   mark.style.background = 'transparent';
+  } else {
+   mark.innerHTML = DEFAULT_BRAND_SVG;
+   mark.style.background = '';
+  }
+ }
+ const favHref = a.siteFavicon || a.siteLogo || DEFAULT_FAVICON;
+ document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(lk => {
+  if (favHref) lk.href = favHref;
+ });
+ const root = document.documentElement;
+ const hasBg = !!(a.bgDesktop || a.bgMobile);
+ document.body.classList.toggle('has-wallpaper', hasBg);
+ root.style.setProperty('--bg-desktop', a.bgDesktop ? `url("${a.bgDesktop.replace(/"/g, '\\"')}")` : (a.bgMobile ? `url("${a.bgMobile.replace(/"/g, '\\"')}")` : 'none'));
+ root.style.setProperty('--bg-mobile', a.bgMobile ? `url("${a.bgMobile.replace(/"/g, '\\"')}")` : (a.bgDesktop ? `url("${a.bgDesktop.replace(/"/g, '\\"')}")` : 'none'));
+ const ov = Math.max(0, Math.min(85, Number(a.bgOverlay ?? 45))) / 100;
+ const bl = Math.max(0, Math.min(24, Number(a.cardBlur ?? 14)));
+ root.style.setProperty('--bg-overlay', ov.toFixed(2));
+ root.style.setProperty('--card-blur', bl + 'px');
+}
+async function loadAppearance() {
+ try {
+  const cached = localStorage.getItem('fs-appearance');
+  if (cached) { siteAppearance = { ...siteAppearance, ...JSON.parse(cached) }; applyAppearance(siteAppearance); }
+ } catch {}
+ try {
+  const r = await fetch('/api/appearance');
+  const d = await r.json();
+  if (r.ok && d.ok && d.appearance) {
+   siteAppearance = { ...siteAppearance, ...d.appearance };
+   try { localStorage.setItem('fs-appearance', JSON.stringify(siteAppearance)); } catch {}
+   applyAppearance(siteAppearance);
+  }
+ } catch {}
+}
+function syncAppearancePreviews() {
+ const pairs = [
+  ['apBgDesktop', 'prevBgDesktop'],
+  ['apBgMobile', 'prevBgMobile'],
+  ['apLogo', 'prevLogo'],
+  ['apFavicon', 'prevFavicon'],
+ ];
+ for (const [inpId, prevId] of pairs) {
+  const v = ($(inpId) ? $(inpId).value : '').trim();
+  const box = $(prevId);
+  if (!box) continue;
+  const img = box.querySelector('img');
+  if (v) { img.src = v; box.classList.add('show'); }
+  else { img.removeAttribute('src'); box.classList.remove('show'); }
+ }
+ $('apOverlayVal').textContent = $('apOverlay').value + '%';
+ $('apBlurVal').textContent = $('apBlur').value + 'px';
+}
+function collectAppearanceForm() {
+ return {
+  siteTitle: $('apTitle').value.trim() || 'RelayBox',
+  bgDesktop: $('apBgDesktop').value.trim(),
+  bgMobile: $('apBgMobile').value.trim(),
+  siteLogo: $('apLogo').value.trim(),
+  siteFavicon: $('apFavicon').value.trim(),
+  bgOverlay: Number($('apOverlay').value),
+  cardBlur: Number($('apBlur').value),
+ };
+}
+function openAppearanceModal() {
+ if (!authed) return;
+ appearanceSnapshot = { ...siteAppearance };
+ $('apTitle').value = siteAppearance.siteTitle || 'RelayBox';
+ $('apBgDesktop').value = siteAppearance.bgDesktop || '';
+ $('apBgMobile').value = siteAppearance.bgMobile || '';
+ $('apLogo').value = siteAppearance.siteLogo || '';
+ $('apFavicon').value = siteAppearance.siteFavicon || '';
+ $('apOverlay').value = String(siteAppearance.bgOverlay ?? 45);
+ $('apBlur').value = String(siteAppearance.cardBlur ?? 14);
+ syncAppearancePreviews();
+ $('appearanceModal').classList.add('open');
+}
+function closeAppearanceModal(keepCurrent) {
+ $('appearanceModal').classList.remove('open');
+ if (!keepCurrent && appearanceSnapshot) {
+  applyAppearance(appearanceSnapshot);
+ }
+ appearanceSnapshot = null;
+}
+['apTitle', 'apBgDesktop', 'apBgMobile', 'apLogo', 'apFavicon', 'apOverlay', 'apBlur'].forEach(id => {
+ const el = $(id);
+ if (el) el.addEventListener('input', () => { syncAppearancePreviews(); applyAppearance(collectAppearanceForm()); });
+});
+let appearUploadTargetId = '';
+document.querySelectorAll('[data-ap-upload]').forEach(btn => {
+ btn.onclick = () => { appearUploadTargetId = btn.dataset.apUpload; $('appearUploadInput').value = ''; $('appearUploadInput').click(); };
+});
+document.querySelectorAll('[data-ap-clear]').forEach(btn => {
+ btn.onclick = () => {
+  const el = $(btn.dataset.apClear);
+  if (el) { el.value = ''; syncAppearancePreviews(); applyAppearance(collectAppearanceForm()); }
+ };
+});
+if ($('appearUploadInput')) {
+ $('appearUploadInput').onchange = async () => {
+  const file = $('appearUploadInput').files && $('appearUploadInput').files[0];
+  if (!file || !appearUploadTargetId) return;
+  if (file.size > 15 * 1024 * 1024) { showToast('壁纸/图标图片请控制在 15MB 以内', 'err'); return; }
+  showToast('正在上传图片…', '');
+  try {
+   const activePool = getActivePool();
+   const customPoolId = (activePool && !activePool.builtin) ? activePool.id : '';
+   const mode = (activePool && activePool.transferMode) ? activePool.transferMode : r2TransferMode;
+   let uploadedFile = null;
+   if (activePool && activePool.type === 'local') {
+    const fd = new FormData();
+    fd.append('visibility', 'public');
+    fd.append('expires', '0');
+    fd.append('file', file);
+    const r = await fetch('/api/upload', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    uploadedFile = d.file;
+   } else if (mode === 'proxy') {
+    const qs = new URLSearchParams({ name: file.name, size: String(file.size), visibility: 'public', expires: '0', ...(customPoolId ? { poolId: customPoolId } : {}) });
+    const r = await fetch('/api/upload-proxy?' + qs.toString(), { method: 'POST', headers: { 'Content-Type': file.type || 'image/jpeg' }, body: file });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    uploadedFile = d.file;
+   } else {
+    const r1 = await fetch('/api/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, size: file.size, visibility: 'public', expires: 0, ...(customPoolId ? { poolId: customPoolId } : {}) }) });
+    const d1 = await r1.json();
+    if (!r1.ok || !d1.ok) throw new Error(d1.error || ('HTTP ' + r1.status));
+    const putRes = await fetch(d1.uploadUrl, { method: 'PUT', body: file });
+    if (!putRes.ok) throw new Error('HTTP ' + putRes.status);
+    const r2 = await fetch('/api/upload-complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: d1.id, key: d1.key, name: file.name, size: file.size, visibility: 'public', expires: 0, ...(customPoolId ? { poolId: customPoolId } : {}) }) });
+    const d2 = await r2.json();
+    if (!r2.ok || !d2.ok) throw new Error(d2.error || ('HTTP ' + r2.status));
+    uploadedFile = d2.file;
+   }
+   if (uploadedFile && uploadedFile.id) {
+    const el = $(appearUploadTargetId);
+    if (el) el.value = '/f/' + uploadedFile.id;
+    syncAppearancePreviews();
+    applyAppearance(collectAppearanceForm());
+    showToast('图片已上传并预览生效，记得点保存外观', 'ok');
+    loadList();
+   }
+  } catch (e) {
+   showToast('上传失败：' + ((e && e.message) || '网络错误'), 'err');
+  }
+ };
+}
+if ($('appearanceBtn')) $('appearanceBtn').onclick = openAppearanceModal;
+if ($('mobAppearanceBtn')) $('mobAppearanceBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openAppearanceModal(); };
+if ($('appearanceClose')) $('appearanceClose').onclick = () => closeAppearanceModal(false);
+if ($('apCancelBtn')) $('apCancelBtn').onclick = () => closeAppearanceModal(false);
+if ($('appearanceModal')) $('appearanceModal').onclick = (e) => { if (e.target.id === 'appearanceModal') closeAppearanceModal(false); };
+if ($('apResetBtn')) $('apResetBtn').onclick = () => {
+ $('apTitle').value = 'RelayBox';
+ $('apBgDesktop').value = '';
+ $('apBgMobile').value = '';
+ $('apLogo').value = '';
+ $('apFavicon').value = '';
+ $('apOverlay').value = '45';
+ $('apBlur').value = '14';
+ syncAppearancePreviews();
+ applyAppearance(collectAppearanceForm());
+};
+if ($('apSaveBtn')) $('apSaveBtn').onclick = async () => {
+ const btn = $('apSaveBtn');
+ btn.disabled = true;
+ try {
+  const payload = collectAppearanceForm();
+  const r = await fetch('/api/appearance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const d = await r.json();
+  if (!r.ok || !d.ok) { showToast('保存失败：' + (d.error || ('HTTP ' + r.status)), 'err'); return; }
+  siteAppearance = d.appearance || payload;
+  try { localStorage.setItem('fs-appearance', JSON.stringify(siteAppearance)); } catch {}
+  applyAppearance(siteAppearance);
+  closeAppearanceModal(true);
+  showToast('外观设置已保存并全站生效', 'ok');
+ } catch {
+  showToast('保存失败：网络错误', 'err');
+ } finally {
+  btn.disabled = false;
+ }
+};
+
+loadAppearance();
 initUploadCollapse();
 renderViewToggle();
 applyTheme();

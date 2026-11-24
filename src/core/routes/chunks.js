@@ -1,8 +1,9 @@
 // RelayBox core routes — chunked upload (chunk / chunk-status / chunk-complete).
-// Captures uploadIp, uploadGeo, width, height on chunk-complete (v3.1.5).
+// Supports built-in R2, built-in local disk (VPS), and dynamic S3/R2 storage pools (v3.2).
 
 import { readJsonBody, kindOf, extOf, keyOf, safeName, parseDim, parseExpiresHours, expiresAtOf, newId, CHUNK_SIZE, MIN_FREE_BYTES, MIME, log } from '../lib/util.js';
 import { authOrPassword, authFail, clientMeta } from '../lib/auth.js';
+import { resolveUploadTarget } from './pools.js';
 
 export function registerChunks(app) {
   app.post('/api/upload/chunk', async (c) => {
@@ -38,25 +39,52 @@ export function registerChunks(app) {
     } catch (e) {
       return c.json({ ok: false, error: '读取分片失败' }, 400);
     }
-    const buf = Buffer.concat(chunks);
+    const buf = new Uint8Array(len);
+    let offset = 0;
+    for (const part of chunks) {
+      buf.set(part, offset);
+      offset += part.length;
+    }
     const expect = index === total - 1 ? size - index * chunkSize : chunkSize;
-    if (buf.length !== expect) return c.json({ ok: false, error: '分片大小不对' }, 400);
+    if (buf.byteLength !== expect) return c.json({ ok: false, error: '分片大小不对' }, 400);
+
     let meta = await deps.meta.getChunkUpload(uploadId);
+    let targetDriver = null;
     if (!meta) {
+      const reqPoolId = (typeof q.poolId === 'string' && q.poolId.trim()) ? q.poolId.trim() : '';
+      let targetStorage = q.storage === 'r2' && deps.r2.enabled ? 'r2' : 'local';
+      let poolId = null;
+      if (reqPoolId) {
+        const resolved = await resolveUploadTarget(deps, reqPoolId, q.storage);
+        if (!resolved.ok) return c.json({ ok: false, error: resolved.error }, resolved.status || 400);
+        targetStorage = resolved.storage;
+        poolId = resolved.poolId;
+        targetDriver = resolved.driver;
+      } else if (targetStorage === 'r2') {
+        targetDriver = deps.r2;
+      }
       meta = {
         uploadId, r2UploadId: null, storageKey: null, name, size, total, chunkSize,
         visibility: q.visibility === 'public' ? 'public' : 'private',
         expiresHours: parseExpiresHours(q.expires || '0'),
-        storage: q.storage === 'r2' && deps.r2.enabled ? 'r2' : 'local',
+        storage: targetStorage,
+        poolId,
         folderId: q.folderId || null,
         createdAt: Date.now(), received: [],
       };
       await deps.meta.createChunkUpload(meta);
+    } else if (meta.poolId) {
+      const resolved = await resolveUploadTarget(deps, meta.poolId, 'r2');
+      if (!resolved.ok) return c.json({ ok: false, error: resolved.error }, resolved.status || 400);
+      targetDriver = resolved.driver;
+    } else if (meta.storage === 'r2') {
+      targetDriver = deps.r2;
     }
+
     if (meta.name !== name || meta.size !== size || meta.total !== total) {
       return c.json({ ok: false, error: '分片信息和首次不一致' }, 400);
     }
-    const updated = await deps.meta.writeChunkPart(uploadId, index, buf);
+    const updated = await deps.meta.writeChunkPart(uploadId, index, buf, targetDriver);
     return c.json({ ok: true, received: index, done: updated.received.length, total });
   });
 
@@ -89,37 +117,79 @@ export function registerChunks(app) {
     }
     const id = newId();
     const ext = extOf(meta.name);
+    const finalKey = keyOf(id, meta.name);
+    const mime = MIME[ext] || 'application/octet-stream';
     const tmpPath = deps.local.tempFilePath(`.tmp-chunk-${id}`);
+
+    let poolDriver = null;
+    if (meta.poolId) {
+      const resolved = await resolveUploadTarget(deps, meta.poolId, 'r2');
+      if (!resolved.ok) return c.json({ ok: false, error: resolved.error }, resolved.status || 400);
+      poolDriver = resolved.driver;
+    }
+
     try {
-      const assembled = await deps.meta.assembleChunks(cleanId, tmpPath);
-      if (assembled !== meta.size) throw new Error('assembled size mismatch');
       if (meta.r2UploadId) {
-        await deps.r2.rename(meta.storageKey, keyOf(id, meta.name));
-      } else if (meta.storage === 'r2') {
-        if (!deps.r2.enabled) throw new Error('R2 未配置');
-        await deps.r2.putFile(keyOf(id, meta.name), tmpPath, MIME[ext] || 'application/octet-stream');
-        await deps.local.removeTempFile(tmpPath);
+        // CF path: parts already uploaded to R2 / external S3 pool via writeChunkPart
+        const drv = poolDriver || deps.r2;
+        const assembled = await deps.meta.assembleChunks(cleanId, tmpPath, drv);
+        if (assembled !== meta.size) throw new Error('assembled size mismatch');
+        await drv.rename(meta.storageKey, finalKey);
+      } else if (poolDriver) {
+        // VPS path uploading to an external S3/R2 pool: stream parts via S3 multipart (zero full-file RAM)
+        if (meta.total === 1) {
+          const part0 = await deps.meta.readChunkPart(cleanId, 0);
+          if (!part0 || part0.length !== meta.size) throw new Error('assembled size mismatch');
+          await poolDriver.put(finalKey, part0, mime);
+        } else {
+          const mpuId = await poolDriver.createMultipartUpload(finalKey, mime);
+          const uploadedParts = [];
+          try {
+            let totalBytes = 0;
+            for (let i = 0; i < meta.total; i++) {
+              const partBuf = await deps.meta.readChunkPart(cleanId, i);
+              if (!partBuf) throw new Error(`missing chunk ${i}`);
+              totalBytes += partBuf.length;
+              const { etag } = await poolDriver.uploadPart(mpuId, finalKey, i + 1, partBuf);
+              uploadedParts.push({ partNumber: i + 1, etag });
+            }
+            if (totalBytes !== meta.size) throw new Error('assembled size mismatch');
+            await poolDriver.completeMultipartUpload(mpuId, finalKey, uploadedParts);
+          } catch (err) {
+            try { await poolDriver.abortMultipartUpload(mpuId, finalKey); } catch {}
+            throw err;
+          }
+        }
       } else {
-        await deps.local.importTempFile(tmpPath, keyOf(id, meta.name));
+        const assembled = await deps.meta.assembleChunks(cleanId, tmpPath);
+        if (assembled !== meta.size) throw new Error('assembled size mismatch');
+        if (meta.storage === 'r2') {
+          if (!deps.r2.enabled) throw new Error('R2 未配置');
+          await deps.r2.putFile(finalKey, tmpPath, mime);
+          await deps.local.removeTempFile(tmpPath);
+        } else {
+          await deps.local.importTempFile(tmpPath, finalKey);
+        }
       }
     } catch (e) {
       log('chunk assemble failed:', e && e.message);
       await deps.local.removeTempFile(tmpPath);
       return c.json({ ok: false, error: '合并失败：' + (e && e.message) }, 500);
     }
-    try { await deps.meta.deleteChunkUpload(cleanId); } catch {}
+    try { await deps.meta.deleteChunkUpload(cleanId, poolDriver || deps.r2); } catch {}
     const folders = await deps.meta.listFolders();
     const folderId = (typeof meta.folderId === 'string' && meta.folderId && folders.some((fd) => fd.id === meta.folderId)) ? meta.folderId : null;
     const { uploadIp, uploadGeo } = clientMeta(c, deps);
     const item = {
       id, name: meta.name, size: meta.size, ext, kind: kindOf(ext),
-      visibility: meta.visibility, storage: meta.storage, storageKey: keyOf(id, meta.name), folderId,
+      visibility: meta.visibility, storage: meta.storage, storageKey: finalKey, folderId,
       expiresAt: expiresAtOf(meta.expiresHours),
       uploadedAt: new Date().toISOString(),
       downloads: 0,
       uploadIp, uploadGeo,
       width: parseDim(body.width),
       height: parseDim(body.height),
+      poolId: meta.poolId || null,
     };
     try {
       await deps.meta.createFile(item);
@@ -127,7 +197,7 @@ export function registerChunks(app) {
       log('meta save failed:', e && e.message);
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
-    log('uploaded (chunked):', meta.name, (meta.size / 1024 / 1024).toFixed(2) + 'MB', meta.storage);
+    log('uploaded (chunked):', meta.name, (meta.size / 1024 / 1024).toFixed(2) + 'MB', meta.poolId || meta.storage);
     return c.json({ ok: true, file: item });
   });
 }

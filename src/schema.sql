@@ -19,7 +19,8 @@ CREATE TABLE files (
   upload_ip TEXT,
   upload_geo TEXT,
   width INTEGER,
-  height INTEGER
+  height INTEGER,
+  pool_id TEXT
 );
 CREATE INDEX idx_files_folder ON files(folder_id);
 CREATE INDEX idx_files_uploaded ON files(uploaded_at);
@@ -111,7 +112,8 @@ CREATE TABLE chunk_uploads (
   folder_id TEXT,
   visibility TEXT NOT NULL DEFAULT 'public',
   expires_hours INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  pool_id TEXT
 );
 CREATE INDEX idx_chunks_created ON chunk_uploads(created_at);
 
@@ -120,4 +122,23 @@ CREATE TABLE settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL DEFAULT '',
   updated_at INTEGER NOT NULL
+);
+
+-- Dynamic external storage pools (v3.2: extra R2 / S3-compatible buckets)
+CREATE TABLE storage_pools (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 's3',
+  endpoint TEXT NOT NULL,
+  bucket TEXT NOT NULL,
+  region TEXT NOT NULL DEFAULT 'auto',
+  access_key_id TEXT NOT NULL,
+  secret_key_enc TEXT NOT NULL,
+  public_domain TEXT NOT NULL DEFAULT '',
+  transfer_mode TEXT NOT NULL DEFAULT 'presign',
+  quota_bytes INTEGER NOT NULL DEFAULT 10737418240,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
 );

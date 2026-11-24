@@ -4,13 +4,16 @@
 
 import { kindOf, safeName, extOf, keyOf, parseDim, expiresAtOf, newId, sha256Hex, MIME, log } from '../lib/util.js';
 import { clientMeta } from '../lib/auth.js';
+import { resolveUploadTarget } from './pools.js';
 
 const RAW_UPLOAD_MAX_BYTES = 32 * 1024 * 1024; // 32MB
 
 export function registerRawUpload(app) {
   app.post('/api/raw-upload', async (c) => {
     const deps = c.get('deps');
-    if (!deps.r2.enabled) return c.json({ ok: false, error: 'R2 未配置' }, 501);
+    const reqPoolId = (c.req.query('poolId') || c.req.header('X-Pool-Id') || '').trim();
+    const target = await resolveUploadTarget(deps, reqPoolId, 'r2');
+    if (!target.ok) return c.json({ ok: false, error: target.error }, target.status || 501);
 
     const authHeader = c.req.header('Authorization') || '';
     const bearer = /^Bearer\s+(.+)$/i.exec(authHeader);
@@ -96,7 +99,7 @@ export function registerRawUpload(app) {
     const id = newId();
     const key = keyOf(id, filename);
     try {
-      await deps.r2.put(key, fileBytes, mime);
+      await target.driver.put(key, fileBytes, mime);
     } catch (e) {
       log('raw-upload R2 put failed:', e && e.message);
       return c.json({ ok: false, error: '保存失败' }, 500);
@@ -110,12 +113,13 @@ export function registerRawUpload(app) {
       downloads: 0,
       uploadIp, uploadGeo,
       width, height,
+      poolId: target.poolId,
     };
     try {
       await deps.meta.createFile(item);
     } catch (e) {
       log('raw-upload meta save failed:', e && e.message);
-      try { await deps.r2.delete(key); } catch {}
+      try { await target.driver.delete(key); } catch {}
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
     log('raw-upload:', filename, (item.size / 1024 / 1024).toFixed(2) + 'MB', 'token', apiToken.prefix);

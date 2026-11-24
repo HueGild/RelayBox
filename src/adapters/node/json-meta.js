@@ -16,6 +16,7 @@ export class JsonMetaStore {
     this.announceFile = path.join(dataDir, 'announcement.json');
     this.apiTokensFile = path.join(dataDir, 'api_tokens.json');
     this.settingsFile = path.join(dataDir, 'settings.json');
+    this.poolsFile = path.join(dataDir, 'storage_pools.json');
     this.chunksDir = path.join(dataDir, 'chunks');
     fs.mkdirSync(dataDir, { recursive: true });
     fs.mkdirSync(this.chunksDir, { recursive: true });
@@ -55,6 +56,7 @@ export class JsonMetaStore {
     f.uploadGeo = (typeof f.uploadGeo === 'string' && f.uploadGeo) ? f.uploadGeo : null;
     f.width = parseDim(f.width);
     f.height = parseDim(f.height);
+    f.poolId = (typeof f.poolId === 'string' && f.poolId) ? f.poolId : null;
     return f;
   }
   _readFiles() {
@@ -412,6 +414,74 @@ export class JsonMetaStore {
     });
   }
 
+  // ---- storage pools (v3.2) ----
+  _normalizePool(p) {
+    if (!p || typeof p !== 'object') return null;
+    return {
+      id: p.id,
+      name: p.name,
+      type: p.type || 's3',
+      endpoint: p.endpoint,
+      bucket: p.bucket,
+      region: p.region || 'auto',
+      accessKeyId: p.accessKeyId,
+      secretKeyEnc: p.secretKeyEnc,
+      publicDomain: p.publicDomain || '',
+      transferMode: p.transferMode === 'proxy' ? 'proxy' : 'presign',
+      quotaBytes: Number(p.quotaBytes) > 0 ? Math.floor(Number(p.quotaBytes)) : 10737418240,
+      enabled: p.enabled !== false,
+      isDefault: !!p.isDefault,
+      sortOrder: Number.isFinite(Number(p.sortOrder)) ? Math.floor(Number(p.sortOrder)) : 0,
+      createdAt: p.createdAt || Date.now(),
+    };
+  }
+  _readPools() {
+    const list = this._readJson(this.poolsFile, []);
+    if (!Array.isArray(list)) return [];
+    return list.map((p) => this._normalizePool(p)).filter(Boolean);
+  }
+  _writePools(list) {
+    this._writeJson(this.poolsFile, list);
+  }
+  async listStoragePools() {
+    return this._readPools().sort((a, b) => (a.sortOrder - b.sortOrder) || (a.createdAt - b.createdAt));
+  }
+  async getStoragePool(id) {
+    if (!id) return null;
+    return this._readPools().find((p) => p.id === id) || null;
+  }
+  async createStoragePool(p) {
+    return this._enqueue(() => {
+      const list = this._readPools();
+      const item = this._normalizePool({ ...p });
+      if (item.isDefault) list.forEach((x) => { x.isDefault = false; });
+      list.push(item);
+      this._writePools(list);
+      return item;
+    });
+  }
+  async updateStoragePool(id, patch) {
+    return this._enqueue(() => {
+      const list = this._readPools();
+      const idx = list.findIndex((p) => p.id === id);
+      if (idx === -1) return null;
+      if (patch.isDefault === true) list.forEach((x) => { x.isDefault = false; });
+      const next = this._normalizePool({ ...list[idx], ...patch, id });
+      list[idx] = next;
+      this._writePools(list);
+      return next;
+    });
+  }
+  async deleteStoragePool(id) {
+    return this._enqueue(() => {
+      const list = this._readPools();
+      const next = list.filter((p) => p.id !== id);
+      if (next.length === list.length) return false;
+      this._writePools(next);
+      return true;
+    });
+  }
+
   // ---- login brute-force ----
   async recordFailure(ip, at) {
     const now = at || Date.now();
@@ -458,6 +528,7 @@ export class JsonMetaStore {
     if (!m.storageKey) m.storageKey = null;
     if (!m.chunkSize) m.chunkSize = CHUNK_SIZE;
     if (!m.createdAt) m.createdAt = Date.now();
+    m.poolId = (typeof m.poolId === 'string' && m.poolId) ? m.poolId : null;
     return m;
   }
   _readChunkMeta(uploadId) {

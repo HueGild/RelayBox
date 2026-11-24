@@ -1,8 +1,9 @@
-// RelayBox core routes — upload (local multipart / R2 presigned upload-url /
-// upload-complete). Captures uploadIp, uploadGeo, width, height (v3.1.5).
+// RelayBox core routes — upload (local multipart / R2 & S3 pool presigned upload-url /
+// upload-complete / Worker binding & S3 pool proxy upload).
 
 import { readJsonBody, kindOf, safeName, extOf, keyOf, parseDim, parseExpiresHours, expiresAtOf, newId, MIN_FREE_BYTES, MIME, log } from '../lib/util.js';
 import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
+import { resolveUploadTarget } from './pools.js';
 
 export function registerUpload(app) {
   app.post('/api/upload', async (c) => {
@@ -50,6 +51,7 @@ export function registerUpload(app) {
       uploadIp, uploadGeo,
       width: parseDim(fields.width),
       height: parseDim(fields.height),
+      poolId: null,
     };
     try {
       await deps.meta.createFile(item);
@@ -64,12 +66,12 @@ export function registerUpload(app) {
 
   app.post('/api/upload-url', async (c) => {
     const deps = c.get('deps');
-    if (!deps.r2.enabled) return c.json({ ok: false, error: 'R2 未配置' }, 501);
     const body = await readJsonBody(c);
+    const target = await resolveUploadTarget(deps, body.poolId, 'r2');
+    if (!target.ok) return c.json({ ok: false, error: target.error }, target.status || 501);
     const auth = await authOrPassword(c, deps, body.password || '');
     if (auth !== 'ok') return authFail(c, auth);
     const filename = safeName(body.name);
-    const ext = extOf(filename);
     const n = Number(body.size);
     if (!filename || !Number.isFinite(n) || n <= 0 || n > deps.config.maxUploadSize) {
       return c.json({ ok: false, error: '文件名或大小不对' }, 400);
@@ -77,8 +79,8 @@ export function registerUpload(app) {
     const id = newId();
     const key = keyOf(id, filename);
     try {
-      const url = await deps.r2.presignedPutUrl(key, { contentLength: n, expiresIn: 900 });
-      return c.json({ ok: true, id, key, uploadUrl: url, expiresIn: 900 });
+      const url = await target.driver.presignedPutUrl(key, { contentLength: n, expiresIn: 900 });
+      return c.json({ ok: true, id, key, uploadUrl: url, expiresIn: 900, poolId: target.poolId });
     } catch (e) {
       log('presign PUT failed:', e && e.message);
       return c.json({ ok: false, error: '生成上传链接失败' }, 500);
@@ -87,8 +89,9 @@ export function registerUpload(app) {
 
   app.post('/api/upload-complete', async (c) => {
     const deps = c.get('deps');
-    if (!deps.r2.enabled) return c.json({ ok: false, error: 'R2 未配置' }, 501);
     const body = await readJsonBody(c);
+    const target = await resolveUploadTarget(deps, body.poolId, 'r2');
+    if (!target.ok) return c.json({ ok: false, error: target.error }, target.status || 501);
     const auth = await authOrPassword(c, deps, body.password || '');
     if (auth !== 'ok') return authFail(c, auth);
     const filename = safeName(body.name);
@@ -101,14 +104,14 @@ export function registerUpload(app) {
     if (existing) return c.json({ ok: true, file: existing });
     let head;
     try {
-      head = await deps.r2.head(body.key);
+      head = await target.driver.head(body.key);
     } catch (e) {
-      log('R2 head failed:', e && e.message);
-      return c.json({ ok: false, error: 'R2 里没有这个文件，请重新上传' }, 400);
+      log('storage head failed:', e && e.message);
+      return c.json({ ok: false, error: '存储桶里没有这个文件，请重新上传' }, 400);
     }
-    if (!head) return c.json({ ok: false, error: 'R2 里没有这个文件，请重新上传' }, 400);
+    if (!head) return c.json({ ok: false, error: '存储桶里没有这个文件，请重新上传' }, 400);
     if (Number(head.size) !== n) {
-      try { await deps.r2.delete(body.key); } catch {}
+      try { await target.driver.delete(body.key); } catch {}
       return c.json({ ok: false, error: '文件大小和申报的不一致，已取消登记' }, 400);
     }
     let folderId = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;
@@ -124,6 +127,7 @@ export function registerUpload(app) {
       uploadIp, uploadGeo,
       width: parseDim(body.width),
       height: parseDim(body.height),
+      poolId: target.poolId,
     };
     try {
       await deps.meta.createFile(item);
@@ -131,22 +135,24 @@ export function registerUpload(app) {
       log('meta save failed:', e && e.message);
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
-    log('uploaded (r2):', filename, (n / 1024 / 1024).toFixed(2) + 'MB');
+    log('uploaded (r2):', filename, (n / 1024 / 1024).toFixed(2) + 'MB', target.poolId || 'builtin-r2');
     return c.json({ ok: true, file: item });
   });
 
-  // Worker 绑定中转直传（v3.1.6，图床模式：单文件 <= 20MB，零 S3 密钥、零 CORS）
+  // 中转直传（v3.1.6 + v3.2：支持内置 CF R2 绑定与外挂 S3/R2 池，单文件 <= 20MB）
   app.post('/api/upload-proxy', async (c) => {
     const deps = c.get('deps');
-    if (!deps.r2.enabled || !deps.r2.proxySupported) {
-      return c.json({ ok: false, error: '当前环境不支持中转上传' }, 501);
+    const q = c.req.query();
+    const target = await resolveUploadTarget(deps, q.poolId, 'r2');
+    if (!target.ok) return c.json({ ok: false, error: target.error }, target.status || 501);
+    if (!target.driver.proxySupported) {
+      return c.json({ ok: false, error: '当前存储池不支持中转上传' }, 501);
     }
     const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
     if (auth !== 'ok') return authFail(c, auth);
     const maxProxyBytes = Number(deps.config.proxyUploadMaxBytes) > 0
       ? Number(deps.config.proxyUploadMaxBytes)
       : 20 * 1024 * 1024;
-    const q = c.req.query();
     const filename = safeName(q.name || '');
     const declaredSize = Number(q.size);
     if (!filename || !Number.isFinite(declaredSize) || declaredSize <= 0 || declaredSize > deps.config.maxUploadSize) {
@@ -181,9 +187,9 @@ export function registerUpload(app) {
     const id = newId();
     const key = keyOf(id, filename);
     try {
-      await deps.r2.put(key, bytes, mime);
+      await target.driver.put(key, bytes, mime);
     } catch (e) {
-      log('upload-proxy R2 put failed:', e && e.message);
+      log('upload-proxy put failed:', e && e.message);
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
     const { uploadIp, uploadGeo } = clientMeta(c, deps);
@@ -197,15 +203,16 @@ export function registerUpload(app) {
       uploadIp, uploadGeo,
       width: parseDim(q.width),
       height: parseDim(q.height),
+      poolId: target.poolId,
     };
     try {
       await deps.meta.createFile(item);
     } catch (e) {
       log('upload-proxy meta save failed:', e && e.message);
-      try { await deps.r2.delete(key); } catch {}
+      try { await target.driver.delete(key); } catch {}
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
-    log('uploaded (r2-proxy):', filename, (bytes.byteLength / 1024 / 1024).toFixed(2) + 'MB');
+    log('uploaded (r2-proxy):', filename, (bytes.byteLength / 1024 / 1024).toFixed(2) + 'MB', target.poolId || 'builtin-r2');
     return c.json({ ok: true, file: item });
   });
 }

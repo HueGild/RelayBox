@@ -45,6 +45,7 @@ export class D1MetaStore {
       uploadGeo: (typeof r.upload_geo === 'string' && r.upload_geo) ? r.upload_geo : null,
       width: parseDim(r.width),
       height: parseDim(r.height),
+      poolId: (typeof r.pool_id === 'string' && r.pool_id) ? r.pool_id : null,
     };
   }
   _rowToFolder(r) {
@@ -95,6 +96,7 @@ export class D1MetaStore {
       expiresHours: typeof r.expires_hours === 'number' ? r.expires_hours : 0,
       createdAt: r.created_at,
       chunkSize: CHUNK_SIZE,
+      poolId: (typeof r.pool_id === 'string' && r.pool_id) ? r.pool_id : null,
     };
   }
 
@@ -141,13 +143,14 @@ export class D1MetaStore {
       upload_geo: file.uploadGeo || null,
       width: parseDim(file.width),
       height: parseDim(file.height),
+      pool_id: (typeof file.poolId === 'string' && file.poolId) ? file.poolId : null,
     });
     await this.db.prepare(
-      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height, pool_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       item.id, item.name, item.size, item.ext, item.kind, item.storage, item.storageKey,
       item.folderId, item.visibility, isoToMs(item.expiresAt), item.downloads, isoToMs(item.uploadedAt),
-      item.uploadIp, item.uploadGeo, item.width, item.height,
+      item.uploadIp, item.uploadGeo, item.width, item.height, item.poolId,
     ).run();
     return item;
   }
@@ -166,13 +169,14 @@ export class D1MetaStore {
       upload_geo: (typeof next.uploadGeo === 'string' && next.uploadGeo) ? next.uploadGeo : null,
       width: parseDim(next.width),
       height: parseDim(next.height),
+      pool_id: (typeof next.poolId === 'string' && next.poolId) ? next.poolId : null,
     };
     await this.db.prepare(
-      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ?, upload_ip = ?, upload_geo = ?, width = ?, height = ? WHERE id = ?',
+      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ?, upload_ip = ?, upload_geo = ?, width = ?, height = ?, pool_id = ? WHERE id = ?',
     ).bind(
       row.name, row.size, row.ext, row.kind, row.storage, row.storage_key,
       row.folder_id, row.visibility, row.expires_at, row.downloads, row.uploaded_at,
-      row.upload_ip, row.upload_geo, row.width, row.height, id,
+      row.upload_ip, row.upload_geo, row.width, row.height, row.pool_id, id,
     ).run();
     return this._rowToFile(row);
   }
@@ -377,6 +381,102 @@ export class D1MetaStore {
     ).bind(String(key), String(value ?? ''), Date.now()).run();
   }
 
+  // ---- storage pools (v3.2) ----
+  _rowToPool(r) {
+    if (!r) return null;
+    return {
+      id: r.id,
+      name: r.name,
+      type: r.type || 's3',
+      endpoint: r.endpoint,
+      bucket: r.bucket,
+      region: r.region || 'auto',
+      accessKeyId: r.access_key_id,
+      secretKeyEnc: r.secret_key_enc,
+      publicDomain: r.public_domain || '',
+      transferMode: r.transfer_mode === 'proxy' ? 'proxy' : 'presign',
+      quotaBytes: typeof r.quota_bytes === 'number' && r.quota_bytes > 0 ? r.quota_bytes : 10737418240,
+      enabled: r.enabled !== 0,
+      isDefault: r.is_default === 1,
+      sortOrder: typeof r.sort_order === 'number' ? r.sort_order : 0,
+      createdAt: r.created_at,
+    };
+  }
+  async listStoragePools() {
+    try {
+      const { results } = await this.db.prepare(
+        'SELECT * FROM storage_pools ORDER BY sort_order ASC, created_at ASC',
+      ).all();
+      return (results || []).map((r) => this._rowToPool(r));
+    } catch {
+      return [];
+    }
+  }
+  async getStoragePool(id) {
+    if (!id) return null;
+    try {
+      const r = await this.db.prepare('SELECT * FROM storage_pools WHERE id = ?').bind(String(id)).first();
+      return this._rowToPool(r);
+    } catch {
+      return null;
+    }
+  }
+  async createStoragePool(p) {
+    const item = {
+      id: p.id,
+      name: p.name,
+      type: p.type || 's3',
+      endpoint: p.endpoint,
+      bucket: p.bucket,
+      region: p.region || 'auto',
+      accessKeyId: p.accessKeyId,
+      secretKeyEnc: p.secretKeyEnc,
+      publicDomain: p.publicDomain || '',
+      transferMode: p.transferMode === 'proxy' ? 'proxy' : 'presign',
+      quotaBytes: Number(p.quotaBytes) > 0 ? Math.floor(Number(p.quotaBytes)) : 10737418240,
+      enabled: p.enabled !== false,
+      isDefault: !!p.isDefault,
+      sortOrder: Number.isFinite(Number(p.sortOrder)) ? Math.floor(Number(p.sortOrder)) : 0,
+      createdAt: p.createdAt || Date.now(),
+    };
+    if (item.isDefault) {
+      await this.db.prepare('UPDATE storage_pools SET is_default = 0').run();
+    }
+    await this.db.prepare(
+      'INSERT INTO storage_pools (id, name, type, endpoint, bucket, region, access_key_id, secret_key_enc, public_domain, transfer_mode, quota_bytes, enabled, is_default, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      item.id, item.name, item.type, item.endpoint, item.bucket, item.region,
+      item.accessKeyId, item.secretKeyEnc, item.publicDomain, item.transferMode,
+      item.quotaBytes, item.enabled ? 1 : 0, item.isDefault ? 1 : 0, item.sortOrder, item.createdAt,
+    ).run();
+    return item;
+  }
+  async updateStoragePool(id, patch) {
+    const cur = await this.getStoragePool(id);
+    if (!cur) return null;
+    const next = { ...cur, ...patch };
+    next.transferMode = next.transferMode === 'proxy' ? 'proxy' : 'presign';
+    next.quotaBytes = Number(next.quotaBytes) > 0 ? Math.floor(Number(next.quotaBytes)) : 10737418240;
+    next.enabled = next.enabled !== false;
+    next.isDefault = !!next.isDefault;
+    next.sortOrder = Number.isFinite(Number(next.sortOrder)) ? Math.floor(Number(next.sortOrder)) : 0;
+    if (patch.isDefault === true) {
+      await this.db.prepare('UPDATE storage_pools SET is_default = 0 WHERE id != ?').bind(id).run();
+    }
+    await this.db.prepare(
+      'UPDATE storage_pools SET name = ?, type = ?, endpoint = ?, bucket = ?, region = ?, access_key_id = ?, secret_key_enc = ?, public_domain = ?, transfer_mode = ?, quota_bytes = ?, enabled = ?, is_default = ?, sort_order = ? WHERE id = ?',
+    ).bind(
+      next.name, next.type || 's3', next.endpoint, next.bucket, next.region || 'auto',
+      next.accessKeyId, next.secretKeyEnc, next.publicDomain || '', next.transferMode,
+      next.quotaBytes, next.enabled ? 1 : 0, next.isDefault ? 1 : 0, next.sortOrder, id,
+    ).run();
+    return next;
+  }
+  async deleteStoragePool(id) {
+    const out = await this.db.prepare('DELETE FROM storage_pools WHERE id = ?').bind(String(id)).run();
+    return (out.meta && out.meta.changes > 0) || false;
+  }
+
   // ---- login brute-force ----
   async recordFailure(ip, at) {
     await this.db.prepare('INSERT INTO login_attempts (ip, at) VALUES (?, ?)').bind(ip, at || Date.now()).run();
@@ -409,13 +509,14 @@ export class D1MetaStore {
       received: JSON.stringify(u.received || []), storage,
       folder_id: u.folderId || null, visibility: u.visibility || 'public',
       expires_hours: u.expiresHours || 0, created_at: u.createdAt || Date.now(),
+      pool_id: (typeof u.poolId === 'string' && u.poolId) ? u.poolId : null,
     });
     await this.db.prepare(
-      'INSERT INTO chunk_uploads (upload_id, r2_upload_id, storage_key, name, size, total, received, storage, folder_id, visibility, expires_hours, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO chunk_uploads (upload_id, r2_upload_id, storage_key, name, size, total, received, storage, folder_id, visibility, expires_hours, created_at, pool_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       item.uploadId, item.r2UploadId, item.storageKey, item.name, item.size, item.total,
       JSON.stringify(item.received), item.storage, item.folderId, item.visibility,
-      item.expiresHours, item.createdAt,
+      item.expiresHours, item.createdAt, item.poolId,
     ).run();
   }
 
@@ -424,19 +525,20 @@ export class D1MetaStore {
     if (!cur) return;
     const next = { ...cur, ...patch };
     await this.db.prepare(
-      'UPDATE chunk_uploads SET r2_upload_id = ?, storage_key = ?, received = ?, storage = ?, folder_id = ?, visibility = ?, expires_hours = ? WHERE upload_id = ?',
+      'UPDATE chunk_uploads SET r2_upload_id = ?, storage_key = ?, received = ?, storage = ?, folder_id = ?, visibility = ?, expires_hours = ?, pool_id = ? WHERE upload_id = ?',
     ).bind(
       next.r2UploadId || null, next.storageKey || null, JSON.stringify(next.received || []),
       next.storage || 'r2', next.folderId || null, next.visibility || 'public',
-      next.expiresHours || 0, uploadId,
+      next.expiresHours || 0, next.poolId || null, uploadId,
     ).run();
   }
 
-  async deleteChunkUpload(uploadId) {
+  async deleteChunkUpload(uploadId, storageOverride) {
     const meta = await this.getChunkUpload(uploadId);
-    if (meta && meta.r2UploadId && this.r2) {
+    const drv = storageOverride || this.r2;
+    if (meta && meta.r2UploadId && drv) {
       try {
-        await this.r2.abortMultipartUpload(meta.r2UploadId, meta.storageKey || (CHUNK_TMP_PREFIX + uploadId));
+        await drv.abortMultipartUpload(meta.r2UploadId, meta.storageKey || (CHUNK_TMP_PREFIX + uploadId));
       } catch { /* already gone is fine */ }
     }
     await this.db.prepare('DELETE FROM chunk_uploads WHERE upload_id = ?').bind(uploadId).run();
@@ -449,20 +551,21 @@ export class D1MetaStore {
     return (results || []).map((r) => this._rowToChunk(r));
   }
 
-  async writeChunkPart(uploadId, index, buf) {
-    if (!this.r2) throw new Error('R2 storage is required for chunk uploads on CF');
+  async writeChunkPart(uploadId, index, buf, storageOverride) {
+    const drv = storageOverride || this.r2;
+    if (!drv) throw new Error('R2 storage is required for chunk uploads on CF');
     let meta = await this.getChunkUpload(uploadId);
     if (!meta) return null;
     const partNumber = index + 1;
     if (!meta.r2UploadId) {
       const tmpKey = CHUNK_TMP_PREFIX + uploadId;
       const contentType = MIME[extOf(meta.name)] || 'application/octet-stream';
-      const r2UploadId = await this.r2.createMultipartUpload(tmpKey, contentType);
+      const r2UploadId = await drv.createMultipartUpload(tmpKey, contentType);
       meta.r2UploadId = r2UploadId;
       meta.storageKey = tmpKey;
       await this.updateChunkUpload(uploadId, { r2UploadId, storageKey: tmpKey });
     }
-    const { etag } = await this.r2.uploadPart(meta.r2UploadId, meta.storageKey, partNumber, buf);
+    const { etag } = await drv.uploadPart(meta.r2UploadId, meta.storageKey, partNumber, buf);
     if (!meta.received.some((r) => r.partNumber === index)) {
       meta.received.push({ partNumber: index, etag });
       meta.received.sort((a, b) => a.partNumber - b.partNumber);
@@ -483,15 +586,16 @@ export class D1MetaStore {
     return !!meta && meta.received.some((r) => r.partNumber === index);
   }
 
-  async assembleChunks(uploadId) {
-    if (!this.r2) throw new Error('R2 storage is required for chunk uploads on CF');
+  async assembleChunks(uploadId, _tmpPath, storageOverride) {
+    const drv = storageOverride || this.r2;
+    if (!drv) throw new Error('R2 storage is required for chunk uploads on CF');
     const meta = await this.getChunkUpload(uploadId);
     if (!meta || !meta.r2UploadId) throw new Error('chunk meta missing');
     const parts = meta.received
       .map((p) => ({ partNumber: p.partNumber + 1, etag: p.etag }))
       .sort((a, b) => a.partNumber - b.partNumber);
-    await this.r2.completeMultipartUpload(meta.r2UploadId, meta.storageKey, parts);
-    const head = await this.r2.head(meta.storageKey);
+    await drv.completeMultipartUpload(meta.r2UploadId, meta.storageKey, parts);
+    const head = await drv.head(meta.storageKey);
     if (!head) throw new Error('assembled object missing after complete');
     return head.size;
   }
