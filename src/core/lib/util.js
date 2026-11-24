@@ -124,6 +124,29 @@ export function newSessionToken() {
   return randomHex(24);
 }
 
+/** 5 位短取件码字符集：31 个无歧义字符（去 0/O/1/I/L），5 位约 2860 万种组合。 */
+export const PICKUP_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+/** 生成一个 5 位短取件码（Web Crypto 随机）。 */
+export function newPickupCode() {
+  const arr = new Uint8Array(5);
+  crypto.getRandomValues(arr);
+  let out = '';
+  for (const b of arr) out += PICKUP_CODE_ALPHABET[b % PICKUP_CODE_ALPHABET.length];
+  return out;
+}
+
+/** API Token 明文：`rbx_` + 32 位随机 hex。明文只在创建时返回一次，入库只存 SHA-256。 */
+export function newApiToken() {
+  return 'rbx_' + randomHex(16);
+}
+
+/** Web Crypto SHA-256，返回小写 hex（64 字符）。零 Node 依赖，Node 与 Workers 通用。 */
+export async function sha256Hex(text) {
+  const data = new TextEncoder().encode(String(text));
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 /** Parse a Cookie header into an object (no decode errors). */
 export function parseCookies(header) {
   const out = {};

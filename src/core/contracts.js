@@ -32,6 +32,17 @@
  * @property {string} code         extraction code, '' = none
  * @property {boolean} burn        burn-after-reading
  * @property {number} createdAt
+ * @property {number} maxDownloads 0 = unlimited, 1 = burn-after-reading, N = limited (v3.1)
+ * @property {number} usedDownloads downloads already served through this share (v3.1)
+ * @property {string|null} pickupCode 5-char pickup code, null = none (v3.1)
+ *
+ * @typedef {Object} ApiTokenItem
+ * @property {string} id
+ * @property {string} name
+ * @property {string} prefix       first 8 chars preview, e.g. "rbx_a1b2" (v3.1)
+ * @property {string} scope        'upload' | 'all' (v3.1)
+ * @property {number|null} lastUsedAt
+ * @property {number} createdAt
  *
  * @typedef {Object} ChunkUpload
  * @property {string} uploadId
@@ -64,8 +75,9 @@ export const MetaStoreMethods = [
   'getFile', 'listFiles', 'listAllFiles', 'searchFiles', 'createFile', 'updateFile', 'deleteFile',
   'incrementDownloads',
   'listFolders', 'getFolder', 'createFolder', 'updateFolder', 'deleteFolder',
-  'getShareByToken', 'getShareByFileId', 'getShareByFolderId',
-  'createShare', 'updateShare', 'deleteShare',
+  'getShareByToken', 'getShareByFileId', 'getShareByFolderId', 'getShareByPickupCode',
+  'createShare', 'updateShare', 'deleteShare', 'incrementShareDownloads',
+  'createApiToken', 'getApiTokenByHash', 'listApiTokens', 'deleteApiToken', 'touchApiToken',
   'getSession', 'createSession', 'deleteSession', 'deleteExpiredSessions',
   'getAnnouncement', 'setAnnouncement',
   'recordFailure', 'countFailuresSince', 'clearFailures', 'isBlocked',

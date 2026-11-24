@@ -14,6 +14,8 @@ import { registerShares } from './routes/shares.js';
 import { registerUpload } from './routes/upload.js';
 import { registerChunks } from './routes/chunks.js';
 import { registerThumbs } from './routes/thumbs.js';
+import { registerTokens } from './routes/tokens.js';
+import { registerRawUpload } from './routes/raw-upload.js';
 
 /**
  * deps: {
@@ -49,6 +51,8 @@ export function createApp(deps) {
   registerUpload(app);
   registerChunks(app);
   registerThumbs(app);
+  registerTokens(app);
+  registerRawUpload(app);
 
   // Unmatched routes: same 404 shape as v2.8.4.
   app.notFound((c) => c.json({ ok: false, error: 'not found' }, 404));

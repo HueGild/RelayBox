@@ -22,6 +22,7 @@ export class JsonMetaStore {
     this.foldersFile = path.join(dataDir, 'folders.json');
     this.sessionsFile = path.join(dataDir, 'sessions.json');
     this.announceFile = path.join(dataDir, 'announcement.json');
+    this.apiTokensFile = path.join(dataDir, 'api_tokens.json');
     this.chunksDir = path.join(dataDir, 'chunks');
     fs.mkdirSync(dataDir, { recursive: true });
     fs.mkdirSync(this.chunksDir, { recursive: true });
@@ -197,7 +198,15 @@ export class JsonMetaStore {
   // ---- shares ----
   _normalizeShare(s) {
     if (!s || typeof s !== 'object') return null;
-    return { ...s, code: typeof s.code === 'string' ? s.code : '', burn: s.burn === true };
+    const out = { ...s, code: typeof s.code === 'string' ? s.code : '', burn: s.burn === true };
+    // v3.1: maxDownloads 0 = unlimited; usedDownloads counts served downloads;
+    // pickupCode null = none (old shares).
+    out.maxDownloads = (typeof s.maxDownloads === 'number' && Number.isFinite(s.maxDownloads) && s.maxDownloads >= 0)
+      ? Math.floor(s.maxDownloads) : 0;
+    out.usedDownloads = (typeof s.usedDownloads === 'number' && Number.isFinite(s.usedDownloads) && s.usedDownloads >= 0)
+      ? Math.floor(s.usedDownloads) : 0;
+    out.pickupCode = (typeof s.pickupCode === 'string' && s.pickupCode) ? s.pickupCode : null;
+    return out;
   }
   _readShares() {
     const list = this._readJson(this.sharesFile, []);
@@ -218,12 +227,19 @@ export class JsonMetaStore {
     const s = this._readShares().find((x) => x.folderId === folderId);
     return s ? this._normalizeShare(s) : null;
   }
+  async getShareByPickupCode(code) {
+    const c = (typeof code === 'string' && code) ? code.trim().toUpperCase() : '';
+    if (!c) return null;
+    const s = this._readShares().find((x) => typeof x.pickupCode === 'string' && x.pickupCode.toUpperCase() === c);
+    return s ? this._normalizeShare(s) : null;
+  }
   async createShare(share) {
     return this._enqueue(() => {
       const list = this._readShares();
-      const item = { ...share };
+      const item = this._normalizeShare({ ...share });
       if (!item.code) delete item.code;
       if (!item.burn) delete item.burn;
+      if (!item.pickupCode) delete item.pickupCode;
       list.push(item);
       this._writeShares(list);
       return this._normalizeShare(item);
@@ -243,8 +259,35 @@ export class JsonMetaStore {
         if (patch.burn) item.burn = true;
         else delete item.burn;
       }
+      if (patch.maxDownloads !== undefined) {
+        item.maxDownloads = Math.max(0, Math.floor(Number(patch.maxDownloads)) || 0);
+      }
+      if (patch.usedDownloads !== undefined) {
+        item.usedDownloads = Math.max(0, Math.floor(Number(patch.usedDownloads)) || 0);
+      }
+      if (patch.pickupCode !== undefined) {
+        if (patch.pickupCode) item.pickupCode = patch.pickupCode;
+        else delete item.pickupCode;
+      }
       this._writeShares(list);
       return this._normalizeShare(item);
+    });
+  }
+  /**
+   * Atomic download-count decrement (v3.1, JSON store): the serial write
+   * queue makes the check-then-increment indivisible. Returns 1 when the
+   * download was counted, 0 when the share is missing or the limit is spent.
+   */
+  async incrementShareDownloads(token) {
+    return this._enqueue(() => {
+      const list = this._readShares();
+      const item = list.find((x) => x.token === token);
+      if (!item) return 0;
+      const s = this._normalizeShare(item);
+      if (!(s.maxDownloads === 0 || s.usedDownloads < s.maxDownloads)) return 0;
+      item.usedDownloads = s.usedDownloads + 1;
+      this._writeShares(list);
+      return 1;
     });
   }
   async deleteShare(token) {
@@ -254,6 +297,67 @@ export class JsonMetaStore {
       if (next.length === list.length) return false;
       this._writeShares(next);
       return true;
+    });
+  }
+
+  // ---- API tokens (v3.1) ----
+  _normalizeApiToken(t) {
+    if (!t || typeof t !== 'object') return null;
+    return {
+      id: t.id,
+      name: t.name,
+      prefix: t.prefix,
+      scope: (t.scope === 'all' || t.scope === 'upload') ? t.scope : 'upload',
+      lastUsedAt: (typeof t.lastUsedAt === 'number') ? t.lastUsedAt : null,
+      createdAt: t.createdAt,
+    };
+  }
+  _readApiTokens() {
+    const list = this._readJson(this.apiTokensFile, []);
+    return Array.isArray(list) ? list : [];
+  }
+  _writeApiTokens(list) {
+    this._writeJson(this.apiTokensFile, list);
+  }
+  async createApiToken(t) {
+    return this._enqueue(() => {
+      const list = this._readApiTokens();
+      const item = this._normalizeApiToken({
+        id: t.id, name: t.name, prefix: t.prefix, scope: t.scope || 'upload',
+        lastUsedAt: null, createdAt: t.createdAt,
+      });
+      // Keep the hash alongside the public fields (never returned by list/get).
+      list.push({ ...item, tokenHash: t.tokenHash });
+      this._writeApiTokens(list);
+      return item;
+    });
+  }
+  async getApiTokenByHash(tokenHash) {
+    const t = this._readApiTokens().find((x) => x.tokenHash === tokenHash);
+    return t ? this._normalizeApiToken(t) : null;
+  }
+  async listApiTokens() {
+    return this._readApiTokens()
+      .map((t) => this._normalizeApiToken(t))
+      .filter(Boolean)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+  async deleteApiToken(id) {
+    return this._enqueue(() => {
+      const list = this._readApiTokens();
+      const next = list.filter((x) => x.id !== id);
+      if (next.length === list.length) return false;
+      this._writeApiTokens(next);
+      return true;
+    });
+  }
+  async touchApiToken(id) {
+    return this._enqueue(() => {
+      const list = this._readApiTokens();
+      const item = list.find((x) => x.id === id);
+      if (!item) return;
+      item.lastUsedAt = Date.now();
+      this._writeApiTokens(list);
     });
   }
 

@@ -33,14 +33,24 @@ async function canAccessViaShare(deps, item, shareToken) {
   return false;
 }
 
-/** 阅后即焚：凭分享 token 下载成功后，把这个分享删掉。只在真正下载时烧。 */
-async function burnShare(deps, token) {
-  if (!token) return;
+/**
+ * 下载交付点消费分享（v3.1）：原子扣减下载次数 + 阅后即焚时清理分享。
+ * 只在真正下载时（?download=1）调用。返回 { ok: true } 或
+ * { ok: false, exhausted: true }（次数已耗尽，调用方回 410 Gone）。
+ * 扣减是原子条件更新：max_downloads=0（不限）恒成功；限次时仅 used<max 才 +1。
+ * 注意：限次用尽时不删分享（只删 burn=true 的），否则私密文件的下次下载
+ * 会在权限校验处回 403 而非 410；保留用尽的分享才能稳定回 410。
+ */
+async function consumeShare(deps, token) {
+  if (!token) return { ok: true };
+  const changes = await deps.meta.incrementShareDownloads(token);
+  if (changes === 0) return { ok: false, exhausted: true };
   const share = await deps.meta.getShareByToken(token);
   if (share && share.burn) {
     await deps.meta.deleteShare(token);
-    log('burn share after download:', token);
+    log('share consumed after download:', token);
   }
+  return { ok: true };
 }
 
 export function registerFiles(app) {
@@ -159,8 +169,11 @@ export function registerFiles(app) {
       if (!deps.r2.enabled) return c.json({ ok: false, error: 'R2 未配置，文件暂时无法访问' }, 503);
       try {
         const res = await deps.r2.get(item.storageKey, { contentType: mime, disposition });
-        // 阅后即焚：临时链接已生成，下载即烧掉这个分享。
-        if (forceDownload) await burnShare(deps, shareToken);
+        // 限次扣减/阅后即焚：临时链接已生成，下载即消费这个分享；次数用尽回 410。
+        if (forceDownload) {
+          const consumed = await consumeShare(deps, shareToken);
+          if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
+        }
         return res;
       } catch (e) {
         log('presign GET failed:', e && e.message);
@@ -173,8 +186,11 @@ export function registerFiles(app) {
       contentType: mime, disposition,
     });
     if (!res) return c.json({ ok: false, error: '文件不存在' }, 404);
-    // 阅后即焚：文件已确认存在，开始传输即烧掉这个分享（416 不烧）。
-    if (forceDownload && res.status !== 416) await burnShare(deps, shareToken);
+    // 限次扣减/阅后即焚：文件已确认存在，开始传输即消费这个分享（416 不消费）；次数用尽回 410。
+    if (forceDownload && res.status !== 416) {
+      const consumed = await consumeShare(deps, shareToken);
+      if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
+    }
     return res;
   });
 

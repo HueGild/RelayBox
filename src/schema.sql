@@ -30,16 +30,48 @@ CREATE TABLE folders (
 CREATE INDEX idx_folders_parent ON folders(parent_id);
 
 -- Shares (file_id XOR folder_id; no independent expiry — a share follows its file)
+-- v3.1: max_downloads (0 = unlimited) / used_downloads / pickup_code (5-char).
 CREATE TABLE shares (
   token      TEXT PRIMARY KEY,
   file_id    TEXT,
   folder_id  TEXT,
   code       TEXT NOT NULL DEFAULT '',
   burn       INTEGER NOT NULL DEFAULT 0,
+  max_downloads  INTEGER NOT NULL DEFAULT 0,
+  used_downloads INTEGER NOT NULL DEFAULT 0,
+  pickup_code    TEXT,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX idx_shares_file ON shares(file_id);
 CREATE INDEX idx_shares_folder ON shares(folder_id);
+CREATE UNIQUE INDEX idx_shares_pickup_code ON shares(pickup_code);
+
+-- API Tokens (v3.1: geek one-click upload / later WebDAV reuse).
+-- Only the SHA-256 hash is stored; the plaintext token is shown once at creation.
+CREATE TABLE api_tokens (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  prefix TEXT NOT NULL,
+  scope TEXT NOT NULL DEFAULT 'upload',
+  last_used_at INTEGER,
+  created_at INTEGER NOT NULL
+);
+
+-- Drop links / file collection boxes (v3.2, created here with v3.1 for simplicity).
+CREATE TABLE drop_links (
+  token TEXT PRIMARY KEY,
+  folder_id TEXT,
+  title TEXT NOT NULL DEFAULT '文件收集',
+  password_hash TEXT NOT NULL DEFAULT '',
+  max_files INTEGER NOT NULL DEFAULT 0,
+  used_files INTEGER NOT NULL DEFAULT 0,
+  max_file_size INTEGER NOT NULL DEFAULT 104857600,
+  visibility TEXT NOT NULL DEFAULT 'private',
+  expires_at INTEGER,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX idx_drop_links_expires ON drop_links(expires_at);
 
 -- Admin sessions (replaces sessions.json)
 CREATE TABLE sessions (

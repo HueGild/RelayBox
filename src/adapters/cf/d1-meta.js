@@ -87,6 +87,9 @@ export class D1MetaStore {
       folderId: r.folder_id || null,
       code: typeof r.code === 'string' ? r.code : '',
       burn: r.burn === 1,
+      maxDownloads: typeof r.max_downloads === 'number' ? r.max_downloads : 0,
+      usedDownloads: typeof r.used_downloads === 'number' ? r.used_downloads : 0,
+      pickupCode: (typeof r.pickup_code === 'string' && r.pickup_code) ? r.pickup_code : null,
       createdAt: msToIso(r.created_at),
     };
   }
@@ -255,14 +258,27 @@ export class D1MetaStore {
     const r = await this.db.prepare('SELECT * FROM shares WHERE folder_id = ?').bind(folderId).first();
     return this._rowToShare(r);
   }
+  async getShareByPickupCode(code) {
+    const c = (typeof code === 'string' && code) ? code.trim().toUpperCase() : '';
+    if (!c) return null;
+    const r = await this.db.prepare('SELECT * FROM shares WHERE pickup_code = ?').bind(c).first();
+    return this._rowToShare(r);
+  }
   async createShare(share) {
     const item = this._rowToShare({
       token: share.token, file_id: share.fileId || null, folder_id: share.folderId || null,
-      code: share.code || '', burn: share.burn ? 1 : 0, created_at: isoToMs(share.createdAt),
+      code: share.code || '', burn: share.burn ? 1 : 0,
+      max_downloads: typeof share.maxDownloads === 'number' ? share.maxDownloads : 0,
+      used_downloads: typeof share.usedDownloads === 'number' ? share.usedDownloads : 0,
+      pickup_code: (typeof share.pickupCode === 'string' && share.pickupCode) ? share.pickupCode : null,
+      created_at: isoToMs(share.createdAt),
     });
     await this.db.prepare(
-      'INSERT INTO shares (token, file_id, folder_id, code, burn, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    ).bind(item.token, item.fileId, item.folderId, item.code, item.burn ? 1 : 0, isoToMs(item.createdAt)).run();
+      'INSERT INTO shares (token, file_id, folder_id, code, burn, max_downloads, used_downloads, pickup_code, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      item.token, item.fileId, item.folderId, item.code, item.burn ? 1 : 0,
+      item.maxDownloads, item.usedDownloads, item.pickupCode, isoToMs(item.createdAt),
+    ).run();
     return item;
   }
   async updateShare(token, patch) {
@@ -272,14 +288,66 @@ export class D1MetaStore {
     // v2.8.4 semantics: code '' removes the code, burn false removes the flag.
     if (patch.code !== undefined) next.code = patch.code ? patch.code : '';
     if (patch.burn !== undefined) next.burn = !!patch.burn;
+    if (patch.maxDownloads !== undefined) next.maxDownloads = Math.max(0, Math.floor(Number(patch.maxDownloads)) || 0);
+    if (patch.usedDownloads !== undefined) next.usedDownloads = Math.max(0, Math.floor(Number(patch.usedDownloads)) || 0);
+    if (patch.pickupCode !== undefined) next.pickupCode = (typeof patch.pickupCode === 'string' && patch.pickupCode) ? patch.pickupCode : null;
     await this.db.prepare(
-      'UPDATE shares SET code = ?, burn = ? WHERE token = ?',
-    ).bind(next.code, next.burn ? 1 : 0, token).run();
+      'UPDATE shares SET code = ?, burn = ?, max_downloads = ?, used_downloads = ?, pickup_code = ? WHERE token = ?',
+    ).bind(next.code, next.burn ? 1 : 0, next.maxDownloads, next.usedDownloads, next.pickupCode, token).run();
     return next;
+  }
+  /**
+   * Atomic download-count decrement (v3.1): increments used_downloads only
+   * while under the limit. Returns the number of rows changed (1 = counted,
+   * 0 = share missing or limit exhausted). The caller treats 0 as 410 Gone.
+   */
+  async incrementShareDownloads(token) {
+    const out = await this.db.prepare(
+      'UPDATE shares SET used_downloads = used_downloads + 1 WHERE token = ? AND (max_downloads = 0 OR used_downloads < max_downloads)',
+    ).bind(token).run();
+    return (out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
   }
   async deleteShare(token) {
     const out = await this.db.prepare('DELETE FROM shares WHERE token = ?').bind(token).run();
     return (out.meta && out.meta.changes > 0) || false;
+  }
+
+  // ---- API tokens (v3.1) ----
+  _rowToApiToken(r) {
+    if (!r) return null;
+    return {
+      id: r.id,
+      name: r.name,
+      prefix: r.prefix,
+      scope: r.scope || 'upload',
+      lastUsedAt: (typeof r.last_used_at === 'number') ? r.last_used_at : null,
+      createdAt: r.created_at,
+    };
+  }
+  async createApiToken(t) {
+    const item = {
+      id: t.id, name: t.name, prefix: t.prefix, scope: t.scope || 'upload',
+      lastUsedAt: null, createdAt: t.createdAt,
+    };
+    await this.db.prepare(
+      'INSERT INTO api_tokens (id, name, token_hash, prefix, scope, last_used_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).bind(item.id, item.name, t.tokenHash, item.prefix, item.scope, null, item.createdAt).run();
+    return item;
+  }
+  async getApiTokenByHash(tokenHash) {
+    const r = await this.db.prepare('SELECT * FROM api_tokens WHERE token_hash = ?').bind(tokenHash).first();
+    return this._rowToApiToken(r);
+  }
+  async listApiTokens() {
+    const { results } = await this.db.prepare('SELECT * FROM api_tokens ORDER BY created_at DESC').all();
+    return (results || []).map((r) => this._rowToApiToken(r));
+  }
+  async deleteApiToken(id) {
+    const out = await this.db.prepare('DELETE FROM api_tokens WHERE id = ?').bind(id).run();
+    return (out.meta && out.meta.changes > 0) || false;
+  }
+  async touchApiToken(id) {
+    await this.db.prepare('UPDATE api_tokens SET last_used_at = ? WHERE id = ?').bind(Date.now(), id).run();
   }
 
   // ---- sessions ----
