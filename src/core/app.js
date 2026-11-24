@@ -22,7 +22,7 @@ import { registerRawUpload } from './routes/raw-upload.js';
  *   meta,            // MetaStore (JsonMetaStore / D1MetaStore)
  *   local,           // LocalStorage (VPS disk; CF: unused)
  *   r2,              // R2Storage (may be disabled when unconfigured)
- *   config: { uploadPassword, maxUploadSize, r2Enabled },
+ *   config: { uploadPassword, maxUploadSize, r2Enabled, chunkUploadThreshold, chunkSize },
  *   parseMultipart,  // (c, { maxFileSize, filesDir }) => { fields, file, failed, tmpPath }
  *                     // Node-only (busboy); absent on CF (local upload is VPS-only).
  *   getClientIp,     // (c) => string — socket address for the rate limiter

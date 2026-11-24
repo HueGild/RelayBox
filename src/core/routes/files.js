@@ -93,6 +93,9 @@ export function registerFiles(app) {
       ok: true, files, folders: subfolders, path: folderPath(folders, folderId), folderId, total,
       free: deps.local.freeBytes(), diskTotal: deps.local.totalBytes(),
       r2Used, localUsed, r2Total: R2_FREE_BYTES, authed, r2: deps.r2.enabled,
+      // 前端上传策略（由部署端决定：VPS 200MB/50MB，CF 32MB/5MB）。
+      chunkUploadThreshold: deps.config.chunkUploadThreshold || 32 * 1024 * 1024,
+      chunkSize: deps.config.chunkSize || 5 * 1024 * 1024,
     });
   });
 

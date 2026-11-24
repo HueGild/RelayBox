@@ -13,6 +13,9 @@ export function registerChunks(app) {
   // 收一片：POST /api/upload/chunk?uploadId&index&total&name&size&visibility&expires&storage&folderId，body 是分片原字节。
   app.post('/api/upload/chunk', async (c) => {
     const deps = c.get('deps');
+    // 分片大小由部署端配置决定（VPS 50MB，CF 5MB），与前端下发的 chunkSize 一致；
+    // 用配置值校验，否则 50MB 的片会被当成“分片太大”拒掉。
+    const chunkSize = Number(deps.config.chunkSize) > 0 ? Number(deps.config.chunkSize) : CHUNK_SIZE;
     if (deps.local.freeBytes() < MIN_FREE_BYTES) {
       return c.json({ ok: false, error: '磁盘空间不足' }, 507);
     }
@@ -40,19 +43,19 @@ export function registerChunks(app) {
         if (done) break;
         chunks.push(value);
         len += value.length;
-        if (len > CHUNK_SIZE + 1024 * 1024) return c.json({ ok: false, error: '分片太大' }, 413);
+        if (len > chunkSize + 1024 * 1024) return c.json({ ok: false, error: '分片太大' }, 413);
       }
     } catch (e) {
       return c.json({ ok: false, error: '读取分片失败' }, 400);
     }
     const buf = Buffer.concat(chunks);
-    // 最后一片可以小一点，其余片必须满 5MB。
-    const expect = index === total - 1 ? size - index * CHUNK_SIZE : CHUNK_SIZE;
+    // 最后一片可以小一点，其余片必须满一片（按部署端配置的片大小）。
+    const expect = index === total - 1 ? size - index * chunkSize : chunkSize;
     if (buf.length !== expect) return c.json({ ok: false, error: '分片大小不对' }, 400);
     let meta = await deps.meta.getChunkUpload(uploadId);
     if (!meta) {
       meta = {
-        uploadId, r2UploadId: null, storageKey: null, name, size, total, chunkSize: CHUNK_SIZE,
+        uploadId, r2UploadId: null, storageKey: null, name, size, total, chunkSize,
         visibility: q.visibility === 'public' ? 'public' : 'private',
         expiresHours: parseExpiresHours(q.expires || '0'),
         storage: q.storage === 'r2' && deps.r2.enabled ? 'r2' : 'local',

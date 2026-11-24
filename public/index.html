@@ -1226,6 +1226,8 @@ async function loadList(showSkel) {
     r2On = d.r2 === true;
     hasLocalStorage = !!(d.diskTotal && d.diskTotal > 0);
     maxUploadSize = Number(d.maxUploadSize || d.maxFileSize || 0);
+    if (Number(d.chunkUploadThreshold) > 0) CHUNK_UPLOAD_THRESHOLD = Number(d.chunkUploadThreshold);
+    if (Number(d.chunkSize) > 0) CHUNK_SIZE = Number(d.chunkSize);
     if (!selectedFiles.length && !uploading) drop.innerHTML = getDropDefaultHtml();
     const fsg = $('filterStoreGroup');
     if (fsg) fsg.style.display = hasLocalStorage ? '' : 'none';
@@ -2362,8 +2364,11 @@ async function maybeUploadThumb(fileObj, file) {
   } catch {}
 }
 
-const CHUNK_UPLOAD_THRESHOLD = 32 * 1024 * 1024;
-const CHUNK_SIZE = 5 * 1024 * 1024;
+// 上传分片策略由服务端下发（/api/files 返回 chunkUploadThreshold / chunkSize）：
+// VPS：200MB 以下直传，超过才分片，每片 50MB；CF：32MB / 5MB。默认值是 CF 的策略，
+// 服务端没返回时用默认值（页面刚加载、还没拿到配置前上传也不会错）。
+let CHUNK_UPLOAD_THRESHOLD = 32 * 1024 * 1024;
+let CHUNK_SIZE = 5 * 1024 * 1024;
 const CHUNK_RETRIES = 3;
 async function uploadChunked(job, idx, total, targetFolderId, pw) {
   const f = job.file;

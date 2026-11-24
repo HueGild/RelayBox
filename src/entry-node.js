@@ -22,6 +22,10 @@ import { log } from './core/lib/util.js';
 const ROOT = process.env.RELAYBOX_ROOT || process.cwd();
 const PORT = Number(process.env.PORT || 80);
 const MAX_UPLOAD_SIZE = Number(process.env.MAX_UPLOAD_SIZE || 10 * 1024 * 1024 * 1024);
+// VPS 上传策略（仅 VPS，CF 保持 32MB / 5MB 不变）：200MB 以下直传，
+// 超过 200MB 才分片，且每片 50MB（5MB 一片太多）。可用环境变量覆盖。
+const CHUNK_UPLOAD_THRESHOLD = Number(process.env.CHUNK_UPLOAD_THRESHOLD || 200 * 1024 * 1024);
+const CHUNK_SIZE = Number(process.env.CHUNK_SIZE || 50 * 1024 * 1024);
 
 function loadConfig() {
   let file = {};
@@ -60,6 +64,8 @@ const deps = {
     uploadPassword: config.uploadPassword,
     maxUploadSize: MAX_UPLOAD_SIZE,
     r2Enabled: r2.enabled,
+    chunkUploadThreshold: CHUNK_UPLOAD_THRESHOLD,
+    chunkSize: CHUNK_SIZE,
   },
   parseMultipart: (c, opts) => parseMultipartUpload(c, opts),
   // Client IP for the rate limiter (socket address when no X-Forwarded-For).
