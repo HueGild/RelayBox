@@ -1,7 +1,8 @@
 // RelayBox core lib — expiry + stale-chunk cleanup (v3.2 pool-aware).
 
 import { isExpired, log, CHUNK_TTL_MS } from './util.js';
-import { resolveStorageForFile, resolveUploadTarget } from '../routes/pools.js';
+import { resolveStorageForFile, resolveUploadTarget, buildPoolSummaries } from '../routes/pools.js';
+import { maybeSendDailyReport } from './notify.js';
 
 export async function cleanupExpired(deps) {
   const list = await deps.meta.listAllFiles({ authed: true });
@@ -27,6 +28,10 @@ export async function cleanupExpired(deps) {
   }
   await deps.meta.deleteExpiredSessions(Date.now());
   await cleanupChunks(deps);
+  await maybeSendDailyReport(deps, async () => {
+    const remaining = await deps.meta.listAllFiles({ authed: true });
+    return buildPoolSummaries(deps, remaining, { authed: true, includeAdminMeta: false });
+  });
 }
 
 export async function cleanupChunks(deps) {

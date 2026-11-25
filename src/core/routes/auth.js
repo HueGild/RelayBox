@@ -14,7 +14,7 @@ export function registerAuth(app) {
       return c.json({ ok: false, error: '尝试太频繁，10 分钟后再试' }, 429);
     }
     if (username !== 'admin' || password !== deps.config.uploadPassword) {
-      await recordPasswordResult(deps, ip, false);
+      await recordPasswordResult(deps, ip, false, c, '管理员登录');
       return c.json({ ok: false, error: '账号或密码不对' }, 401);
     }
     await recordPasswordResult(deps, ip, true);

@@ -7,7 +7,8 @@ import {
   readJsonBody, newToken, newId, sha256Hex, safeName, extOf, kindOf, keyOf,
   parseDim, isExpired, CHUNK_SIZE, MIN_FREE_BYTES, MIME, log,
 } from '../lib/util.js';
-import { isAuthed, isBlocked, clientIp, clientMeta } from '../lib/auth.js';
+import { isAuthed, isBlocked, clientIp, clientMeta, recordFailureWithAlert } from '../lib/auth.js';
+import { notifyDropUpload } from '../lib/notify.js';
 import { buildPoolSummaries, resolveUploadTarget } from './pools.js';
 
 const DEFAULT_MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -57,11 +58,31 @@ async function verifyDropForUpload(c, deps, token, password) {
     }
     const expected = await hashDropPassword(drop.token, supplied);
     if (expected !== drop.passwordHash) {
-      await deps.meta.recordFailure(ip, Date.now());
+      await recordFailureWithAlert(deps, ip, c, '收集箱口令校验');
       return { ok: false, status: 403, error: '提交口令不正确', needPassword: true };
     }
   }
   return { ok: true, drop };
+}
+
+async function fireDropNotify(deps, c, drop, item, usedFiles) {
+  let folderName = '根目录';
+  if (item.folderId) {
+    try {
+      const fd = await deps.meta.getFolder(item.folderId);
+      if (fd && fd.name) folderName = fd.name;
+    } catch {}
+  }
+  notifyDropUpload(deps, c, {
+    dropTitle: drop.title,
+    fileName: item.name,
+    size: item.size,
+    folderName,
+    usedFiles,
+    maxFiles: drop.maxFiles || 0,
+    ip: item.uploadIp,
+    geo: item.uploadGeo,
+  });
 }
 
 function adminDropView(d, folderMap) {
@@ -174,7 +195,7 @@ export function registerDrops(app) {
       }
       const expected = await hashDropPassword(drop.token, supplied);
       if (expected !== drop.passwordHash) {
-        await deps.meta.recordFailure(ip, Date.now());
+        await recordFailureWithAlert(deps, ip, c, '收集箱口令校验');
         return c.json({ ok: false, error: '提交口令不正确', needPassword: true }, 403);
       }
       unlocked = true;
@@ -290,6 +311,7 @@ export function registerDrops(app) {
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
     log('drop uploaded (proxy):', drop.title, filename, (bytes.byteLength / 1024 / 1024).toFixed(2) + 'MB');
+    await fireDropNotify(deps, c, drop, item, (drop.usedFiles || 0) + 1);
     return c.json({
       ok: true,
       file: { id: item.id, name: item.name, size: item.size },
@@ -389,6 +411,7 @@ export function registerDrops(app) {
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
     log('drop uploaded (presign):', drop.title, filename, (n / 1024 / 1024).toFixed(2) + 'MB');
+    await fireDropNotify(deps, c, drop, item, (drop.usedFiles || 0) + 1);
     return c.json({
       ok: true,
       file: { id: item.id, name: item.name, size: item.size },
@@ -459,6 +482,7 @@ export function registerDrops(app) {
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
     log('drop uploaded (local):', drop.title, filename, (file.size / 1024 / 1024).toFixed(2) + 'MB');
+    await fireDropNotify(deps, c, drop, item, (drop.usedFiles || 0) + 1);
     return c.json({
       ok: true,
       file: { id: item.id, name: item.name, size: item.size },
@@ -641,6 +665,7 @@ export function registerDrops(app) {
       return c.json({ ok: false, error: '保存失败' }, 500);
     }
     log('drop uploaded (chunked):', drop.title, meta.name, (meta.size / 1024 / 1024).toFixed(2) + 'MB');
+    await fireDropNotify(deps, c, drop, item, (drop.usedFiles || 0) + 1);
     return c.json({
       ok: true,
       file: { id: item.id, name: item.name, size: item.size },

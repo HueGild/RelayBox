@@ -3,7 +3,8 @@
 // and v3.2 multi-storage pools.
 
 import { readJsonBody, folderIdOf, folderPath, folderVisibleToGuest, isExpired, kindOf, safeName, extOf, keyOf, parseExpiresHours, expiresAtOf, parseRange, MIME, R2_FREE_BYTES, log } from '../lib/util.js';
-import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
+import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
+import { notifyShareConsumed } from '../lib/notify.js';
 import { getTransferModeState } from './settings.js';
 import { hasLocalDisk, buildPoolSummaries, resolveStorageForFile, BUILTIN_R2_ID, BUILTIN_LOCAL_ID } from './pools.js';
 
@@ -48,14 +49,38 @@ async function canAccessViaShare(deps, item, shareToken) {
   return false;
 }
 
-async function consumeShare(deps, token) {
+async function consumeShare(deps, c, token, item) {
   if (!token) return { ok: true };
   const changes = await deps.meta.incrementShareDownloads(token);
   if (changes === 0) return { ok: false, exhausted: true };
   const share = await deps.meta.getShareByToken(token);
-  if (share && share.burn) {
+  if (!share) return { ok: true };
+  const burned = !!share.burn;
+  const reachedMax = !burned && share.maxDownloads > 0 && share.usedDownloads >= share.maxDownloads;
+  if (burned) {
     await deps.meta.deleteShare(token);
     log('share consumed after download:', token);
+  }
+  if (burned || reachedMax) {
+    let targetName = (item && item.name) || token;
+    const isFolder = !!share.folderId;
+    if (isFolder) {
+      try {
+        const fd = await deps.meta.getFolder(share.folderId);
+        if (fd && fd.name) targetName = item && item.name ? `${fd.name} / ${item.name}` : fd.name;
+      } catch {}
+    }
+    const { uploadIp, uploadGeo } = clientMeta(c, deps);
+    notifyShareConsumed(deps, c, {
+      targetName,
+      isFolder,
+      token,
+      burn: burned,
+      usedDownloads: share.usedDownloads,
+      maxDownloads: share.maxDownloads,
+      ip: uploadIp,
+      geo: uploadGeo,
+    });
   }
   return { ok: true };
 }
@@ -196,7 +221,7 @@ export function registerFiles(app) {
       });
       if (!res) return c.json({ ok: false, error: '文件不存在' }, 404);
       if (forceDownload && res.status !== 416) {
-        const consumed = await consumeShare(deps, shareToken);
+        const consumed = await consumeShare(deps, c, shareToken, item);
         if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
       }
       return res;

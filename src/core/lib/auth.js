@@ -2,6 +2,7 @@
 // Mirrors v2.8.4's isAuthed / passwordBlocked / recordPasswordResult / chunkAuthed.
 
 import { parseCookies, newSessionToken, SESSION_TTL, FAIL_LIMIT, FAIL_WINDOW_MS } from './util.js';
+import { notifyAuthBlocked } from './notify.js';
 
 /**
  * Client IP: X-Forwarded-For first entry, else the runtime-provided address
@@ -65,11 +66,27 @@ export async function isBlocked(deps, ip) {
   return deps.meta.isBlocked(ip);
 }
 
-export async function recordPasswordResult(deps, ip, ok) {
+/** Record an auth failure and fire a Telegram alert right when IP crosses FAIL_LIMIT. */
+export async function recordFailureWithAlert(deps, ip, c, source) {
+  const now = Date.now();
+  await deps.meta.recordFailure(ip, now);
+  try {
+    const count = await deps.meta.countFailuresSince(ip, now - FAIL_WINDOW_MS);
+    if (count === FAIL_LIMIT) {
+      notifyAuthBlocked(deps, c, {
+        ip,
+        geo: c ? clientGeo(c, deps) : '',
+        source: source || '密码校验',
+      });
+    }
+  } catch { /* never break auth flow */ }
+}
+
+export async function recordPasswordResult(deps, ip, ok, c, source) {
   if (ok) {
     await deps.meta.clearFailures(ip);
   } else {
-    await deps.meta.recordFailure(ip, Date.now());
+    await recordFailureWithAlert(deps, ip, c, source);
   }
 }
 
@@ -84,7 +101,7 @@ export async function authOrPassword(c, deps, password) {
   const ip = clientIp(c, deps);
   if (await isBlocked(deps, ip)) return 'blocked';
   if ((password || '') !== deps.config.uploadPassword) {
-    await recordPasswordResult(deps, ip, false);
+    await recordPasswordResult(deps, ip, false, c, '上传密码验证');
     return 'wrong';
   }
   await recordPasswordResult(deps, ip, true);

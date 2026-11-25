@@ -3,7 +3,7 @@
 // handleCreateFolderShare / handleRevokeFolderShare / handleShareInfo exactly.
 
 import { readJsonBody, folderIdOf, folderPath, isExpired, newToken, newPickupCode, log } from '../lib/util.js';
-import { isAuthed, isBlocked, clientIp } from '../lib/auth.js';
+import { isAuthed, isBlocked, clientIp, recordFailureWithAlert } from '../lib/auth.js';
 
 /** 分享对象（管理员接口用）：新旧字段并存，旧前端只读它认识的字段。 */
 function shareView(share) {
@@ -51,11 +51,6 @@ export function registerShares(app) {
   }
 
   // 生成（或返回已有的）分享链接（管理员）。一个文件/文件夹同时只有一个有效分享链接。
-  // 可选 body { code, burn, maxDownloads }：只在 body 里明确传了字段时才改它（快捷复制不碰已有选项）。
-  // maxDownloads/burn 映射（v3.1）：传 maxDownloads>0 时回写 burn=(maxDownloads===1)；
-  // 只传 burn:true 未传 maxDownloads 时映射为 maxDownloads=1；
-  // 传 burn:false 且当前 maxDownloads===1 时同步清为 0（两者等价，保持一致）。
-  // pickupCode：新建分享自动生成；更新已有分享保留原码（旧数据无码时顺手补生成）。
   async function handleCreateShare(c, id, isFolder) {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
@@ -76,7 +71,6 @@ export function registerShares(app) {
       : deps.meta.getShareByFileId(id);
     let share = await getExisting;
     if (!share) {
-      // 新建：maxDownloads/burn 按映射定；取件码自动生成。
       let newBurn = false;
       let newMaxDownloads = 0;
       if (hasMaxDownloads) {
@@ -96,7 +90,6 @@ export function registerShares(app) {
         burn: newBurn,
         pickupCode,
       };
-      // D1 唯一索引并发冲突时换码重试（generateUniquePickupCode 已先查库，极少走到这里）。
       try {
         share = await deps.meta.createShare(fresh);
       } catch (e) {
@@ -115,7 +108,6 @@ export function registerShares(app) {
       if (burn) patch.maxDownloads = 1;
       else if (share.maxDownloads === 1) patch.maxDownloads = 0;
     }
-    // 旧分享无取件码时，重新保存设置顺手补生成（已发出的口令不受影响）。
     if (!share.pickupCode) {
       const backfill = await generateUniquePickupCode(deps);
       if (backfill) patch.pickupCode = backfill;
@@ -146,8 +138,7 @@ export function registerShares(app) {
   app.post('/api/folders/:id/share', (c) => handleCreateShare(c, decodeURIComponent(c.req.param('id')), true));
   app.delete('/api/folders/:id/share', (c) => handleRevokeShare(c, decodeURIComponent(c.req.param('id')), true));
 
-  // 分享页取信息（公开接口）：凭 token 换文件或文件夹的信息。文件夹分享可带 ?folderId= 进子文件夹（只限被分享的目录树内）。
-  // 有提取码的分享须带 ?code= 校验，错了回 403 + needCode；只看信息不烧链接，下载时才烧。
+  // 分享页取信息（公开接口）
   app.get('/api/share/:token', async (c) => {
     const deps = c.get('deps');
     const token = decodeURIComponent(c.req.param('token'));
@@ -163,7 +154,6 @@ export function registerShares(app) {
       const root = folders.find((f) => f.id === share.folderId);
       if (!root) return c.json({ ok: false, error: '文件夹不存在' }, 404);
       const cur = subFolderId || share.folderId;
-      // 目标目录必须在被分享的目录树内（是根或其子孙）。
       let ok = cur === share.folderId;
       if (!ok) {
         let node = folders.find((f) => f.id === cur);
@@ -177,8 +167,6 @@ export function registerShares(app) {
       if (!ok) return c.json({ ok: false, error: '文件夹不存在' }, 404);
       const curFolder = folders.find((f) => f.id === cur);
       const allFiles = await deps.meta.listAllFiles({ authed: true });
-      // 文件夹分享是明确授权：里面的文件不论公开/私密都对持链接的人可见。
-      // 已过期的文件不列出（与 v2.8.4 一致）。
       const files = allFiles
         .filter((f) => folderIdOf(f) === cur && !isExpired(f))
         .map((f) => ({
@@ -214,10 +202,7 @@ export function registerShares(app) {
     });
   });
 
-  // 5 位短取件码取件（公开接口，v3.1）：访客凭口令换分享 token。
-  // 防爆破：复用登录同款限流（FAIL_LIMIT=5，5 次/10 分钟）。
-  // 只记失败、成功不清除：查不到调 recordFailure 并回 404；
-  // 查中严禁调 clearFailures，防止猜中一个有效码重置计数继续爆破。
+  // 5 位短取件码取件（公开接口，v3.1）
   app.get('/api/pickup/:code', async (c) => {
     const deps = c.get('deps');
     const ip = clientIp(c, deps);
@@ -226,12 +211,12 @@ export function registerShares(app) {
     }
     const code = (decodeURIComponent(c.req.param('code')) || '').trim().toUpperCase();
     if (!code) {
-      await deps.meta.recordFailure(ip, Date.now());
+      await recordFailureWithAlert(deps, ip, c, '短取件码查询');
       return c.json({ ok: false, error: '取件码不存在' }, 404);
     }
     const share = await deps.meta.getShareByPickupCode(code);
     if (!share) {
-      await deps.meta.recordFailure(ip, Date.now());
+      await recordFailureWithAlert(deps, ip, c, '短取件码查询');
       return c.json({ ok: false, error: '取件码不存在' }, 404);
     }
     return c.json({ ok: true, token: share.token, needCode: !!share.code });

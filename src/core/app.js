@@ -19,6 +19,7 @@ import { registerRawUpload } from './routes/raw-upload.js';
 import { registerSettings } from './routes/settings.js';
 import { registerPools } from './routes/pools.js';
 import { registerDrops } from './routes/drops.js';
+import { registerNotify } from './routes/notify.js';
 
 export function createApp(deps) {
   assertImplements(deps.meta, MetaStoreMethods, 'MetaStore');
@@ -39,6 +40,7 @@ export function createApp(deps) {
   registerSettings(app);
   registerPools(app);
   registerDrops(app);
+  registerNotify(app);
   registerFiles(app);
   registerFolders(app);
   registerShares(app);

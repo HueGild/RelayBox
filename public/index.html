@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r10 (2026-11-24 · v3.3.1 文件收集箱 Drop Links：反向收件链接、口令保护、份数/大小/过期控制与访客只写投递页) -->
+<!-- RelayBox v3.0 UI r11 (2026-11-24 · v3.3.2 Telegram 实时推送：收集箱来件、阅后即焚、密码封禁告警与每日存储池用量汇总) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -625,6 +625,17 @@
  .drop-done-item span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
  .pool-tag.ok { background: var(--ok-bg); color: var(--ok-text); }
 
+ /* r11: Telegram 推送设置弹窗样式 */
+ .tg-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--border); margin-bottom: 12px; }
+ .tg-switch-row label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--text); cursor: pointer; margin: 0; }
+ .tg-switch-row input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+ .tg-events-box { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--border); margin: 10px 0 12px; }
+ .tg-event-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text); }
+ .tg-event-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; flex: 1; }
+ .tg-event-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+ .tg-hour-sel { width: auto !important; padding: 4px 8px !important; font-size: 12px !important; border-radius: 8px !important; }
+ body.has-wallpaper .tg-switch-row, body.has-wallpaper .tg-events-box { background: var(--glass-input-bg); }
+
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
   .mob-only-wrap { display: inline-flex; }
@@ -661,6 +672,7 @@
  <button class="icon-btn desk-only-btn" id="poolsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="存储池管理" aria-label="存储池管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></button>
  <button class="icon-btn desk-only-btn" id="appearanceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="外观与壁纸" aria-label="外观与壁纸"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
  <button class="icon-btn desk-only-btn" id="transferModeBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="R2 传输模式" aria-label="R2 传输模式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="notifyBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="Telegram 推送" aria-label="Telegram 推送"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
  <button class="icon-btn desk-only-btn" id="tokensBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="API 密钥管理" aria-label="API 密钥管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></button>
  <span class="top-more-wrap mob-only-wrap">
   <button class="icon-btn" id="topMoreBtn" type="button" style="width:30px;height:30px;border-radius:999px" title="更多功能" aria-label="更多功能"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
@@ -671,6 +683,7 @@
    <button type="button" id="mobPoolsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> 存储池管理</button>
    <button type="button" id="mobAppearanceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> 外观与壁纸</button>
    <button type="button" id="mobTransferModeBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> R2 传输模式</button>
+   <button type="button" id="mobNotifyBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Telegram 推送</button>
    <button type="button" id="mobTokensBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API 密钥管理</button>
   </div>
  </span>
@@ -819,6 +832,7 @@
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
 <div class="modal" id="tokensModal"><span class="close" id="tokensClose">×</span><div class="card token-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">API 密钥管理</div><div class="meta" style="margin-bottom:12px">用于 curl、ShareX、PicGo、iOS 快捷指令一键直传（单文件 ≤ 32MB，默认公开直链）。</div><div class="row" style="margin-top:0"><input type="text" id="tokenNameInput" placeholder="备注名，如 Mac ShareX / 快捷指令" maxlength="40"><button id="tokenCreateBtn" type="button">生成密钥</button></div><div class="token-created" id="tokenCreatedBox" style="display:none"><div style="font-size:12px;font-weight:600;color:var(--ok-text)">已生成新密钥（明文仅展示这一次，请立即保存）：</div><div class="token-created-val" id="tokenCreatedVal"></div><div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tokenCopyKeyBtn" style="flex:1;padding:7px 10px;font-size:12px">复制密钥</button><button type="button" id="tokenCopyCurlBtn" style="flex:1;padding:7px 10px;font-size:12px">复制 curl 上传命令</button></div></div><div class="token-list" id="tokenList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="token-curl"><div style="font-weight:600;color:var(--text)">极客上传接口示例（POST /api/raw-upload）</div><pre id="tokenCurlExample"></pre></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="tokensDoneBtn" type="button">关闭</button></div></div></div>
 <div class="modal" id="detailModal"><span class="close" id="detailClose">×</span><div class="card detail-card" id="detailCardBody"></div></div>
+<div class="modal" id="notifyModal"><span class="close" id="notifyClose">×</span><div class="card pool-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
 <div class="modal" id="dropsModal"><span class="close" id="dropsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">文件收集箱</div><button type="button" id="dropAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新建收集箱</button></div><div class="meta" style="margin-bottom:12px">生成反向收件链接发给他人，对方无需登录即可投递文件到指定目录，且彼此不可见已交文件。</div><div class="pool-list" id="dropListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="dropFormBox"><div style="font-size:13.5px;font-weight:600">新建文件收集箱</div><div class="form-grid2"><div class="form-field"><label>收集箱标题 *</label><input type="text" id="dfTitle" placeholder="如 作业提交 / 活动素材收集" maxlength="60"></div><div class="form-field"><label>文件存入目录</label><select id="dfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2"><div class="form-field"><label>提交口令（留空 = 免密）</label><input type="text" id="dfPassword" placeholder="可选，如 2026" maxlength="64" autocomplete="off"></div><div class="form-field"><label>最大收集份数（0 = 不限）</label><input type="number" id="dfMaxFiles" value="0" min="0" max="100000"></div></div><div class="form-grid2"><div class="form-field"><label>单文件上限</label><select id="dfMaxSize"><option value="10485760">10 MB</option><option value="52428800">50 MB</option><option value="104857600" selected>100 MB</option><option value="524288000">500 MB</option><option value="1073741824">1 GB</option></select></div><div class="form-field"><label>链接有效期</label><select id="dfExpires"><option value="24">24 小时</option><option value="72">3 天</option><option value="168" selected>7 天</option><option value="720">30 天</option><option value="0">永久有效</option></select></div></div><div class="form-field"><label>收到的文件默认可见性</label><select id="dfVis"><option value="private" selected>私密（推荐：仅管理员可见）</option><option value="public">公开（任何人可访问）</option></select></div><div class="msg" id="dfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="dfCancelBtn">取消</button><button type="button" id="dfCreateBtn">创建并复制链接</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="dropsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="poolsModal"><span class="close" id="poolsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储池管理</div><button type="button" id="poolAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新增外部桶</button></div><div class="meta" style="margin-bottom:12px">支持内置 R2 与任意外部 Cloudflare R2 / S3 兼容桶（如亚太桶、B2、MinIO），新增即用无需重新部署。</div><div class="pool-list" id="poolListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="poolFormBox"><div style="font-size:13.5px;font-weight:600" id="poolFormTitle">新增外部存储池</div><input type="hidden" id="pfId"><div class="form-grid2"><div class="form-field"><label>显示名称 *</label><input type="text" id="pfName" placeholder="如 亚太 R2 桶" maxlength="40"></div><div class="form-field"><label>存储桶名 (Bucket) *</label><input type="text" id="pfBucket" placeholder="如 relaybox-apac" maxlength="100"></div></div><div class="form-field"><label>S3 Endpoint *</label><input type="text" id="pfEndpoint" placeholder="https://&lt;AccountID&gt;.r2.cloudflarestorage.com"></div><div class="form-grid2"><div class="form-field"><label>Access Key ID *</label><input type="text" id="pfAk" placeholder="S3 Access Key ID" autocomplete="off"></div><div class="form-field"><label>Secret Access Key <span id="pfSkHint">*</span></label><input type="password" id="pfSk" placeholder="加密存库，绝不回传明文" autocomplete="new-password"></div></div><div class="form-grid2"><div class="form-field"><label>Region（R2 填 auto）</label><input type="text" id="pfRegion" value="auto" placeholder="auto"></div><div class="form-field"><label>显示配额（GB）</label><input type="number" id="pfQuotaGb" value="10" min="1" max="100000"></div></div><div class="form-grid2"><div class="form-field"><label>传输模式</label><select id="pfMode"><option value="proxy">Worker 中转（校园网/图床推荐）</option><option value="presign">预签名直传（大文件模式）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="pfDefault" style="width:auto"> 设为默认上传池</label></div></div><div class="msg" id="pfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="pfCancelBtn">取消</button><button type="button" class="ghost" id="pfTestBtn">测试连接</button><button type="button" id="pfSaveBtn">保存存储池</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="poolsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="appearanceModal"><span class="close" id="appearanceClose">×</span><div class="card appear-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">外观与壁纸设置</div><div class="meta" style="margin-bottom:12px">支持桌面端与手机端分开设置壁纸，自定义左上角站点头像、标题与网页图标，保存后全站生效。</div><input type="file" id="appearUploadInput" accept="image/*" style="display:none"><div class="appear-field"><label>站点名称 <span>显示在左上角与浏览器标题</span></label><input type="text" id="apTitle" placeholder="RelayBox" maxlength="40" style="width:100%"></div><div class="appear-field"><label>桌面端背景图片 <span>横屏推荐 16:9</span></label><div class="appear-input-row"><input type="text" id="apBgDesktop" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgDesktop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev desk" id="prevBgDesktop"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgDesktop" title="清除">×</button></div></div><div class="appear-field"><label>手机端背景图片 <span>竖屏推荐 9:16，留空则沿用桌面壁纸</span></label><div class="appear-input-row"><input type="text" id="apBgMobile" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgMobile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev mob" id="prevBgMobile"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgMobile" title="清除">×</button></div></div><div class="appear-field"><label>左上角站点头像 / Logo <span>留空使用默认蓝色图标</span></label><div class="appear-input-row"><input type="text" id="apLogo" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev ico" id="prevLogo"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apLogo" title="清除">×</button></div></div><div class="appear-field"><label>网站图标 (Favicon) <span>浏览器标签页小图标</span></label><div class="appear-input-row"><input type="text" id="apFavicon" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apFavicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev ico" id="prevFavicon"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apFavicon" title="清除">×</button></div></div><div class="form-grid2"><div class="appear-field"><label>壁纸遮罩暗度 <span id="apOverlayVal">45%</span></label><input type="range" class="appear-range" id="apOverlay" min="0" max="85" value="45"></div><div class="appear-field"><label>卡片毛玻璃模糊 <span id="apBlurVal">14px</span></label><input type="range" class="appear-range" id="apBlur" min="0" max="24" value="14"></div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="apResetBtn">恢复默认</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="apCancelBtn">取消</button><button type="button" id="apSaveBtn">保存外观</button></div></div></div></div>
@@ -1670,6 +1684,8 @@ async function loadList(showSkel) {
  if ($('tokensBtn')) $('tokensBtn').style.display = authed ? '' : 'none';
  if ($('mobAnnounceBtn')) $('mobAnnounceBtn').style.display = authed ? 'flex' : 'none';
  if ($('mobTokensBtn')) $('mobTokensBtn').style.display = authed ? 'flex' : 'none';
+ if ($('notifyBtn')) $('notifyBtn').style.display = authed ? '' : 'none';
+ if ($('mobNotifyBtn')) $('mobNotifyBtn').style.display = authed ? 'flex' : 'none';
  if ($('dropsBtn')) $('dropsBtn').style.display = authed ? '' : 'none';
  if ($('mobDropsBtn')) $('mobDropsBtn').style.display = authed ? 'flex' : 'none';
  if ($('poolsBtn')) $('poolsBtn').style.display = authed ? '' : 'none';
@@ -2117,6 +2133,7 @@ document.addEventListener('keydown', (e) => {
  if ($('transferModeModal') && $('transferModeModal').classList.contains('open')) { closeTransferModeModal(); return; }
  if ($('poolsModal') && $('poolsModal').classList.contains('open')) { closePoolsModal(); return; }
  if ($('dropsModal') && $('dropsModal').classList.contains('open')) { closeDropsModal(); return; }
+ if ($('notifyModal') && $('notifyModal').classList.contains('open')) { closeNotifyModal(); return; }
  if ($('appearanceModal') && $('appearanceModal').classList.contains('open')) { closeAppearanceModal(false); return; }
 });
 
@@ -4536,6 +4553,127 @@ async function startDropFiles(files) {
   }
  }
 }
+
+
+// ===== r11: Telegram 实时推送设置弹窗 =====
+let tgSavedHasToken = false;
+let tgSavedPreview = '';
+
+function syncTgStatusTag() {
+ const tag = $('tgStatusTag');
+ if (!tag) return;
+ const on = !!($('tgEnabled') && $('tgEnabled').checked);
+ tag.textContent = on ? '已开启' : '未开启';
+ tag.className = 'pool-tag' + (on ? ' ok' : '');
+}
+
+async function openNotifyModal() {
+ if (!authed) return;
+ $('tgMsg').textContent = '';
+ $('tgMsg').className = 'msg';
+ $('tgBotToken').value = '';
+ $('notifyModal').classList.add('open');
+ try {
+  const r = await fetch('/api/notify/telegram');
+  const d = await r.json();
+  if (!r.ok || !d.ok || !d.config) {
+   $('tgMsg').textContent = d.error || '加载配置失败';
+   $('tgMsg').className = 'msg err';
+   return;
+  }
+  const c = d.config;
+  tgSavedHasToken = !!c.hasBotToken;
+  tgSavedPreview = c.botTokenPreview || '';
+  $('tgEnabled').checked = !!c.enabled;
+  $('tgChatId').value = c.chatId || '';
+  $('tgApiBase').value = c.apiBase && c.apiBase !== 'https://api.telegram.org' ? c.apiBase : '';
+  $('tgBotToken').placeholder = tgSavedHasToken ? `已保存 (${tgSavedPreview})，留空保持不变` : '如 123456:ABC-DEF...';
+  $('tgTokenHint').textContent = tgSavedHasToken ? '（已配置，留空保持原值）' : '*';
+  const ev = c.events || {};
+  $('tgEvDrop').checked = ev.dropUpload !== false;
+  $('tgEvShare').checked = ev.shareConsumed !== false;
+  $('tgEvAuth').checked = ev.authBlocked !== false;
+  $('tgEvDaily').checked = ev.dailyReport !== false;
+  $('tgDailyHour').value = String(typeof c.dailyReportHour === 'number' ? c.dailyReportHour : 8);
+  $('tgLastDaily').textContent = c.lastDailyReportDate ? `上次每日汇总推送日期：${c.lastDailyReportDate}（北京时间）` : '尚未推送过每日汇总';
+  syncTgStatusTag();
+ } catch {
+  $('tgMsg').textContent = '加载失败：网络错误';
+  $('tgMsg').className = 'msg err';
+ }
+}
+function closeNotifyModal() { $('notifyModal').classList.remove('open'); }
+
+function collectTgForm() {
+ return {
+  enabled: $('tgEnabled').checked,
+  botToken: $('tgBotToken').value.trim(),
+  chatId: $('tgChatId').value.trim(),
+  apiBase: $('tgApiBase').value.trim() || 'https://api.telegram.org',
+  events: {
+   dropUpload: $('tgEvDrop').checked,
+   shareConsumed: $('tgEvShare').checked,
+   authBlocked: $('tgEvAuth').checked,
+   dailyReport: $('tgEvDaily').checked,
+  },
+  dailyReportHour: Number($('tgDailyHour').value),
+ };
+}
+
+if ($('tgEnabled')) $('tgEnabled').onchange = syncTgStatusTag;
+if ($('notifyBtn')) $('notifyBtn').onclick = openNotifyModal;
+if ($('mobNotifyBtn')) $('mobNotifyBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openNotifyModal(); };
+if ($('notifyClose')) $('notifyClose').onclick = closeNotifyModal;
+if ($('tgCancelBtn')) $('tgCancelBtn').onclick = closeNotifyModal;
+if ($('notifyModal')) $('notifyModal').onclick = (e) => { if (e.target.id === 'notifyModal') closeNotifyModal(); };
+
+if ($('tgTestBtn')) $('tgTestBtn').onclick = async () => {
+ const btn = $('tgTestBtn'), msg = $('tgMsg');
+ btn.disabled = true; msg.textContent = '正在发送测试消息…'; msg.className = 'msg';
+ try {
+  const form = collectTgForm();
+  const r = await fetch('/api/notify/telegram/test', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ botToken: form.botToken, chatId: form.chatId, apiBase: form.apiBase }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (r.ok && d.ok) { msg.textContent = '测试消息已发送，请检查 Telegram！'; msg.className = 'msg ok'; showToast('Telegram 测试消息已发送', 'ok'); }
+  else { msg.textContent = d.error || '发送失败'; msg.className = 'msg err'; }
+ } catch { msg.textContent = '网络错误'; msg.className = 'msg err'; }
+ finally { btn.disabled = false; }
+};
+
+if ($('tgReportNowBtn')) $('tgReportNowBtn').onclick = async () => {
+ const btn = $('tgReportNowBtn'), msg = $('tgMsg');
+ btn.disabled = true; msg.textContent = '正在汇总并推送存储池用量…'; msg.className = 'msg';
+ try {
+  const form = collectTgForm();
+  const r = await fetch('/api/notify/telegram/daily-report', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ botToken: form.botToken, chatId: form.chatId, apiBase: form.apiBase }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (r.ok && d.ok) { msg.textContent = '存储池用量汇总已推送到 Telegram！'; msg.className = 'msg ok'; showToast('用量汇总已推送', 'ok'); }
+  else { msg.textContent = d.error || '推送失败'; msg.className = 'msg err'; }
+ } catch { msg.textContent = '网络错误'; msg.className = 'msg err'; }
+ finally { btn.disabled = false; }
+};
+
+if ($('tgSaveBtn')) $('tgSaveBtn').onclick = async () => {
+ const btn = $('tgSaveBtn'), msg = $('tgMsg');
+ btn.disabled = true; msg.textContent = '正在保存…'; msg.className = 'msg';
+ try {
+  const r = await fetch('/api/notify/telegram', {
+   method: 'PUT', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify(collectTgForm()),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { msg.textContent = d.error || '保存失败'; msg.className = 'msg err'; return; }
+  showToast('Telegram 推送设置已保存', 'ok');
+  closeNotifyModal();
+ } catch { msg.textContent = '网络错误'; msg.className = 'msg err'; }
+ finally { btn.disabled = false; }
+};
 
 loadDropView().then(async (isDrop) => {
  if (isDrop) return;
