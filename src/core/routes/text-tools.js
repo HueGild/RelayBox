@@ -11,6 +11,7 @@ import {
 } from '../lib/util.js';
 import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
 import { resolveUploadTarget, resolveStorageForFile } from './pools.js';
+import { purgeEdgeCacheForFile } from '../lib/edge-cache.js';
 
 const DEFAULT_MAX_TEXT_BYTES = 1024 * 1024; // 1MB UTF-8 text limit
 
@@ -413,6 +414,7 @@ export function registerTextTools(app) {
     }
 
     const updated = await deps.meta.updateFile(id, { size: bytes.byteLength });
+    await purgeEdgeCacheForFile(deps, c, id);
     log('edited text file:', item.name, bytes.byteLength + 'B');
     c.header('Cache-Control', 'no-store');
     return c.json({ ok: true, file: updated || { ...item, size: bytes.byteLength } });

@@ -34,6 +34,9 @@ export async function cleanupExpired(deps) {
   if (typeof deps.meta.deleteExpiredShares === 'function') {
     await deps.meta.deleteExpiredShares(now);
   }
+  if (typeof deps.meta.deleteExpiredDropLinks === 'function') {
+    await deps.meta.deleteExpiredDropLinks(now);
+  }
   await cleanupChunks(deps);
   await maybeSendDailyReport(deps, async () => (
     buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: false })

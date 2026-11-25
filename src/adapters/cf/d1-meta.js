@@ -1047,6 +1047,10 @@ export class D1MetaStore {
     const out = await this.db.prepare('DELETE FROM drop_links WHERE token = ?').bind(String(token)).run();
     return (out.meta && out.meta.changes > 0) || false;
   }
+  async deleteExpiredDropLinks(now = Date.now()) {
+    const out = await this.db.prepare('DELETE FROM drop_links WHERE expires_at IS NOT NULL AND expires_at <= ?').bind(now).run();
+    return (out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
+  }
   async incrementDropLinkFiles(token) {
     const out = await this.db.prepare(
       'UPDATE drop_links SET used_files = used_files + 1 WHERE token = ? AND (max_files = 0 OR used_files < max_files)',

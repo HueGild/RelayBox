@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.5.1 UI r27 (2026-11-25 · 大目录后端全量排序/全目录与拖拽文件夹上传判重/统计看板Top10点击直达) -->
+<!-- RelayBox v3.5.2 UI r28 (2026-11-25 · 分享页独立有效期倒计时/看板类型图例点击筛选联动/全局Esc关闭新弹窗) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -941,7 +941,9 @@
 .stats-sec-title { font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
 .stats-kind-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(127,127,127,.14); margin-bottom: 8px; }
 .stats-kind-seg { height: 100%; min-width: 3px; transition: width .25s ease; }
-.stats-kind-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 12px; color: var(--muted); }
+.stats-kind-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 12px; color: var(--muted); }
+.stats-kind-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; transition: background .12s, border-color .12s, color .12s; }
+.stats-kind-pill:hover { background: var(--surface-2, rgba(37,99,235,.08)); border-color: var(--accent); color: var(--text); }
 .stats-kind-dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 5px; vertical-align: middle; }
 .stats-trend { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; align-items: end; height: 104px; padding: 8px 6px 2px; background: var(--surface-2, rgba(127,127,127,.05)); border: 1px solid var(--border); border-radius: 12px; }
 .stats-trend-col { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
@@ -2865,6 +2867,8 @@ function renderList() {
  if (typeFilter === 'pkg') return /\.(apk|exe|dmg|iso)$/i.test(f.name);
  if (typeFilter === 'video') return f.kind === 'video';
  if (typeFilter === 'image') return f.kind === 'image';
+ if (typeFilter === 'audio') return f.kind === 'audio';
+ if (typeFilter === 'file') return f.kind === 'file';
  if (typeFilter === 'archive') return /\.(zip|rar|7z|tar|gz)$/i.test(f.name);
  return true;
  };
@@ -3282,6 +3286,8 @@ document.addEventListener('keydown', (e) => {
  if ($('detailModal') && $('detailModal').classList.contains('open')) { closeDetailModal(); return; }
  if ($('copyFmtModal') && $('copyFmtModal').classList.contains('open')) { closeCopyFmtModal(); return; }
  if ($('transferModeModal') && $('transferModeModal').classList.contains('open')) { closeTransferModeModal(); return; }
+ if ($('statsModal') && $('statsModal').classList.contains('open')) { closeStatsModal(); return; }
+ if ($('dupCheckModal') && $('dupCheckModal').classList.contains('open')) { closeDupModal(); return; }
  if ($('poolsModal') && $('poolsModal').classList.contains('open')) { closePoolsModal(); return; }
  if ($('dropsModal') && $('dropsModal').classList.contains('open')) { closeDropsModal(); return; }
  if ($('notifyModal') && $('notifyModal').classList.contains('open')) { closeNotifyModal(); return; }
@@ -4670,6 +4676,11 @@ function shareLimitBarHtml(sh) {
  const rem = Math.max(0, md - ud);
  const label = md === 1 ? '阅后即焚（仅限下载 1 次）' : `剩余 ${rem} / ${md} 次下载`;
  chips.push(`<span class="share-chip${rem <= 1 ? ' warn' : ''}">${label}</span>`);
+ }
+ if (sh.expiresAt) {
+ const diff = new Date(sh.expiresAt).getTime() - Date.now();
+ const expLbl = expiryText(sh.expiresAt);
+ chips.push(`<span class="share-chip${diff <= 86400000 ? ' warn' : ''}">⏰ 链接${escapeHtml(expLbl)}</span>`);
  }
  return chips.length ? `<div class="share-limit-bar">${chips.join('')}</div>` : '';
 }
@@ -7830,7 +7841,7 @@ function renderStatsModal(d) {
  const kindLegend = byKind.length
   ? byKind.map(k => {
     const m = KIND_META[k.kind] || { label: k.kind, color: '#64748B' };
-    return `<span><i class="stats-kind-dot" style="background:${m.color}"></i>${escapeHtml(m.label)} ${k.count} 个 · ${fmtSize(k.bytes)} (${k.pctBytes}%)</span>`;
+    return `<span class="stats-kind-pill" onclick="filterByStatsKind('${escapeHtml(k.kind)}')" title="点击在首页筛选「${escapeHtml(m.label)}」"><i class="stats-kind-dot" style="background:${m.color}"></i>${escapeHtml(m.label)} ${k.count} 个 · ${fmtSize(k.bytes)} (${k.pctBytes}%)</span>`;
    }).join('')
   : '<span>暂无文件数据</span>';
 
@@ -7922,6 +7933,18 @@ function renderDupModalList(hashMap) {
   return `<div class="dup-item"><span class="dup-item-name" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span><span class="dup-item-meta">${fmtSize(item.file.size)} · ${tag}${h}</span></div>`;
  }).join('');
 }
+function filterByStatsKind(kind) {
+ closeStatsModal();
+ const allowed = ['image', 'video', 'audio', 'file'];
+ typeFilter = allowed.includes(kind) ? kind : 'all';
+ document.querySelectorAll('#typeBar button[data-filter]').forEach(b => {
+  b.classList.toggle('active', b.dataset.filter === typeFilter);
+ });
+ renderList();
+ const lbl = (KIND_META[kind] && KIND_META[kind].label) || kind;
+ showToast(`已筛选：${lbl}（点「全部」恢复）`, 'ok');
+}
+
 async function openStatsTopFile(fileId, folderId) {
  closeStatsModal();
  if (allFiles.some(x => x.id === fileId)) {

@@ -10,6 +10,7 @@
 
 import { readJsonBody, isExpired, keyOf, MIN_FREE_BYTES, MIME, log } from '../lib/util.js';
 import { isAuthed } from '../lib/auth.js';
+import { purgeEdgeCacheForFile } from '../lib/edge-cache.js';
 import {
   resolveStorageForFile, resolveUploadTarget, buildPoolSummaries,
   BUILTIN_R2_ID, BUILTIN_LOCAL_ID,
@@ -376,6 +377,7 @@ export function registerMigrate(app) {
       deleteSource: body.deleteSource !== false,
     });
     if (!res.ok) return c.json({ ok: false, error: res.error }, res.status || 500);
+    if (!res.skipped) await purgeEdgeCacheForFile(deps, c, item.id);
     return c.json(res);
   });
 
@@ -444,6 +446,7 @@ export function registerMigrate(app) {
         skipped++;
         results.push({ id: item.id, name: item.name, ok: true, skipped: true });
       } else if (r.ok) {
+        await purgeEdgeCacheForFile(deps, c, item.id);
         migrated++;
         migratedBytes += (r.bytes || item.size || 0);
         results.push({ id: item.id, name: item.name, ok: true, skipped: false, sourceDeleted: r.sourceDeleted });

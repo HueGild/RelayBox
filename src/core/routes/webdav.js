@@ -13,6 +13,7 @@ import {
 import { isBlocked, clientIp, clientMeta, recordFailureWithAlert } from '../lib/auth.js';
 import { buildPoolSummaries, resolveStorageForFile, resolveUploadTarget } from './pools.js';
 import { moveFileToTrash, purgeFilePermanently } from './trash.js';
+import { purgeEdgeCacheForFile } from '../lib/edge-cache.js';
 
 const DEFAULT_WEBDAV_MAX_UPLOAD = 50 * 1024 * 1024; // 50MB single PUT limit
 const DAV_ALLOW = 'OPTIONS, PROPFIND, GET, HEAD, PUT, DELETE, MKCOL, MOVE, COPY, LOCK, UNLOCK';
@@ -312,7 +313,7 @@ function isDescendantFolder(folders, ancestorId, targetId) {
   return false;
 }
 
-async function deleteFolderSubtree(deps, rootFolderId, permanent = false) {
+async function deleteFolderSubtree(deps, rootFolderId, permanent = false, c = null) {
   const folders = await deps.meta.listFolders();
   const subtreeIds = [];
   const collect = (fid) => {
@@ -325,8 +326,8 @@ async function deleteFolderSubtree(deps, rootFolderId, permanent = false) {
 
   const subtreeFiles = subtreeIds.length ? await deps.meta.listFilesInFolders(subtreeIds) : [];
   for (const f of subtreeFiles) {
-    if (permanent) await purgeFilePermanently(deps, f);
-    else await moveFileToTrash(deps, f);
+    if (permanent) await purgeFilePermanently(deps, f, c);
+    else await moveFileToTrash(deps, f, c);
   }
   // Delete folders bottom-up (children before parents)
   for (const fid of subtreeIds) {
@@ -613,6 +614,7 @@ export function registerWebdav(app) {
           size: bytes.byteLength,
           uploadedAt: new Date().toISOString(),
         });
+        await purgeEdgeCacheForFile(deps, c, existing.id);
         log('webdav PUT overwrite:', segments.join('/'), bytes.byteLength + 'B');
         return new Response(null, {
           status: 204,
@@ -680,12 +682,12 @@ export function registerWebdav(app) {
       }
       const permanent = url.searchParams.get('permanent') === '1';
       if (node.type === 'file') {
-        if (permanent) await purgeFilePermanently(deps, node.file);
-        else await moveFileToTrash(deps, node.file);
+        if (permanent) await purgeFilePermanently(deps, node.file, c);
+        else await moveFileToTrash(deps, node.file, c);
         log('webdav DELETE file:', segments.join('/'));
         return new Response(null, { status: 204 });
       }
-      await deleteFolderSubtree(deps, node.folder.id, permanent);
+      await deleteFolderSubtree(deps, node.folder.id, permanent, c);
       log('webdav DELETE folder:', segments.join('/'));
       return new Response(null, { status: 204 });
     }
@@ -711,7 +713,7 @@ export function registerWebdav(app) {
         if (dstNode.type === 'file') {
           if (dstNode.file.id === node.file.id) return new Response(null, { status: 204 });
           if (!overwrite) return new Response('Precondition Failed', { status: 412 });
-          await moveFileToTrash(deps, dstNode.file);
+          await moveFileToTrash(deps, dstNode.file, c);
           overwritten = true;
         }
         const targetParentId = dstNode.parentId;
@@ -734,6 +736,7 @@ export function registerWebdav(app) {
           patch.storageKey = newKey;
         }
         await deps.meta.updateFile(node.file.id, patch);
+      await purgeEdgeCacheForFile(deps, c, node.file.id);
         log('webdav MOVE file:', segments.join('/'), '->', dstParsed.segments.join('/'));
         return new Response(null, { status: overwritten ? 204 : 201 });
       }
@@ -747,7 +750,7 @@ export function registerWebdav(app) {
       }
       if (dstNode.type === 'file') {
         if (!overwrite) return new Response('Precondition Failed', { status: 412 });
-        await moveFileToTrash(deps, dstNode.file);
+        await moveFileToTrash(deps, dstNode.file, c);
         overwritten = true;
       }
       if (isDescendantFolder(folders, node.folder.id, dstNode.parentId)) {
@@ -781,7 +784,7 @@ export function registerWebdav(app) {
       if (dstNode.type === 'file') {
         if (dstNode.file.id === node.file.id) return new Response(null, { status: 204 });
         if (!overwrite) return new Response('Precondition Failed', { status: 412 });
-        await moveFileToTrash(deps, dstNode.file);
+        await moveFileToTrash(deps, dstNode.file, c);
         overwritten = true;
       }
 
