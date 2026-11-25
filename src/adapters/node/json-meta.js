@@ -113,6 +113,55 @@ export class JsonMetaStore {
       return item;
     });
   }
+  async batchUpdateFiles(ids, patch) {
+    const idSet = new Set((ids || []).filter((x) => typeof x === 'string' && x));
+    if (!idSet.size) return { updatedIds: [], notFoundIds: [] };
+    return this._enqueue(() => {
+      const list = this._readFiles();
+      const updatedIds = [];
+      const found = new Set();
+      for (const item of list) {
+        if (!idSet.has(item.id) || item.deletedAt) continue;
+        found.add(item.id);
+        Object.assign(item, patch);
+        this._normalizeFile(item);
+        updatedIds.push(item.id);
+      }
+      if (updatedIds.length) this._writeFiles(list);
+      const notFoundIds = [...idSet].filter((id) => !found.has(id));
+      return { updatedIds, notFoundIds };
+    });
+  }
+  async batchTrashFiles(ids, deletedAt) {
+    const idSet = new Set((ids || []).filter((x) => typeof x === 'string' && x));
+    if (!idSet.size) return { trashedIds: [], alreadyTrashedIds: [], notFoundIds: [] };
+    return this._enqueue(() => {
+      const list = this._readFiles();
+      const trashedIds = [];
+      const alreadyTrashedIds = [];
+      const found = new Set();
+      for (const item of list) {
+        if (!idSet.has(item.id)) continue;
+        found.add(item.id);
+        if (item.deletedAt) {
+          alreadyTrashedIds.push(item.id);
+          continue;
+        }
+        item.deletedAt = deletedAt;
+        this._normalizeFile(item);
+        trashedIds.push(item.id);
+      }
+      if (trashedIds.length) {
+        this._writeFiles(list);
+        const trashedSet = new Set(trashedIds);
+        const shares = this._readShares();
+        const nextShares = shares.filter((s) => !(s && s.fileId && trashedSet.has(s.fileId)));
+        if (nextShares.length !== shares.length) this._writeShares(nextShares);
+      }
+      const notFoundIds = [...idSet].filter((id) => !found.has(id));
+      return { trashedIds, alreadyTrashedIds, notFoundIds };
+    });
+  }
   async deleteFile(id) {
     return this._enqueue(() => {
       const list = this._readFiles();
@@ -698,3 +747,4 @@ export class JsonMetaStore {
     return total;
   }
 }
+

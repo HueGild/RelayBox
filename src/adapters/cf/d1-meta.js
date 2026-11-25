@@ -192,6 +192,95 @@ export class D1MetaStore {
     return this._rowToFile(row);
   }
 
+  async batchUpdateFiles(ids, patch) {
+    const uniq = [...new Set((ids || []).filter((x) => typeof x === 'string' && x))];
+    if (!uniq.length) return { updatedIds: [], notFoundIds: [] };
+    const sets = [];
+    const vals = [];
+    if (Object.prototype.hasOwnProperty.call(patch, 'folderId')) {
+      sets.push('folder_id = ?');
+      vals.push((typeof patch.folderId === 'string' && patch.folderId) ? patch.folderId : null);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'visibility')) {
+      sets.push('visibility = ?');
+      vals.push(patch.visibility === 'private' ? 'private' : 'public');
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'expiresAt')) {
+      sets.push('expires_at = ?');
+      vals.push(isoToMs(patch.expiresAt));
+    }
+    if (!sets.length) return { updatedIds: [], notFoundIds: uniq };
+    const CHUNK = 80;
+    const found = new Set();
+    const updateStmts = [];
+    for (let i = 0; i < uniq.length; i += CHUNK) {
+      const part = uniq.slice(i, i + CHUNK);
+      const ph = part.map(() => '?').join(',');
+      const { results } = await this.db
+        .prepare(`SELECT id FROM files WHERE id IN (${ph}) AND deleted_at IS NULL`)
+        .bind(...part)
+        .all();
+      const activeIds = (results || []).map((r) => r.id);
+      for (const id of activeIds) found.add(id);
+      if (activeIds.length) {
+        const upPh = activeIds.map(() => '?').join(',');
+        updateStmts.push(
+          this.db
+            .prepare(`UPDATE files SET ${sets.join(', ')} WHERE id IN (${upPh}) AND deleted_at IS NULL`)
+            .bind(...vals, ...activeIds),
+        );
+      }
+    }
+    if (updateStmts.length) {
+      if (typeof this.db.batch === 'function') await this.db.batch(updateStmts);
+      else for (const st of updateStmts) await st.run();
+    }
+    const updatedIds = uniq.filter((id) => found.has(id));
+    const notFoundIds = uniq.filter((id) => !found.has(id));
+    return { updatedIds, notFoundIds };
+  }
+
+  async batchTrashFiles(ids, deletedAt) {
+    const uniq = [...new Set((ids || []).filter((x) => typeof x === 'string' && x))];
+    if (!uniq.length) return { trashedIds: [], alreadyTrashedIds: [], notFoundIds: [] };
+    const delMs = isoToMs(deletedAt) || Date.now();
+    const CHUNK = 80;
+    const trashedIds = [];
+    const alreadyTrashedIds = [];
+    const found = new Set();
+    const stmts = [];
+    for (let i = 0; i < uniq.length; i += CHUNK) {
+      const part = uniq.slice(i, i + CHUNK);
+      const ph = part.map(() => '?').join(',');
+      const { results } = await this.db
+        .prepare(`SELECT id, deleted_at FROM files WHERE id IN (${ph})`)
+        .bind(...part)
+        .all();
+      const toTrash = [];
+      for (const r of (results || [])) {
+        found.add(r.id);
+        if (r.deleted_at) alreadyTrashedIds.push(r.id);
+        else {
+          toTrash.push(r.id);
+          trashedIds.push(r.id);
+        }
+      }
+      if (toTrash.length) {
+        const tPh = toTrash.map(() => '?').join(',');
+        stmts.push(
+          this.db.prepare(`UPDATE files SET deleted_at = ? WHERE id IN (${tPh}) AND deleted_at IS NULL`).bind(delMs, ...toTrash),
+          this.db.prepare(`DELETE FROM shares WHERE file_id IN (${tPh})`).bind(...toTrash),
+        );
+      }
+    }
+    if (stmts.length) {
+      if (typeof this.db.batch === 'function') await this.db.batch(stmts);
+      else for (const st of stmts) await st.run();
+    }
+    const notFoundIds = uniq.filter((id) => !found.has(id));
+    return { trashedIds, alreadyTrashedIds, notFoundIds };
+  }
+
   async deleteFile(id) {
     const out = await this.db.prepare('DELETE FROM files WHERE id = ?').bind(id).run();
     return (out.meta && out.meta.changes > 0) || false;
@@ -683,3 +772,4 @@ export class D1MetaStore {
     return head.size;
   }
 }
+

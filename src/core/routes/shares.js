@@ -138,6 +138,70 @@ export function registerShares(app) {
   app.post('/api/folders/:id/share', (c) => handleCreateShare(c, decodeURIComponent(c.req.param('id')), true));
   app.delete('/api/folders/:id/share', (c) => handleRevokeShare(c, decodeURIComponent(c.req.param('id')), true));
 
+  // 全站分享管理汇总接口（管理员，v3.3.10）：一屏列出所有文件/文件夹分享、剩余次数、取件码与状态。
+  app.get('/api/shares', async (c) => {
+    const deps = c.get('deps');
+    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const [shares, folders, files] = await Promise.all([
+      typeof deps.meta.listShares === 'function' ? deps.meta.listShares() : Promise.resolve([]),
+      deps.meta.listFolders(),
+      deps.meta.listAllFiles({ authed: true }),
+    ]);
+    const folderMap = new Map((folders || []).map((f) => [f.id, f]));
+    const fileMap = new Map((files || []).map((f) => [f.id, f]));
+    const list = (shares || []).filter((s) => s && s.token).map((s) => {
+      const isFolder = !!s.folderId;
+      const targetId = isFolder ? s.folderId : s.fileId;
+      const target = isFolder ? folderMap.get(targetId) : fileMap.get(targetId);
+      const maxDownloads = typeof s.maxDownloads === 'number' ? s.maxDownloads : (s.burn ? 1 : 0);
+      const usedDownloads = typeof s.usedDownloads === 'number' ? s.usedDownloads : 0;
+      const remainingDownloads = maxDownloads > 0 ? Math.max(0, maxDownloads - usedDownloads) : null;
+      let status = 'active';
+      if (!target) {
+        status = 'missing';
+      } else if (!isFolder && isExpired(target)) {
+        status = 'expired';
+      } else if (maxDownloads > 0 && usedDownloads >= maxDownloads) {
+        status = 'exhausted';
+      }
+      return {
+        token: s.token,
+        type: isFolder ? 'folder' : 'file',
+        targetId: targetId || null,
+        targetName: target ? target.name : (isFolder ? '（文件夹已删除）' : '（文件已删除或移入回收站）'),
+        targetSize: (!isFolder && target) ? (target.size || 0) : null,
+        targetKind: (!isFolder && target) ? (target.kind || 'file') : null,
+        targetVisibility: (!isFolder && target) ? (target.visibility || 'public') : null,
+        targetExpiresAt: (!isFolder && target) ? (target.expiresAt || null) : null,
+        code: s.code || null,
+        burn: !!s.burn,
+        pickupCode: s.pickupCode || null,
+        maxDownloads,
+        usedDownloads,
+        remainingDownloads,
+        createdAt: s.createdAt || null,
+        status,
+      };
+    });
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    const counts = {
+      all: list.length,
+      active: list.filter((x) => x.status === 'active').length,
+      inactive: list.filter((x) => x.status !== 'active').length,
+    };
+    return c.json({ ok: true, shares: list, counts });
+  });
+
+  // 按 token 直接吊销分享（管理员，v3.3.10，兼容目标文件/文件夹已删除的孤立分享清理）。
+  app.delete('/api/shares/:token', async (c) => {
+    const deps = c.get('deps');
+    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const token = decodeURIComponent(c.req.param('token'));
+    await deps.meta.deleteShare(token);
+    log('share revoked by token:', token);
+    return c.json({ ok: true });
+  });
+
   // 分享页取信息（公开接口）
   app.get('/api/share/:token', async (c) => {
     const deps = c.get('deps');
@@ -222,3 +286,4 @@ export function registerShares(app) {
     return c.json({ ok: true, token: share.token, needCode: !!share.code });
   });
 }
+

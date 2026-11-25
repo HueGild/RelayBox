@@ -296,6 +296,88 @@ export function registerFiles(app) {
     }
   });
 
+  // 批量操作聚合接口（管理员，v3.3.10）：一次请求完成 move / visibility / trash，消除串行请求与 VPS JSON 写放大。
+  app.post('/api/files/batch', async (c) => {
+    const deps = c.get('deps');
+    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const body = await readJsonBody(c);
+    const action = typeof body.action === 'string' ? body.action.trim() : '';
+    const rawIds = Array.isArray(body.ids) ? body.ids : [];
+    const ids = [...new Set(rawIds.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()))];
+    if (!ids.length) return c.json({ ok: false, error: '请至少选择一个文件' }, 400);
+    if (ids.length > 500) return c.json({ ok: false, error: '单次批量操作最多支持 500 个文件' }, 400);
+
+    if (action === 'move') {
+      const target = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;
+      if (target && !(await deps.meta.getFolder(target))) {
+        return c.json({ ok: false, error: '目标文件夹不存在' }, 400);
+      }
+      let out;
+      if (typeof deps.meta.batchUpdateFiles === 'function') {
+        out = await deps.meta.batchUpdateFiles(ids, { folderId: target });
+      } else {
+        const updatedIds = [];
+        const notFoundIds = [];
+        for (const id of ids) {
+          const item = await deps.meta.getFile(id);
+          if (!item || item.deletedAt) { notFoundIds.push(id); continue; }
+          await deps.meta.updateFile(id, { folderId: target });
+          updatedIds.push(id);
+        }
+        out = { updatedIds, notFoundIds };
+      }
+      log('batch move:', out.updatedIds.length, 'files ->', target || 'root');
+      return c.json({ ok: true, action, count: out.updatedIds.length, ...out });
+    }
+
+    if (action === 'visibility') {
+      const visibility = body.visibility;
+      if (visibility !== 'public' && visibility !== 'private') {
+        return c.json({ ok: false, error: 'visibility 只能是 public 或 private' }, 400);
+      }
+      let out;
+      if (typeof deps.meta.batchUpdateFiles === 'function') {
+        out = await deps.meta.batchUpdateFiles(ids, { visibility });
+      } else {
+        const updatedIds = [];
+        const notFoundIds = [];
+        for (const id of ids) {
+          const item = await deps.meta.getFile(id);
+          if (!item || item.deletedAt) { notFoundIds.push(id); continue; }
+          await deps.meta.updateFile(id, { visibility });
+          updatedIds.push(id);
+        }
+        out = { updatedIds, notFoundIds };
+      }
+      log('batch visibility:', out.updatedIds.length, 'files ->', visibility);
+      return c.json({ ok: true, action, count: out.updatedIds.length, ...out });
+    }
+
+    if (action === 'trash') {
+      const deletedAt = new Date().toISOString();
+      let out;
+      if (typeof deps.meta.batchTrashFiles === 'function') {
+        out = await deps.meta.batchTrashFiles(ids, deletedAt);
+      } else {
+        const trashedIds = [];
+        const alreadyTrashedIds = [];
+        const notFoundIds = [];
+        for (const id of ids) {
+          const item = await deps.meta.getFile(id);
+          if (!item) { notFoundIds.push(id); continue; }
+          const res = await moveFileToTrash(deps, item);
+          if (res && res.alreadyTrashed) alreadyTrashedIds.push(id);
+          else trashedIds.push(id);
+        }
+        out = { trashedIds, alreadyTrashedIds, notFoundIds };
+      }
+      log('batch trash:', out.trashedIds.length, 'files');
+      return c.json({ ok: true, action, count: out.trashedIds.length, ...out });
+    }
+
+    return c.json({ ok: false, error: '不支持的批量操作类型（仅支持 move / visibility / trash）' }, 400);
+  });
+
   // 移动文件到另一个文件夹（管理员）。folderId 为空表示移回根目录。
   app.post('/api/files/:id/move', async (c) => {
     const deps = c.get('deps');
@@ -398,3 +480,4 @@ export function registerFiles(app) {
     return c.json({ ok: true });
   });
 }
+
