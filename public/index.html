@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r18 (2026-11-25 · 顶栏主题纯图标/移动端方案A紧凑横条文件夹与4:3缩略图/目录SWR缓存与预取/目录树全局缓存/缩略图WebP+首帧快照回填/jsdom select setter修复) -->
+<!-- RelayBox v3.4.4 UI r24 (2026-11-25 · 移动端双程丝滑抽屉与防滚动穿透锁/子设置叠层不重弹/桌面端居中毛玻璃控制台面板/宽屏1480px流式布局与取件上传并排) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -54,7 +54,7 @@
  }
  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
- .wrap { max-width: 1180px; margin: 0 auto; padding: 18px 16px 104px; }
+ .wrap { max-width: min(1480px, 92vw); margin: 0 auto; padding: 18px 16px 104px; }
  h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -.01em; display: inline-flex; align-items: center; gap: 9px; }
  .brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #3B82F6, #2563EB); color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,.28); flex-shrink: 0; }
  .brand-mark svg { width: 17px; height: 17px; }
@@ -291,7 +291,7 @@
  .sheet-item.danger:hover { background: var(--danger-hover); }
  .sheet-item.danger svg { color: var(--danger-text); }
  /* 预览弹窗（修复桌面端高分辨率视频撑破视口 + 文本/PDF 预览） */
- .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.64); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 50; align-items: center; justify-content: center; padding: 16px; }
+ .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.64); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 75; align-items: center; justify-content: center; padding: 16px; }
  .modal .card { background: var(--glass-bg-strong); border: 1px solid var(--glass-border); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%); box-shadow: 0 0 0 1px var(--glass-stroke), 0 20px 50px rgba(0,0,0,.32); }
  .modal.open { display: flex; }
  #modalBody { display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: calc(100vw - 32px); max-height: calc(100vh - 64px); width: 100%; }
@@ -882,18 +882,17 @@
  .ctx-item.danger:hover { background: var(--danger-bg); }
  .ctx-item.danger svg { color: var(--danger-text); }
 
- /* v3.4.2 / r22: 修复抽屉被 topbar 裁剪及视口横向撑宽 + 顶栏精简 */
+ /* v3.4.4 / r24: 双程丝滑抽屉与滚动穿透锁 + 桌面端居中控制台面板 + 桌面端取件/上传并排 */
  html, body { overflow-x: clip; max-width: 100%; }
+ html.drawer-locked, body.drawer-locked { overflow: hidden !important; overscroll-behavior: none !important; }
+ body.drawer-locked { position: fixed; left: 0; right: 0; width: 100%; }
  .topbar .desk-only-btn:not(#trashBtn) { display: none !important; }
  .topbar .top-more-wrap.mob-only-wrap { display: inline-flex !important; position: static; }
- .nav-drawer-mask { display: none; position: fixed; inset: 0; z-index: 82; background: rgba(15,23,42,.42); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
- .nav-drawer-mask.open { display: block; }
- @keyframes drawerSlideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
- @keyframes drawerSlideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
- .top-more-menu.nav-drawer { display: none !important; flex-direction: column; position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important; left: auto !important; width: min(248px, 68vw) !important; min-width: 0 !important; max-height: none !important; margin: 0 !important; padding: calc(14px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom)) !important; border-radius: 18px 0 0 18px !important; z-index: 85 !important; background: var(--glass-bg-strong); backdrop-filter: blur(24px) saturate(185%); -webkit-backdrop-filter: blur(24px) saturate(185%); border-left: 1px solid var(--glass-border); box-shadow: -12px 0 36px rgba(0,0,0,.22); overflow-y: auto; gap: 3px; }
- .top-more-menu.nav-drawer.open { display: flex !important; animation: drawerSlideInRight .2s cubic-bezier(.22,1,.36,1); }
- .top-more-menu.nav-drawer.side-left { left: 0 !important; right: auto !important; border-radius: 0 18px 18px 0 !important; border-left: 0; border-right: 1px solid var(--glass-border); box-shadow: 12px 0 36px rgba(0,0,0,.22); }
- .top-more-menu.nav-drawer.side-left.open { animation: drawerSlideInLeft .2s cubic-bezier(.22,1,.36,1); }
+ .nav-drawer-mask { display: block; position: fixed; inset: 0; z-index: 62; background: rgba(15,23,42,.44); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); opacity: 0; visibility: hidden; pointer-events: none; touch-action: none; overscroll-behavior: none; transition: opacity .24s ease, visibility .24s ease; }
+ .nav-drawer-mask.open { opacity: 1; visibility: visible; pointer-events: auto; }
+ .top-more-menu.nav-drawer { display: flex !important; flex-direction: column; position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important; left: auto !important; width: min(248px, 68vw) !important; min-width: 0 !important; max-height: none !important; margin: 0 !important; padding: calc(14px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom)) !important; border-radius: 18px 0 0 18px !important; z-index: 65 !important; background: var(--glass-bg-strong); backdrop-filter: blur(24px) saturate(185%); -webkit-backdrop-filter: blur(24px) saturate(185%); border-left: 1px solid var(--glass-border); box-shadow: -12px 0 36px rgba(0,0,0,.22); overflow-y: auto; overscroll-behavior: contain; gap: 3px; transform: translateX(104%); opacity: 0; visibility: hidden; pointer-events: none; transition: transform .26s cubic-bezier(.22,1,.36,1), opacity .22s ease, visibility .26s ease; }
+ .top-more-menu.nav-drawer.open { transform: translateX(0) !important; opacity: 1; visibility: visible; pointer-events: auto; }
+ .top-more-menu.nav-drawer.side-left { left: 0 !important; right: auto !important; border-radius: 0 18px 18px 0 !important; border-left: 0; border-right: 1px solid var(--glass-border); box-shadow: 12px 0 36px rgba(0,0,0,.22); transform: translateX(-104%); }
  .drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
  .drawer-title { font-size: 14.5px; font-weight: 600; color: var(--text); white-space: nowrap; flex: 1; min-width: 0; }
  .drawer-head-acts { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -902,9 +901,25 @@
  .top-more-menu.nav-drawer .drawer-close { width: 28px !important; height: 28px !important; flex: 0 0 28px; border-radius: 999px; border: 0; background: var(--surface-soft); color: var(--muted); font-size: 17px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0 !important; }
  .top-more-menu.nav-drawer .drawer-close:hover { background: var(--btn-bg); color: var(--text); }
  .drawer-sec { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); padding: 10px 10px 4px; }
- .top-more-menu.nav-drawer > button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 12px; border-radius: 11px; border: 0; background: transparent; color: var(--text); font-size: 13.5px; text-align: left; cursor: pointer; transition: background .14s ease; }
+ .top-more-menu.nav-drawer > button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 12px; border-radius: 11px; border: 0; background: transparent; color: var(--text); font-size: 13.5px; text-align: left; cursor: pointer; transition: background .14s ease, border-color .14s ease; }
  .top-more-menu.nav-drawer > button:hover { background: var(--surface-soft); }
  .top-more-menu.nav-drawer > button svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--accent); }
+ @media (min-width: 769px) {
+  .top-more-menu.nav-drawer, .top-more-menu.nav-drawer.side-left { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 8px; top: 50% !important; left: 50% !important; right: auto !important; bottom: auto !important; width: min(520px, 90vw) !important; max-height: 82vh !important; padding: 18px 20px 20px !important; border-radius: 18px !important; border: 1px solid var(--glass-border) !important; box-shadow: 0 24px 64px rgba(0,0,0,.28) !important; transform: translate(-50%, -48%) scale(.96); opacity: 0; visibility: hidden; pointer-events: none; transition: transform .22s cubic-bezier(.22,1,.36,1), opacity .18s ease, visibility .22s ease; }
+  .top-more-menu.nav-drawer.open, .top-more-menu.nav-drawer.side-left.open { transform: translate(-50%, -50%) scale(1) !important; opacity: 1; visibility: visible; pointer-events: auto; }
+  .top-more-menu.nav-drawer .drawer-head { grid-column: 1 / -1; padding: 0 2px 12px; margin-bottom: 2px; }
+  .top-more-menu.nav-drawer .drawer-title { font-size: 16px; }
+  .top-more-menu.nav-drawer .drawer-side-btn { display: none !important; }
+  .top-more-menu.nav-drawer .drawer-sec { grid-column: 1 / -1; padding: 8px 2px 2px; }
+  .top-more-menu.nav-drawer > button { background: var(--surface-soft); border: 1px solid var(--border); padding: 11px 13px; border-radius: 12px; }
+  .top-more-menu.nav-drawer > button:hover { background: var(--btn-bg); border-color: rgba(59,130,246,.35); }
+ }
+ @media (min-width: 900px) {
+  .quick-bar-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: stretch; margin-bottom: 14px; }
+  .quick-bar-grid > .card { margin-bottom: 0 !important; display: flex; flex-direction: column; justify-content: center; }
+  .quick-bar-grid > .pickup-card { flex-direction: row; align-items: center; }
+  .quick-bar-grid:has(#uploadCard:not(.collapsed)) { grid-template-columns: 1fr; }
+ }
 </style>
 </head>
 <body>
@@ -953,6 +968,7 @@
  <div class="msg" id="loginMsg"></div>
  </div>
 
+ <div class="quick-bar-grid" id="quickBarGrid">
  <div class="card pickup-card" id="pickupCard">
  <span class="pickup-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V3"/><path d="M8 3h8"/><path d="M9 14h6"/></svg><span>取件码</span></span>
  <input type="text" class="pickup-input" id="pickupInput" placeholder="输入 5 位取件码快速取件" maxlength="8" autocomplete="off" spellcheck="false">
@@ -1044,6 +1060,8 @@
  <div class="upload-queue" id="uploadQueueBox"></div>
  <div class="msg" id="msg"></div>
  </div>
+ </div>
+
  </div>
 
  <div class="card">
@@ -4738,20 +4756,39 @@ if ($('drawerSideBtn')) {
   applyDrawerSide();
  };
 }
-let drawerReturnPending = false;
+let drawerLockedY = 0;
+let drawerScrollLocked = false;
+function lockDrawerScroll() {
+ if (drawerScrollLocked) return;
+ drawerLockedY = window.scrollY || document.documentElement.scrollTop || 0;
+ drawerScrollLocked = true;
+ document.documentElement.classList.add('drawer-locked');
+ document.body.classList.add('drawer-locked');
+ document.body.style.top = (-drawerLockedY) + 'px';
+}
+function unlockDrawerScroll() {
+ if (!drawerScrollLocked) return;
+ drawerScrollLocked = false;
+ document.documentElement.classList.remove('drawer-locked');
+ document.body.classList.remove('drawer-locked');
+ document.body.style.top = '';
+ try { window.scrollTo(0, drawerLockedY); } catch {}
+}
+function hasOpenSubModal() {
+ return !!document.querySelector('.modal.open');
+}
 function openNavDrawer() {
- drawerReturnPending = false;
  applyDrawerSide();
  const m = $('topMoreMenu'), mask = $('navDrawerMask');
  if (m) m.classList.add('open');
  if (mask) mask.classList.add('open');
- document.body.style.overflow = 'hidden';
+ lockDrawerScroll();
 }
 function closeNavDrawer() {
  const m = $('topMoreMenu'), mask = $('navDrawerMask');
  if (m) m.classList.remove('open');
  if (mask) mask.classList.remove('open');
- document.body.style.overflow = '';
+ unlockDrawerScroll();
 }
 if ($('topMoreBtn')) {
  $('topMoreBtn').onclick = (e) => {
@@ -4761,57 +4798,26 @@ if ($('topMoreBtn')) {
   else openNavDrawer();
  };
 }
-if ($('drawerCloseBtn')) $('drawerCloseBtn').onclick = () => { drawerReturnPending = false; closeNavDrawer(); };
-if ($('navDrawerMask')) $('navDrawerMask').onclick = () => { drawerReturnPending = false; closeNavDrawer(); };
+if ($('drawerCloseBtn')) $('drawerCloseBtn').onclick = closeNavDrawer;
+if ($('navDrawerMask')) {
+ $('navDrawerMask').onclick = () => { if (!hasOpenSubModal()) closeNavDrawer(); };
+ $('navDrawerMask').addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+}
 document.addEventListener('click', (e) => {
  const m = $('topMoreMenu');
- if (m && m.classList.contains('open') && !e.target.closest('#topMoreMenu') && !e.target.closest('#topMoreBtn')) {
-  drawerReturnPending = false;
-  closeNavDrawer();
- }
+ if (!m || !m.classList.contains('open')) return;
+ if (hasOpenSubModal()) return;
+ if (e.target.closest('#topMoreMenu') || e.target.closest('#topMoreBtn') || e.target.closest('.modal')) return;
+ closeNavDrawer();
 });
 window.addEventListener('keydown', (e) => {
- if (e.key === 'Escape' && $('topMoreMenu') && $('topMoreMenu').classList.contains('open')) {
-  drawerReturnPending = false;
+ if (e.key === 'Escape' && $('topMoreMenu') && $('topMoreMenu').classList.contains('open') && !hasOpenSubModal()) {
   closeNavDrawer();
  }
 });
-if ($('topMoreMenu')) {
- $('topMoreMenu').addEventListener('click', (e) => {
-  const btn = e.target.closest('button');
-  if (!btn || btn.id === 'drawerCloseBtn' || btn.id === 'drawerSideBtn') return;
-  drawerReturnPending = true;
-  closeNavDrawer();
- });
-}
-// 从抽屉进入的子设置弹窗关闭后，自动返回抽屉（不直接跳回主页）
-const DRAWER_SUB_MODALS = ['sharesMgrModal', 'dropsModal', 'trashModal', 'copyFmtModal', 'appearanceModal', 'poolsModal', 'transferModeModal', 'notifyModal', 'tokensModal', 'inputModal'];
-if (typeof MutationObserver !== 'undefined') {
- const drawerSubObs = new MutationObserver((muts) => {
-  if (!drawerReturnPending) return;
-  for (const mut of muts) {
-   const el = mut.target;
-   if (el && !el.classList.contains('open')) {
-    setTimeout(() => {
-     if (!drawerReturnPending) return;
-     const anyOpen = DRAWER_SUB_MODALS.some(id => $(id) && $(id).classList.contains('open'));
-     if (!anyOpen) {
-      drawerReturnPending = false;
-      openNavDrawer();
-     }
-    }, 60);
-    break;
-   }
-  }
- });
- DRAWER_SUB_MODALS.forEach(id => {
-  const el = $(id);
-  if (el) drawerSubObs.observe(el, { attributes: true, attributeFilter: ['class'] });
- });
-}
-if ($('mobCopyFmtBtn')) $('mobCopyFmtBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openCopyFmtModal(); };
-if ($('mobAnnounceBtn')) $('mobAnnounceBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); editAnnouncement(); };
-if ($('mobTokensBtn')) $('mobTokensBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openTokensModal(); };
+if ($('mobCopyFmtBtn')) $('mobCopyFmtBtn').onclick = () => { openCopyFmtModal(); };
+if ($('mobAnnounceBtn')) $('mobAnnounceBtn').onclick = () => { editAnnouncement(); };
+if ($('mobTokensBtn')) $('mobTokensBtn').onclick = () => { openTokensModal(); };
 // ===== r8: R2 传输双模式切换弹窗 =====
 let editingTransferMode = 'presign';
 function syncTransferModeOptsUI() {
@@ -4849,7 +4855,7 @@ document.querySelectorAll('#transferModeOpts .mode-opt').forEach(b => {
  };
 });
 if ($('transferModeBtn')) $('transferModeBtn').onclick = openTransferModeModal;
-if ($('mobTransferModeBtn')) $('mobTransferModeBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openTransferModeModal(); };
+if ($('mobTransferModeBtn')) $('mobTransferModeBtn').onclick = () => { openTransferModeModal(); };
 if ($('transferModeClose')) $('transferModeClose').onclick = closeTransferModeModal;
 if ($('transferModeCancel')) $('transferModeCancel').onclick = closeTransferModeModal;
 if ($('transferModeModal')) $('transferModeModal').onclick = (e) => { if (e.target.id === 'transferModeModal') closeTransferModeModal(); };
@@ -5128,7 +5134,7 @@ function collectPoolPayload() {
  };
 }
 if ($('poolsBtn')) $('poolsBtn').onclick = openPoolsModal;
-if ($('mobPoolsBtn')) $('mobPoolsBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openPoolsModal(); };
+if ($('mobPoolsBtn')) $('mobPoolsBtn').onclick = () => { openPoolsModal(); };
 if ($('poolsClose')) $('poolsClose').onclick = closePoolsModal;
 if ($('poolsDoneBtn')) $('poolsDoneBtn').onclick = closePoolsModal;
 if ($('poolsModal')) $('poolsModal').onclick = (e) => { if (e.target.id === 'poolsModal') closePoolsModal(); };
@@ -5336,7 +5342,7 @@ if ($('appearUploadInput')) {
  };
 }
 if ($('appearanceBtn')) $('appearanceBtn').onclick = openAppearanceModal;
-if ($('mobAppearanceBtn')) $('mobAppearanceBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openAppearanceModal(); };
+if ($('mobAppearanceBtn')) $('mobAppearanceBtn').onclick = () => { openAppearanceModal(); };
 if ($('appearanceClose')) $('appearanceClose').onclick = () => closeAppearanceModal(false);
 if ($('apCancelBtn')) $('apCancelBtn').onclick = () => closeAppearanceModal(false);
 if ($('appearanceModal')) $('appearanceModal').onclick = (e) => { if (e.target.id === 'appearanceModal') closeAppearanceModal(false); };
@@ -5492,7 +5498,7 @@ async function removeDropLink(token, title) {
 }
 
 if ($('dropsBtn')) $('dropsBtn').onclick = () => openDropsModal();
-if ($('mobDropsBtn')) $('mobDropsBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openDropsModal(); };
+if ($('mobDropsBtn')) $('mobDropsBtn').onclick = () => { openDropsModal(); };
 if ($('dropsClose')) $('dropsClose').onclick = closeDropsModal;
 if ($('dropsDoneBtn')) $('dropsDoneBtn').onclick = closeDropsModal;
 if ($('dropsModal')) $('dropsModal').onclick = (e) => { if (e.target.id === 'dropsModal') closeDropsModal(); };
@@ -5873,7 +5879,7 @@ function collectTgForm() {
 
 if ($('tgEnabled')) $('tgEnabled').onchange = syncTgStatusTag;
 if ($('notifyBtn')) $('notifyBtn').onclick = openNotifyModal;
-if ($('mobNotifyBtn')) $('mobNotifyBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openNotifyModal(); };
+if ($('mobNotifyBtn')) $('mobNotifyBtn').onclick = () => { openNotifyModal(); };
 if ($('notifyClose')) $('notifyClose').onclick = closeNotifyModal;
 if ($('tgCancelBtn')) $('tgCancelBtn').onclick = closeNotifyModal;
 if ($('notifyModal')) $('notifyModal').onclick = (e) => { if (e.target.id === 'notifyModal') closeNotifyModal(); };
@@ -6723,7 +6729,7 @@ async function emptyTrashAll() {
 }
 
 if ($('trashBtn')) $('trashBtn').onclick = openTrashModal;
-if ($('mobTrashBtn')) $('mobTrashBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openTrashModal(); };
+if ($('mobTrashBtn')) $('mobTrashBtn').onclick = () => { openTrashModal(); };
 if ($('trashClose')) $('trashClose').onclick = closeTrashModal;
 if ($('trashDoneBtn')) $('trashDoneBtn').onclick = closeTrashModal;
 if ($('trashModal')) $('trashModal').onclick = (e) => { if (e.target.id === 'trashModal') closeTrashModal(); };
@@ -7308,7 +7314,7 @@ async function revokeAdminShare(token) {
 }
 
 if ($('sharesMgrBtn')) $('sharesMgrBtn').onclick = () => openSharesMgrModal();
-if ($('mobSharesMgrBtn')) $('mobSharesMgrBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openSharesMgrModal(); };
+if ($('mobSharesMgrBtn')) $('mobSharesMgrBtn').onclick = () => { openSharesMgrModal(); };
 if ($('sharesMgrClose')) $('sharesMgrClose').onclick = closeSharesMgrModal;
 if ($('sharesMgrDoneBtn')) $('sharesMgrDoneBtn').onclick = closeSharesMgrModal;
 if ($('sharesMgrRefreshBtn')) $('sharesMgrRefreshBtn').onclick = () => loadAdminShares();
