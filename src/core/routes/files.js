@@ -6,6 +6,7 @@ import { readJsonBody, folderIdOf, folderPath, folderVisibleByCountMap, isExpire
 import { originOf, mediaCacheKey, matchEdgeCache, putEdgeCache, purgeEdgeCacheForFile, purgeEdgeCacheForFiles, withCacheHeader, computePublicEdgeTtl } from '../lib/edge-cache.js';
 import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
 import { notifyShareConsumed } from '../lib/notify.js';
+import { recordAudit } from '../lib/audit.js';
 import { getTransferModeState } from './settings.js';
 import { hasLocalDisk, buildPoolSummaries, resolveStorageForFile, BUILTIN_R2_ID, BUILTIN_LOCAL_ID } from './pools.js';
 import { moveFileToTrash, purgeFilePermanently } from './trash.js';
@@ -18,6 +19,8 @@ function mapFile(f, shareToken, authed, poolNameMap) {
     folderId: folderIdOf(f), expiresAt: f.expiresAt || null, downloads: f.downloads || 0,
     poolId: f.poolId || null,
     poolName: (poolNameMap && poolNameMap.get(poolId)) || (f.storage === 'r2' ? '内置 R2' : '本地磁盘'),
+    pinned: !!f.pinned,
+    note: typeof f.note === 'string' ? f.note : '',
   };
   if (f.width && f.height) {
     out.width = f.width;
@@ -526,6 +529,23 @@ export function registerFiles(app) {
     const updated = await deps.meta.updateFile(id, { visibility });
     await purgeEdgeCacheForFile(deps, c, id);
     log('visibility:', item.name, '->', visibility);
+    return c.json({ ok: true, file: updated });
+  });
+
+  // 置顶 / 备注更新（管理员，v3.6.0）。
+  app.post('/api/files/:id/meta', async (c) => {
+    const deps = c.get('deps');
+    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const id = decodeURIComponent(c.req.param('id'));
+    const body = await readJsonBody(c);
+    const item = await deps.meta.getFile(id);
+    if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
+    const patch = {};
+    if (typeof body.pinned === 'boolean') patch.pinned = body.pinned;
+    if (typeof body.note === 'string') patch.note = body.note.trim().slice(0, 200);
+    if (!Object.keys(patch).length) return c.json({ ok: true, file: item });
+    const updated = await deps.meta.updateFile(id, patch);
+    await recordAudit(deps, c, 'file_meta', item.name, Object.keys(patch).join(','));
     return c.json({ ok: true, file: updated });
   });
 

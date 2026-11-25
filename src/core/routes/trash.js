@@ -13,6 +13,7 @@ import { readJsonBody, folderIdOf, folderPath, extOf, safeName, log } from '../l
 import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
 import { resolveStorageForFile, buildPoolSummaries, BUILTIN_R2_ID, BUILTIN_LOCAL_ID } from './pools.js';
 import { purgeEdgeCacheForFile } from '../lib/edge-cache.js';
+import { recordAudit } from '../lib/audit.js';
 
 export const DEFAULT_TRASH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天自动保留
 
@@ -235,6 +236,7 @@ export function registerTrash(app) {
     const item = await deps.meta.getFile(id);
     if (!item || !item.deletedAt) return c.json({ ok: false, error: '回收站中找不到该文件' }, 404);
     await purgeFilePermanently(deps, item, c);
+    await recordAudit(deps, c, 'trash_purge', item.name, `彻底删除 (${item.size || 0} B)`);
     log('purged from trash:', item.name);
     return c.json({ ok: true, purged: 1, freedBytes: item.size || 0 });
   });
@@ -254,6 +256,7 @@ export function registerTrash(app) {
       purged++;
       freedBytes += (item.size || 0);
     }
+    if (purged > 0) await recordAudit(deps, c, 'trash_empty', `${purged} 个文件`, `释放 ${freedBytes} B`);
     log('trash emptied:', purged, 'files,', freedBytes + 'B');
     return c.json({ ok: true, purged, freedBytes });
   }

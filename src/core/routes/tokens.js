@@ -4,6 +4,7 @@
 
 import { readJsonBody, newId, newApiToken, sha256Hex } from '../lib/util.js';
 import { isAuthed } from '../lib/auth.js';
+import { recordAudit } from '../lib/audit.js';
 
 export function registerTokens(app) {
   // Token 列表（管理员）：只返回可展示字段，不含明文与哈希。
@@ -32,6 +33,7 @@ export function registerTokens(app) {
       scope,
       createdAt: Date.now(),
     });
+    await recordAudit(deps, c, 'token_create', name, `scope=${scope}`);
     return c.json({ ok: true, token, ...item });
   });
 
@@ -41,6 +43,7 @@ export function registerTokens(app) {
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
     const id = decodeURIComponent(c.req.param('id'));
     await deps.meta.deleteApiToken(id);
+    await recordAudit(deps, c, 'token_revoke', id, '吊销 API 密钥');
     return c.json({ ok: true });
   });
 }

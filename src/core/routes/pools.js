@@ -4,6 +4,7 @@
 
 import { readJsonBody, newId, isExpired, R2_FREE_BYTES, log } from '../lib/util.js';
 import { isAuthed } from '../lib/auth.js';
+import { recordAudit } from '../lib/audit.js';
 import { encryptSecret, decryptSecret, maskAccessKey } from '../lib/crypto.js';
 import { S3PoolStorage } from '../lib/s3-pool.js';
 import { getTransferModeState, SETTING_R2_TRANSFER_MODE } from './settings.js';
@@ -256,6 +257,7 @@ export function registerPools(app) {
       sortOrder: 0,
       createdAt: Date.now(),
     });
+    await recordAudit(deps, c, 'pool_create', created.name, created.bucket);
     log('storage pool created:', created.name, created.bucket);
     const summary = await buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, id: created.id, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
@@ -338,6 +340,7 @@ export function registerPools(app) {
     }
 
     await deps.meta.updateStoragePool(id, patch);
+    await recordAudit(deps, c, 'pool_update', existing.name || id, Object.keys(patch).join(','));
     log('storage pool updated:', id);
     const summary = await buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
@@ -361,6 +364,7 @@ export function registerPools(app) {
       return c.json({ ok: false, error: `该存储池在回收站中还有 ${poolStat.trashCount} 个文件，请先清空回收站或还原后再移除存储池` }, 400);
     }
     await deps.meta.deleteStoragePool(id);
+    await recordAudit(deps, c, 'pool_delete', existing.name || id, '删除外部存储池');
     log('storage pool deleted:', id);
     const summary = await buildPoolSummaries(deps, usageMap, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });

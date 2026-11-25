@@ -37,6 +37,9 @@ export async function cleanupExpired(deps) {
   if (typeof deps.meta.deleteExpiredDropLinks === 'function') {
     await deps.meta.deleteExpiredDropLinks(now);
   }
+  if (typeof deps.meta.deleteOldAuditLogs === 'function') {
+    await deps.meta.deleteOldAuditLogs(now - 30 * 24 * 3600 * 1000);
+  }
   await cleanupChunks(deps);
   await maybeSendDailyReport(deps, async () => (
     buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: false })

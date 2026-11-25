@@ -47,6 +47,8 @@ export class D1MetaStore {
       height: parseDim(r.height),
       poolId: (typeof r.pool_id === 'string' && r.pool_id) ? r.pool_id : null,
       deletedAt: msToIso(r.deleted_at),
+      pinned: r.pinned === 1,
+      note: typeof r.note === 'string' ? r.note : '',
     };
   }
   _rowToFolder(r) {
@@ -110,13 +112,13 @@ export class D1MetaStore {
 
   _orderByForSort(sort) {
     switch (sort) {
-      case 'time-asc': return 'uploaded_at ASC';
-      case 'name-asc': return 'lower(name) ASC, uploaded_at DESC';
-      case 'name-desc': return 'lower(name) DESC, uploaded_at DESC';
-      case 'size-desc': return 'size DESC, uploaded_at DESC';
-      case 'size-asc': return 'size ASC, uploaded_at DESC';
+      case 'time-asc': return 'pinned DESC, uploaded_at ASC';
+      case 'name-asc': return 'pinned DESC, lower(name) ASC, uploaded_at DESC';
+      case 'name-desc': return 'pinned DESC, lower(name) DESC, uploaded_at DESC';
+      case 'size-desc': return 'pinned DESC, size DESC, uploaded_at DESC';
+      case 'size-asc': return 'pinned DESC, size ASC, uploaded_at DESC';
       case 'time-desc':
-      default: return 'uploaded_at DESC';
+      default: return 'pinned DESC, uploaded_at DESC';
     }
   }
 
@@ -535,8 +537,8 @@ export class D1MetaStore {
     const now = Date.now();
     const esc = needle.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
     const { results } = await this.db.prepare(
-      "SELECT * FROM files WHERE deleted_at IS NULL AND lower(name) LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)",
-    ).bind(`%${esc}%`, now, authed ? 1 : 0, 'public').all();
+      "SELECT * FROM files WHERE deleted_at IS NULL AND (lower(name) LIKE ? ESCAPE '\\' OR lower(note) LIKE ? ESCAPE '\\') AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) ORDER BY pinned DESC, uploaded_at DESC",
+    ).bind(`%${esc}%`, `%${esc}%`, now, authed ? 1 : 0, 'public').all();
     return (results || []).map((r) => this._rowToFile(r));
   }
 
@@ -580,13 +582,16 @@ export class D1MetaStore {
       height: parseDim(next.height),
       pool_id: (typeof next.poolId === 'string' && next.poolId) ? next.poolId : null,
       deleted_at: isoToMs(next.deletedAt),
+      pinned: next.pinned ? 1 : 0,
+      note: typeof next.note === 'string' ? next.note : '',
     };
     await this.db.prepare(
-      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ?, upload_ip = ?, upload_geo = ?, width = ?, height = ?, pool_id = ?, deleted_at = ? WHERE id = ?',
+      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ?, upload_ip = ?, upload_geo = ?, width = ?, height = ?, pool_id = ?, deleted_at = ?, pinned = ?, note = ? WHERE id = ?',
     ).bind(
       row.name, row.size, row.ext, row.kind, row.storage, row.storage_key,
       row.folder_id, row.visibility, row.expires_at, row.downloads, row.uploaded_at,
-      row.upload_ip, row.upload_geo, row.width, row.height, row.pool_id, row.deleted_at, id,
+      row.upload_ip, row.upload_geo, row.width, row.height, row.pool_id, row.deleted_at,
+      row.pinned, row.note, id,
     ).run();
     return this._rowToFile(row);
   }
@@ -1180,5 +1185,34 @@ export class D1MetaStore {
     if (!head) throw new Error('assembled object missing after complete');
     return head.size;
   }
-}
 
+  // ---- audit logs (v3.6.0) ----
+  async addAuditLog(entry) {
+    await this.db.prepare(
+      'INSERT INTO audit_logs (id, action, target, detail, ip, geo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      entry.id, entry.action, entry.target || '', entry.detail || '',
+      entry.ip || '', entry.geo || '', entry.createdAt || Date.now(),
+    ).run();
+    return entry;
+  }
+  async listAuditLogs({ limit = 100, action = '' } = {}) {
+    const lim = Math.min(200, Math.max(1, Math.floor(Number(limit) || 100)));
+    const { results } = action
+      ? await this.db.prepare('SELECT * FROM audit_logs WHERE action = ? ORDER BY created_at DESC LIMIT ?').bind(action, lim).all()
+      : await this.db.prepare('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT ?').bind(lim).all();
+    return (results || []).map((r) => ({
+      id: r.id,
+      action: r.action,
+      target: r.target || '',
+      detail: r.detail || '',
+      ip: r.ip || '',
+      geo: r.geo || '',
+      createdAt: msToIso(r.created_at),
+    }));
+  }
+  async deleteOldAuditLogs(cutoffMs) {
+    const out = await this.db.prepare('DELETE FROM audit_logs WHERE created_at < ?').bind(cutoffMs).run();
+    return (out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
+  }
+}

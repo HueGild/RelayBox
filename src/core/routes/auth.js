@@ -2,6 +2,7 @@
 // Mirrors v2.8.4's handleLogin / handleLogout / /api/me exactly.
 
 import { readJsonBody } from '../lib/util.js';
+import { recordAudit } from '../lib/audit.js';
 import { isAuthed, newSession, isBlocked, recordPasswordResult, setSessionCookie, clearSessionCookie, sessionTokenOf, clientIp } from '../lib/auth.js';
 
 export function registerAuth(app) {
@@ -11,6 +12,7 @@ export function registerAuth(app) {
     const { username, password } = await readJsonBody(c);
     const ip = clientIp(c, deps);
     if (await isBlocked(deps, ip)) {
+      await recordAudit(deps, c, 'login_blocked', 'admin', 'IP 尝试次数超限被拦截');
       return c.json({ ok: false, error: '尝试太频繁，10 分钟后再试' }, 429);
     }
     if (username !== 'admin' || password !== deps.config.uploadPassword) {
@@ -20,6 +22,7 @@ export function registerAuth(app) {
     await recordPasswordResult(deps, ip, true);
     const token = await newSession(deps);
     setSessionCookie(c, token);
+    await recordAudit(deps, c, 'login', 'admin', '管理员登录成功');
     return c.json({ ok: true, username: 'admin' });
   });
 

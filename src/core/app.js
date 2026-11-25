@@ -26,6 +26,7 @@ import { registerTrash } from './routes/trash.js';
 import { registerMigrate } from './routes/migrate.js';
 import { registerWebdav } from './routes/webdav.js';
 import { registerStats } from './routes/stats.js';
+import { registerAudit } from './routes/audit.js';
 
 export function createApp(depsOrFactory) {
   const isFactory = typeof depsOrFactory === 'function';
@@ -84,6 +85,7 @@ export function createApp(depsOrFactory) {
   registerTokens(app);
   registerRawUpload(app);
   registerStats(app);
+  registerAudit(app);
 
   // Unmatched routes: same 404 shape as v2.8.4.
   app.notFound((c) => c.json({ ok: false, error: 'not found' }, 404));

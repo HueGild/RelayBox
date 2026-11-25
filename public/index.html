@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.5.2 UI r28 (2026-11-25 · 分享页独立有效期倒计时/看板类型图例点击筛选联动/全局Esc关闭新弹窗) -->
+<!-- RelayBox v3.6.0 UI r29 (2026-11-25 · 站内确认弹窗全替换/图床上传自动复制/Ctrl+K命令面板/PWA主屏清单/文件置顶与备注/分享页相册模式/安全审计日志) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RelayBox">
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
 <link rel="apple-touch-icon" href="data:image/png;base64,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">
 <title>RelayBox · 文件传输助手</title>
@@ -963,6 +964,35 @@
 .dup-item-meta { font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
 .share-exp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .share-exp-row input { width: 110px; padding: 6px 10px; border: 1px solid var(--input-border); border-radius: 9px; font-size: 13px; background: var(--input-bg); color: var(--text); }
+
+/* ===== v3.6.0 UI r29: 站内确认弹窗、Ctrl+K 命令面板、置顶备注、相册网格、安全审计日志 ===== */
+.pin-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: #D97706; background: rgba(217, 119, 6, 0.14); padding: 1px 6px; border-radius: 999px; font-weight: 600; margin-right: 4px; vertical-align: middle; }
+.file-note-line { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.auto-copy-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2, rgba(127,127,127,.06)); border: 1px solid var(--border); font-size: 12.5px; color: var(--muted); }
+.auto-copy-bar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); margin: 0; }
+.cmd-modal-card { max-width: 520px; width: 100%; padding: 14px !important; }
+.cmd-input { width: 100%; padding: 10px 12px; border: 1px solid var(--input-border); border-radius: 10px; font-size: 14px; background: var(--input-bg); color: var(--text); margin-bottom: 8px; }
+.cmd-list { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.cmd-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 9px; cursor: pointer; font-size: 13px; color: var(--text); border: 1px solid transparent; }
+.cmd-item:hover, .cmd-item.active { background: var(--surface-2, rgba(37,99,235,.1)); border-color: var(--accent); }
+.cmd-item-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.cmd-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmd-item-tag { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.share-gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px; margin-top: 10px; }
+.share-gal-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--card-bg, var(--surface)); cursor: pointer; transition: transform .12s, border-color .12s; }
+.share-gal-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.share-gal-thumb { position: relative; aspect-ratio: 4/3; background: rgba(127,127,127,.1); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.share-gal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.share-gal-foot { padding: 7px 9px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.share-gal-name { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.audit-modal-card { max-width: 660px; width: 100%; }
+.audit-list { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.audit-row { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; }
+.audit-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.audit-act { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: rgba(37,99,235,.12); color: var(--accent); }
+.audit-act.warn { background: rgba(217,119,6,.15); color: #D97706; }
+.audit-act.err { background: rgba(220,38,38,.15); color: #DC2626; }
+.audit-meta { font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 12px; }
 </style>
 </head>
 <body>
@@ -986,6 +1016,8 @@
  <button class="icon-btn" id="themeBtn" type="button" title="主题：跟随系统（点击切换）" aria-label="切换主题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="copyFmtBtn" style="width:30px;height:30px;border-radius:999px" title="默认复制格式" aria-label="默认复制格式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="cmdBtn" style="width:30px;height:30px;border-radius:999px" title="快捷命令面板 (Ctrl+K)" aria-label="快捷命令面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="auditBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="安全审计日志" aria-label="安全审计日志"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="statsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="存储与访问统计看板" aria-label="存储与访问统计看板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
  <button class="icon-btn desk-only-btn" id="sharesMgrBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="分享管理中心" aria-label="分享管理中心"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
  <button class="icon-btn desk-only-btn" id="dropsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="文件收集箱" aria-label="文件收集箱"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
@@ -1059,6 +1091,7 @@
  <label class="img-comp-toggle"><input type="checkbox" id="imgCompEnable"><span>图片压缩</span><span class="img-comp-summary" id="imgCompSummary">已关闭（上传原图）</span></label>
  <button type="button" class="ghost img-comp-cfg-btn" id="imgCompCfgBtn">参数<span class="dd-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
  </div>
+ <div class="auto-copy-bar"><label><input type="checkbox" id="autoCopyUploadChk"> 上传完成后自动复制链接</label><span>按默认复制格式写入剪贴板</span></div>
  <div class="img-comp-panel" id="imgCompPanel">
  <div class="img-comp-row">
  <span class="img-comp-label">输出格式</span>
@@ -1189,6 +1222,9 @@
 <div class="modal" id="textEditModal"><div class="card code-modal-card"><span class="close" id="textEditClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:24px;margin-bottom:4px"><div style="font-size:15.5px;font-weight:700;word-break:break-all" id="textEditTitle">在线编辑</div><span class="pool-tag" id="textEditPoolTag"></span></div><div class="meta" style="margin-bottom:10px">支持直接修改并覆盖保存回原存储池（Tab 插入缩进，Ctrl/Cmd+S 快捷保存，单文件 ≤ 1MB）。</div><textarea id="textEditArea" class="code-editor-ta tall" placeholder="正在加载文件内容…" spellcheck="false"></textarea><div class="code-status-row"><span id="textEditStat">0 行 · 0 字符 · 0 B</span><span class="code-dirty-dot" id="textEditDirty">● 有未保存修改</span></div><div class="msg" id="textEditMsg" style="margin-top:6px"></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="textEditCopyBtn">复制全文</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="textEditCancelBtn">取消</button><button type="button" id="textEditSaveBtn">保存修改</button></div></div></div></div>
 <div class="modal" id="remoteFetchModal"><div class="card pool-modal-card"><span class="close" id="remoteFetchClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">URL 远程拉取转存</div><div class="meta" style="margin-bottom:12px">贴入直链，由服务端直接抓取文件并写入所选存储池与目录（支持自动识别文件名、防内网 SSRF，单文件 ≤ 50MB）。</div><div class="form-field"><label>文件直链 URL *</label><input type="text" id="rfUrl" placeholder="https://example.com/path/to/file.png" autocomplete="off" spellcheck="false"></div><div class="form-field" style="margin-top:8px"><label>自定义文件名（选填，留空自动识别）</label><input type="text" id="rfName" placeholder="如 banner.webp 或 资料.pdf" maxlength="120" autocomplete="off"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>目标存储池</label><select id="rfPool"></select></div><div class="form-field"><label>存入目录</label><select id="rfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="rfVis"><option value="private" selected>私密（仅管理员/分享可见）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="rfExpires"><option value="0" selected>永久有效</option><option value="24">24 小时</option><option value="168">7 天</option></select></div></div><div class="msg" id="rfMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="rfCancelBtn">取消</button><button type="button" id="rfGoBtn">开始拉取转存</button></div></div></div>
 <div class="modal" id="notifyModal"><div class="card pool-modal-card"><span class="close" id="notifyClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
+<div class="modal" id="uiConfirmModal" style="z-index:1200"><div class="card" style="max-width:390px;width:100%"><span class="close" id="uiConfirmClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:8px" id="uiConfirmTitle">确认操作</div><div style="font-size:13.5px;color:var(--muted);line-height:1.6;word-break:break-word;margin-bottom:14px" id="uiConfirmMsg"></div><div class="row" style="justify-content:flex-end;margin-top:0"><button type="button" class="ghost" id="uiConfirmCancel">取消</button><button type="button" id="uiConfirmOk">确定</button></div></div></div>
+<div class="modal" id="cmdPaletteModal" style="z-index:1150"><div class="card cmd-modal-card"><span class="close" id="cmdClose">×</span><div style="font-size:13.5px;font-weight:600;margin-bottom:8px">快捷命令面板 <span class="meta" style="margin:0;font-weight:400">· ↑↓ 选择 · Enter 执行 · Esc 关闭</span></div><input type="text" class="cmd-input" id="cmdInput" placeholder="输入关键词搜索命令、目录或当前文件…" autocomplete="off" spellcheck="false"><div class="cmd-list" id="cmdList"></div></div></div>
+<div class="modal" id="auditModal"><div class="card audit-modal-card"><span class="close" id="auditClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">安全审计日志</div><button type="button" class="ghost" id="auditRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" style="margin-bottom:8px">自动记录管理员登录、密钥变更、存储池与回收站清理等关键操作（滚动保留 30 天）。</div><div class="sm-tabs" id="auditTabs"><button type="button" class="sm-tab active" data-audit-act="">全部</button><button type="button" class="sm-tab" data-audit-act="login">登录</button><button type="button" class="sm-tab" data-audit-act="token">密钥</button><button type="button" class="sm-tab" data-audit-act="pool">存储池</button><button type="button" class="sm-tab" data-audit-act="trash">回收站</button></div><div class="audit-list" id="auditListBox"><div class="empty" style="padding:20px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="auditDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="statsModal"><div class="card stats-modal-card"><span class="close" id="statsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储与访问统计看板</div><button type="button" class="ghost" id="statsRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" id="statsGenTime" style="margin-bottom:12px">实时聚合统计（D1 原生 SQL）</div><div id="statsBody"><div class="empty" style="padding:24px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="statsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="dupCheckModal"><div class="card" style="max-width:440px;width:100%"><span class="close" id="dupCheckClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:4px">检测到重复文件</div><div class="meta" id="dupCheckSummary" style="margin-bottom:6px"></div><div class="dup-list" id="dupCheckList"></div><div class="row" style="justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:6px"><button type="button" class="ghost" id="dupHashBtn" style="font-size:12px;padding:6px 10px">SHA-256 校验</button><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="dupCancelBtn">取消</button><button type="button" class="ghost" id="dupUploadAllBtn">全部继续上传</button><button type="button" id="dupSkipBtn">跳过重复</button></div></div></div></div>
 <div class="modal" id="sharesMgrModal"><div class="card pool-modal-card"><span class="close" id="sharesMgrClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">分享管理中心</div><button type="button" class="ghost" id="sharesMgrRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" style="margin-bottom:10px">一屏管控全站文件与文件夹外链、提取码、剩余下载次数及 5 位取件码。</div><div class="sm-toolbar"><div class="sm-tabs" id="sharesMgrTabs"><button type="button" class="sm-tab active" data-filter="all">全部 <span id="smCntAll">0</span></button><button type="button" class="sm-tab" data-filter="active">活跃 <span id="smCntActive">0</span></button><button type="button" class="sm-tab" data-filter="inactive">已失效 <span id="smCntInactive">0</span></button></div><input type="text" class="sm-search" id="sharesMgrSearch" placeholder="搜索文件名或取件码…"></div><div class="pool-list" id="sharesMgrList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="sharesMgrDoneBtn">关闭</button></div></div></div>
@@ -1201,6 +1237,7 @@
   <div class="top-more-menu nav-drawer" id="topMoreMenu" role="dialog" aria-label="控制台与设置">
    <div class="drawer-head"><span class="drawer-title">控制台与设置</span><div class="drawer-head-acts"><button type="button" class="drawer-side-btn" id="drawerSideBtn" title="切换左侧/右侧滑出">靠右</button><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div></div>
    <div class="drawer-sec" id="drawerSecAdmin" style="display:none">常用管理</div>
+   <button type="button" id="mobAuditBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 安全审计日志</button>
    <button type="button" id="mobStatsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 统计看板</button>
    <button type="button" id="mobSharesMgrBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>分享管理中心</button>
    <button type="button" id="mobDropsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> 文件收集箱</button>
@@ -1458,6 +1495,8 @@ let sortMode = 'time-desc';
 try { sortMode = localStorage.getItem('fs-sort') || 'time-desc'; } catch {}
 if (!['time-desc', 'time-asc', 'name-asc', 'name-desc', 'size-desc', 'size-asc'].includes(sortMode)) sortMode = 'time-desc';
 function sortFiles(a, b) {
+ const pinDiff = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+ if (pinDiff !== 0) return pinDiff;
  if (sortMode === 'name-asc') return a.name.localeCompare(b.name, 'zh');
  if (sortMode === 'name-desc') return b.name.localeCompare(a.name, 'zh');
  if (sortMode === 'size-desc') return b.size - a.size;
@@ -1778,10 +1817,10 @@ async function downloadFilesAsZip(entries, zipName, opts) {
  }
  const totalBytes = packable.reduce((s, e) => s + (e.size || 0), 0);
  if (oversized.length) {
-  const ok = confirm(`检测到 ${oversized.length} 个超过 150MB 的大文件将自动跳过，仅打包其余 ${packable.length} 个文件（共 ${fmtSize(totalBytes)}）。是否继续？`);
+  const ok = await uiConfirm({ title: '跳过超大文件', message: `检测到 ${oversized.length} 个超过 150MB 的大文件将自动跳过，仅打包其余 ${packable.length} 个文件（共 ${fmtSize(totalBytes)}）。是否继续？`, okText: '继续打包' });
   if (!ok) return false;
  } else if (totalBytes > ZIP_WARN_TOTAL_BYTES) {
-  const ok = confirm(`待打包文件总计 ${fmtSize(totalBytes)}（${packable.length} 个文件），浏览器打包可能耗时较久或占用较多内存。是否继续？`);
+  const ok = await uiConfirm({ title: '大体积打包提醒', message: `待打包文件总计 ${fmtSize(totalBytes)}（${packable.length} 个文件），浏览器打包可能耗时较久或占用较多内存。是否继续？`, okText: '继续打包' });
   if (!ok) return false;
  }
  const zip = new JSZip();
@@ -1876,7 +1915,7 @@ function bulkVisibilityToggle() {
 }
 async function bulkDelete() {
  if (!selected.size) return;
- if (!confirm('确定将选中的 ' + selected.size + ' 个文件移入回收站吗？（保留 7 天，随时可还原）')) return;
+ if (!(await uiConfirm({ title: '移入回收站', message: '确定将选中的 ' + selected.size + ' 个文件移入回收站吗？（保留 7 天，随时可还原）', okText: '移入回收站', danger: true }))) return;
  const ids = [...selected];
  try {
   const r = await fetch('/api/files/batch', {
@@ -2017,7 +2056,7 @@ async function renameFolder(id, name) {
  } else setMsg('改名失败：' + (d.error || ''), 'err');
 }
 async function deleteFolder(id, name) {
- if (!confirm(`确定删除文件夹「${name}」吗？只有空文件夹能删。`)) return;
+ if (!(await uiConfirm({ title: '删除文件夹', message: `确定删除文件夹「${name}」吗？只有空文件夹能删。`, okText: '删除', danger: true }))) return;
  const r = await fetch('/api/folders/' + id, { method: 'DELETE' });
  const d = await r.json();
  if (d.ok) {
@@ -2748,6 +2787,8 @@ function applyDirData(d) {
  updateTrashBadge(authed ? Number(d.trashCount || 0) : 0);
  if ($('notifyBtn')) $('notifyBtn').style.display = authed ? '' : 'none';
  if ($('mobNotifyBtn')) $('mobNotifyBtn').style.display = authed ? 'flex' : 'none';
+ if ($('auditBtn')) $('auditBtn').style.display = authed ? '' : 'none';
+ if ($('mobAuditBtn')) $('mobAuditBtn').style.display = authed ? 'flex' : 'none';
  if ($('statsBtn')) $('statsBtn').style.display = authed ? '' : 'none';
  if ($('mobStatsBtn')) $('mobStatsBtn').style.display = authed ? 'flex' : 'none';
  if ($('sharesMgrBtn')) $('sharesMgrBtn').style.display = authed ? '' : 'none';
@@ -2945,7 +2986,7 @@ function renderList() {
  ${renderMediaThumb(f, false)}
  </div>
  <div class="cinfo">
- <div class="cname" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+ <div class="cname" title="${escapeHtml(f.name)}">${f.pinned ? '<span class="pin-badge">置顶</span>' : ''}${escapeHtml(f.name)}</div>${f.note ? `<div class="file-note-line" title="${escapeHtml(f.note)}">${escapeHtml(f.note)}</div>` : ''}
  <div class="cfoot">
  <div class="cmeta">${fmtSize(f.size)}${f.width && f.height ? ' · ' + f.width + '×' + f.height : ''}${f.downloads ? ' · ' + f.downloads + '次' : ''}${searching && f.folderPath ? ' · ' + escapeHtml(f.folderPath) : ''}</div>
  <div class="cactions">
@@ -2978,7 +3019,7 @@ function renderList() {
  ${authed ? `<input type="checkbox" class="sel" title="选择" aria-label="选择" onchange="toggleSelect('${f.id}', this.checked)" ${selected.has(f.id) ? 'checked' : ''}>` : ''}
  <div class="list-thumb" onclick="thumbClick(event, '${f.id}')">${renderMediaThumb(f, true)}</div>
  <div class="info">
- <div class="name">${escapeHtml(f.name)}</div>
+ <div class="name">${f.pinned ? '<span class="pin-badge">置顶</span>' : ''}${escapeHtml(f.name)}</div>${f.note ? `<div class="file-note-line" title="${escapeHtml(f.note)}">${escapeHtml(f.note)}</div>` : ''}
  <div class="meta">${storageBadge(f)} ${visBadge(f)} · ${fmtSize(f.size)}${f.width && f.height ? ' · ' + f.width + '×' + f.height : ''} · ${fmtDate(f.uploadedAt)}${expiryHtml(f.expiresAt)}${f.shareToken ? ' · 已分享' : ''}${f.downloads ? ' · 下载 ' + f.downloads + ' 次' : ''}${searching && f.folderPath ? ' · 在 ' + escapeHtml(f.folderPath) : ''}</div>
  </div>
  <div class="actions">
@@ -3287,6 +3328,9 @@ document.addEventListener('keydown', (e) => {
  if ($('copyFmtModal') && $('copyFmtModal').classList.contains('open')) { closeCopyFmtModal(); return; }
  if ($('transferModeModal') && $('transferModeModal').classList.contains('open')) { closeTransferModeModal(); return; }
  if ($('statsModal') && $('statsModal').classList.contains('open')) { closeStatsModal(); return; }
+ if ($('uiConfirmModal') && $('uiConfirmModal').classList.contains('open')) { resolveUiConfirm(false); return; }
+ if ($('cmdPaletteModal') && $('cmdPaletteModal').classList.contains('open')) { closeCmdPalette(); return; }
+ if ($('auditModal') && $('auditModal').classList.contains('open')) { closeAuditModal(); return; }
  if ($('dupCheckModal') && $('dupCheckModal').classList.contains('open')) { closeDupModal(); return; }
  if ($('poolsModal') && $('poolsModal').classList.contains('open')) { closePoolsModal(); return; }
  if ($('dropsModal') && $('dropsModal').classList.contains('open')) { closeDropsModal(); return; }
@@ -3315,7 +3359,7 @@ async function copyFolderLink(id, btn) {
  if (btn) flashCopied(btn);
 }
 async function revokeFolderShare(id) {
- if (!confirm('确定取消这个文件夹的分享吗？')) return;
+ if (!(await uiConfirm({ title: '取消分享', message: '确定取消这个文件夹的分享吗？', okText: '取消分享', danger: true }))) return;
  await fetch('/api/folders/' + id + '/share', { method: 'DELETE' });
  setMsg('已取消文件夹分享', 'ok');
  loadList();
@@ -3367,6 +3411,8 @@ function openSheet(id, kind) {
  if (authed) {
  items.push({ icon: ICONS.move, label: '移动到…', fn: () => openMoveModal([f.id]) });
  if (getEnabledPools().length >= 2) items.push({ icon: ICONS.swap, label: '迁移存储池', fn: () => openMigrateModal('file', f.id) });
+ items.push({ icon: ICONS.info, label: f.pinned ? '取消置顶' : '置顶文件', fn: () => toggleFilePin(f.id, !f.pinned) });
+ items.push({ icon: ICONS.pencil, label: f.note ? '修改备注' : '添加备注', fn: () => editFileNote(f.id, f.name, f.note || '') });
  items.push({ icon: ICONS.pencil, label: '改名', fn: () => renameFile(f.id, f.name) });
  items.push({ icon: ICONS.clock, label: '修改有效期', fn: () => openExpireEdit(f.id) });
  items.push({ icon: f.visibility === 'private' ? ICONS.lock : ICONS.globe, label: f.visibility === 'private' ? '设为公开' : '设为私密', fn: () => setVisibility(f.id, f.visibility === 'private' ? 'public' : 'private') });
@@ -3432,6 +3478,8 @@ function openCtxMenu(e, id, kind) {
   items.push({ icon: ICONS.info, label: '文件详情', fn: () => openDetailModal(f.id) });
   if (authed) {
    items.push({ icon: ICONS.move, label: '移动到…', fn: () => openMoveModal([f.id]) });
+   items.push({ icon: ICONS.info, label: f.pinned ? '取消置顶' : '置顶文件', fn: () => toggleFilePin(f.id, !f.pinned) });
+   items.push({ icon: ICONS.pencil, label: f.note ? '修改备注' : '添加备注', fn: () => editFileNote(f.id, f.name, f.note || '') });
    items.push({ icon: ICONS.pencil, label: '改名', fn: () => renameFile(f.id, f.name) });
    items.push({ icon: f.visibility === 'private' ? ICONS.globe : ICONS.lock, label: f.visibility === 'private' ? '设为公开' : '设为私密', fn: () => setVisibility(f.id, f.visibility === 'private' ? 'public' : 'private') });
    items.push({ icon: ICONS.lock, label: '分享设置', fn: () => openShareSettings(f.id, 'file') });
@@ -3637,7 +3685,7 @@ $('qrModal').onclick = (e) => { if (e.target.id === 'qrModal') $('qrModal').clas
 $('qrCopy').onclick = () => { if (qrUrl) copyText(qrUrl); };
 
 async function revokeShare(id) {
- if (!confirm('取消后这个分享链接就打不开了，确定吗？')) return;
+ if (!(await uiConfirm({ title: '取消分享', message: '取消后这个分享链接就打不开了，确定吗？', okText: '取消分享', danger: true }))) return;
  const r = await fetch('/api/files/' + id + '/share', { method: 'DELETE' });
  const d = await r.json();
  if (d.ok) { setMsg('已取消分享', 'ok'); loadList(); } else setMsg('取消失败：' + (d.error || ''), 'err');
@@ -3853,7 +3901,7 @@ async function createApiToken() {
  }
 }
 async function revokeApiToken(id, name) {
- if (!confirm(`确定吊销密钥「${name || id}」吗？吊销后使用该密钥的脚本将立即失效。`)) return;
+ if (!(await uiConfirm({ title: '吊销 API 密钥', message: `确定吊销密钥「${name || id}」吗？吊销后使用该密钥的脚本将立即失效。`, okText: '立即吊销', danger: true }))) return;
  try {
  const r = await fetch('/api/tokens/' + encodeURIComponent(id), { method: 'DELETE' });
  const d = await r.json();
@@ -4494,7 +4542,7 @@ async function uploadOne(job, idx, total) {
  });
  const d2 = await r2.json();
  if (!d2.ok) { job.status = 'error'; setMsg(`第 ${idx} 个登记失败：` + (d2.error || ('HTTP ' + r2.status)), 'err'); }
- else { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}${compressNote(job)}`, 'ok'); await waitThumb(d2.file, f); }
+ else { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}${compressNote(job)}`, 'ok'); await waitThumb(d2.file, f); maybeAutoCopyUploaded(d2.file); }
  } catch (e) {
  if (job.canceled || (e && e.message === 'ABORTED')) return;
  job.status = 'error';
@@ -4517,7 +4565,7 @@ async function uploadOne(job, idx, total) {
  xhr.onload = async () => {
  let d = {};
  try { d = JSON.parse(xhr.responseText); } catch {}
- if (xhr.status === 200 && d.ok) { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}${compressNote(job)}`, 'ok'); await waitThumb(d.file, f); }
+ if (xhr.status === 200 && d.ok) { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}${compressNote(job)}`, 'ok'); await waitThumb(d.file, f); maybeAutoCopyUploaded(d.file); }
  else { job.status = 'error'; setMsg(`第 ${idx} 个上传失败：` + (d.error || ('HTTP ' + xhr.status)), 'err'); }
  resolve();
  };
@@ -4685,24 +4733,55 @@ function shareLimitBarHtml(sh) {
  return chips.length ? `<div class="share-limit-bar">${chips.join('')}</div>` : '';
 }
 let lastShareFolderData = null;
+let shareFolderViewMode = 'list';
+function toggleShareGalleryMode() {
+ shareFolderViewMode = shareFolderViewMode === 'gallery' ? 'list' : 'gallery';
+ if (lastShareFolderData) renderShareFolder(lastShareFolderData);
+}
 function renderShareFolder(d) {
  lastShareFolderData = d;
  shareFiles = d.files || [];
+ const hasMedia = shareFiles.some(f => f.kind === 'image' || f.kind === 'video');
+ if (!hasMedia && shareFolderViewMode === 'gallery') shareFolderViewMode = 'list';
  const crumbs = (d.path || []).map((p, i) => {
  const last = i === d.path.length - 1;
  return (i ? '<span class="sep">/</span>' : '') + (last
  ? `<span class="cur">${escapeHtml(p.name)}</span>`
  : `<button onclick="loadShareFolder('${p.id}')">${escapeHtml(p.name)}</button>`);
  }).join('');
- const curFolderName = (d.current && d.current.name) || (d.folder && d.folder.name) || 'files';
+ const galBtnHtml = hasMedia
+  ? `<button type="button" class="ghost" style="padding:6px 11px;font-size:12.5px" onclick="toggleShareGalleryMode()">${shareFolderViewMode === 'gallery' ? '列表视图' : '相册模式'}</button>`
+  : '';
  const zipBtnHtml = shareFiles.length
   ? `<button type="button" id="shareZipBtn" style="padding:6px 12px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px" onclick="downloadShareFolderZip()">${ICONS.download} 打包下载本目录（${shareFiles.length}）</button>`
   : '';
+ const shareThumbSrc = (f) => {
+  const qs = '?share=' + encodeURIComponent(shareToken) + (shareCode ? '&code=' + encodeURIComponent(shareCode) : '');
+  return f.kind === 'image' ? ('/f/' + f.id + qs) : ('/thumb/' + f.id);
+ };
+ const filesHtml = (shareFolderViewMode === 'gallery' && shareFiles.length)
+  ? '<div class="share-gallery-grid">' + shareFiles.map(f => `
+   <div class="share-gal-card" onclick="${isPreviewable(f) ? `previewShare('${f.id}')` : `confirmShareDownload('${f.id}')`}">
+    <div class="share-gal-thumb">${(f.kind === 'image' || f.kind === 'video') ? `<img src="${shareThumbSrc(f)}" loading="lazy" alt="" onerror="this.style.display='none'">${f.kind === 'video' ? `<span class="play-badge">${ICONS.play}</span>` : ''}` : iconFor(f)}</div>
+    <div class="share-gal-foot"><span class="share-gal-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span><button type="button" class="icon-btn" style="width:26px;height:26px" title="下载" onclick="event.stopPropagation(); confirmShareDownload('${f.id}')">${ICONS.download}</button></div>
+   </div>`).join('') + '</div>'
+  : (d.files || []).map(f => `
+ <div class="file" ontouchstart="cardTouchStart(event, '${f.id}', 'file')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${f.id}', 'file')">
+ <div class="icon">${iconFor(f)}</div>
+ <div class="info">
+ <div class="name">${escapeHtml(f.name)}</div>
+ <div class="meta">${fmtSize(f.size)} · ${fmtDate(f.uploadedAt)}${f.downloads ? ' · 下载 ' + f.downloads + ' 次' : ''}</div>
+ </div>
+ <div class="actions">
+ ${isPreviewable(f) ? `<button class="icon-btn" title="预览" aria-label="预览" onclick="previewShare('${f.id}')">${ICONS.eye}</button>` : ''}
+ <button class="icon-btn primary" title="下载" aria-label="下载" onclick="confirmShareDownload('${f.id}')">${ICONS.download}</button>
+ </div>
+ </div>`).join('');
  $('shareCard').innerHTML = `
  ${shareLimitBarHtml(d.share)}
  <div class="share-folder-bar">
   <div class="share-folder-head" style="font-size:16px;font-weight:600;margin-bottom:0">${ICONS.folderSolid} ${escapeHtml(d.folder.name)}</div>
-  ${zipBtnHtml}
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${galBtnHtml}${zipBtnHtml}</div>
  </div>
  <div class="share-zip-status" id="shareZipStatus"></div>
  <div class="crumbs">${crumbs}</div>
@@ -4714,18 +4793,7 @@ function renderShareFolder(d) {
  <div class="meta">文件夹</div>
  </div>
  </div>`).join('')}
- ${(d.files || []).map(f => `
- <div class="file" ontouchstart="cardTouchStart(event, '${f.id}', 'file')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${f.id}', 'file')">
- <div class="icon">${iconFor(f)}</div>
- <div class="info">
- <div class="name">${escapeHtml(f.name)}</div>
- <div class="meta">${fmtSize(f.size)} · ${fmtDate(f.uploadedAt)}${f.downloads ? ' · 下载 ' + f.downloads + ' 次' : ''}</div>
- </div>
- <div class="actions">
- ${isPreviewable(f) ? `<button class="icon-btn" title="预览" aria-label="预览" onclick="previewShare('${f.id}')">${ICONS.eye}</button>` : ''}
- <button class="icon-btn primary" title="下载" aria-label="下载" onclick="confirmShareDownload('${f.id}')">${ICONS.download}</button>
- </div>
- </div>`).join('')}
+ ${filesHtml}
  ${!(d.folders || []).length && !(d.files || []).length ? '<div class="empty">这个文件夹是空的</div>' : ''}`;
 }
 function previewShare(id) {
@@ -5285,7 +5353,7 @@ async function togglePoolEnabled(id, enabled) {
  } catch { showToast('网络错误', 'err'); }
 }
 async function removePool(id, name) {
- if (!confirm(`确定删除外部存储池「${name}」吗？（仅当池内无文件时可删）`)) return;
+ if (!(await uiConfirm({ title: '删除外部存储池', message: `确定删除外部存储池「${name}」吗？（仅当池内无文件时可删）`, okText: '删除', danger: true }))) return;
  try {
   const r = await fetch('/api/pools/' + encodeURIComponent(id), { method: 'DELETE' });
   const d = await r.json();
@@ -5682,7 +5750,7 @@ function renderAdminDrops() {
 }
 
 async function removeDropLink(token, title) {
- if (!confirm(`确定删除收集箱「${title}」吗？（不会删除已收到的文件）`)) return;
+ if (!(await uiConfirm({ title: '删除收集箱', message: `确定删除收集箱「${title}」吗？（不会删除已收到的文件）`, okText: '删除', danger: true }))) return;
  try {
   const r = await fetch('/api/drops/' + encodeURIComponent(token), { method: 'DELETE' });
   const d = await r.json();
@@ -6704,8 +6772,8 @@ async function openTextEditModal(id) {
   $('textEditMsg').className = 'msg err';
  }
 }
-function closeTextEditModal(force) {
- if (!force && textEditDirtyFlag && !confirm('有未保存的修改，确定放弃并关闭吗？')) return;
+async function closeTextEditModal(force) {
+ if (!force && textEditDirtyFlag && !(await uiConfirm({ title: '放弃未保存修改', message: '当前文本有未保存的修改，确定放弃并关闭吗？', okText: '放弃并关闭', danger: true }))) return;
  $('textEditModal').classList.remove('open');
  textEditFileId = '';
  textEditOrig = '';
@@ -6879,7 +6947,7 @@ async function restoreTrashItem(id) {
 }
 
 async function purgeTrashItem(id, name) {
- if (!confirm(`确定彻底删除「${name}」吗？删除后将无法恢复，并立即释放存储空间。`)) return;
+ if (!(await uiConfirm({ title: '彻底删除文件', message: `确定彻底删除「${name}」吗？删除后将无法恢复，并立即释放存储空间。`, okText: '彻底删除', danger: true }))) return;
  try {
   const r = await fetch(`/api/trash/${encodeURIComponent(id)}`, { method: 'DELETE' });
   const d = await r.json().catch(() => ({}));
@@ -6894,7 +6962,7 @@ async function purgeTrashItem(id, name) {
 
 async function restoreAllTrash() {
  if (!trashItems.length) return;
- if (!confirm(`确定还原回收站中的全部 ${trashItems.length} 个文件吗？`)) return;
+ if (!(await uiConfirm({ title: '全部还原', message: `确定还原回收站中的全部 ${trashItems.length} 个文件吗？`, okText: '全部还原' }))) return;
  const btn = $('trashRestoreAllBtn');
  if (btn) btn.disabled = true;
  try {
@@ -6913,7 +6981,7 @@ async function restoreAllTrash() {
 
 async function emptyTrashAll() {
  if (!trashItems.length) return;
- if (!confirm(`确定一键清空回收站的全部 ${trashItems.length} 个文件吗？清空后将无法恢复。`)) return;
+ if (!(await uiConfirm({ title: '清空回收站', message: `确定一键清空回收站的全部 ${trashItems.length} 个文件吗？清空后将无法恢复。`, okText: '一键清空', danger: true }))) return;
  const btn = $('trashEmptyBtn');
  if (btn) btn.disabled = true;
  try {
@@ -7016,9 +7084,9 @@ function openMigrateModal(mode, target) {
  }
 }
 
-function closeMigrateModal() {
+async function closeMigrateModal() {
  if (migState.running) {
-  if (!confirm('迁移正在进行中，确定停止剩余任务并关闭窗口吗？')) return;
+  if (!(await uiConfirm({ title: '停止迁移', message: '迁移正在进行中，确定停止剩余任务并关闭窗口吗？', okText: '停止并关闭', danger: true }))) return;
   migState.stopRequested = true;
  }
  $('migrateModal').classList.remove('open');
@@ -7332,7 +7400,7 @@ async function downloadShareFolderZip() {
  const md = sh ? Number(sh.maxDownloads || (sh.burn ? 1 : 0)) : 0;
  if (md > 0) {
   const rem = Math.max(0, md - Number(sh.usedDownloads || 0));
-  const ok = confirm(`该分享限下载次数（当前剩余 ${rem} 次），打包下载本目录的 ${files.length} 个文件将逐个计次。是否继续？`);
+  const ok = await uiConfirm({ title: '限次打包提醒', message: `该分享限下载次数（当前剩余 ${rem} 次），打包下载本目录的 ${files.length} 个文件将逐个计次。是否继续？`, okText: '继续打包' });
   if (!ok) return;
  }
  const btn = $('shareZipBtn');
@@ -7513,7 +7581,7 @@ function editAdminShare(token) {
 async function revokeAdminShare(token) {
  const s = adminSharesList.find(x => x.token === token);
  const label = s ? s.targetName : token;
- if (!confirm(`确定吊销「${label}」的分享链接吗？吊销后原链接与取件码将立即失效。`)) return;
+ if (!(await uiConfirm({ title: '吊销分享链接', message: `确定吊销「${label}」的分享链接吗？吊销后原链接与取件码将立即失效。`, okText: '立即吊销', danger: true }))) return;
  try {
   const r = await fetch('/api/shares/' + encodeURIComponent(token), { method: 'DELETE' });
   const d = await r.json().catch(() => ({}));
@@ -8051,6 +8119,250 @@ if ($('dupHashBtn')) $('dupHashBtn').onclick = async () => {
  renderDupModalList(map);
  btn.textContent = '已计算 SHA-256';
 };
+
+// ===== v3.6.0 UI r29: 站内确认弹窗、图床自动复制、Ctrl+K 命令面板、置顶与备注、安全审计日志 =====
+let uiConfirmResolver = null;
+function uiConfirm({ title = '确认操作', message = '', okText = '确定', danger = false } = {}) {
+ return new Promise((resolve) => {
+  if (uiConfirmResolver) { try { uiConfirmResolver(false); } catch {} }
+  uiConfirmResolver = resolve;
+  if ($('uiConfirmTitle')) $('uiConfirmTitle').textContent = title;
+  if ($('uiConfirmMsg')) $('uiConfirmMsg').textContent = message;
+  const okBtn = $('uiConfirmOk');
+  if (okBtn) {
+   okBtn.textContent = okText;
+   okBtn.className = danger ? 'danger' : '';
+  }
+  $('uiConfirmModal').classList.add('open');
+  if (okBtn) setTimeout(() => { try { okBtn.focus(); } catch {} }, 20);
+ });
+}
+function resolveUiConfirm(val) {
+ $('uiConfirmModal').classList.remove('open');
+ const r = uiConfirmResolver;
+ uiConfirmResolver = null;
+ if (r) r(!!val);
+}
+if ($('uiConfirmOk')) $('uiConfirmOk').onclick = () => resolveUiConfirm(true);
+if ($('uiConfirmCancel')) $('uiConfirmCancel').onclick = () => resolveUiConfirm(false);
+if ($('uiConfirmClose')) $('uiConfirmClose').onclick = () => resolveUiConfirm(false);
+if ($('uiConfirmModal')) $('uiConfirmModal').onclick = (e) => { if (e.target.id === 'uiConfirmModal') resolveUiConfirm(false); };
+
+// ---- #2 图床效率模式：上传完成自动复制链接 ----
+const AUTO_COPY_KEY = 'fs-auto-copy-upload';
+let autoCopyOnUpload = false;
+try { autoCopyOnUpload = localStorage.getItem(AUTO_COPY_KEY) === '1'; } catch {}
+if ($('autoCopyUploadChk')) {
+ $('autoCopyUploadChk').checked = autoCopyOnUpload;
+ $('autoCopyUploadChk').onchange = () => {
+  autoCopyOnUpload = $('autoCopyUploadChk').checked;
+  try { localStorage.setItem(AUTO_COPY_KEY, autoCopyOnUpload ? '1' : '0'); } catch {}
+  showToast(autoCopyOnUpload ? '已开启：上传完成后自动复制链接' : '已关闭上传自动复制', '');
+ };
+}
+function maybeAutoCopyUploaded(fileObj) {
+ if (!autoCopyOnUpload || !fileObj || !fileObj.id) return;
+ try {
+  const base = (typeof copyPrefix === 'string' && copyPrefix) ? copyPrefix.replace(/\/+$/, '') : location.origin;
+  const url = base + '/f/' + fileObj.id;
+  const fmt = (typeof copyFmt === 'string' ? copyFmt : 'raw');
+  const isImg = fileObj.kind === 'image';
+  let text = url;
+  if (fmt === 'md') text = isImg ? `![${fileObj.name}](${url})` : `[${fileObj.name}](${url})`;
+  else if (fmt === 'html') text = isImg ? `<img src="${url}" alt="${escapeHtml(fileObj.name)}">` : `<a href="${url}">${escapeHtml(fileObj.name)}</a>`;
+  else if (fmt === 'bb') text = isImg ? `[img]${url}[/img]` : `[url=${url}]${fileObj.name}[/url]`;
+  copyText(text, '已上传并自动复制链接');
+ } catch {}
+}
+
+// ---- #5 文件置顶与备注 ----
+async function toggleFilePin(id, pinned) {
+ try {
+  const r = await fetch('/api/files/' + encodeURIComponent(id) + '/meta', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ pinned: !!pinned }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '操作失败', 'err'); return; }
+  showToast(pinned ? '已置顶文件' : '已取消置顶', 'ok');
+  loadList();
+ } catch { showToast('网络错误', 'err'); }
+}
+async function editFileNote(id, name, curNote) {
+ const next = await openInputModal(`编辑备注（${name}）`, curNote || '');
+ if (next === null) return;
+ try {
+  const r = await fetch('/api/files/' + encodeURIComponent(id) + '/meta', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ note: String(next).trim().slice(0, 200) }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '保存备注失败', 'err'); return; }
+  showToast(next.trim() ? '备注已保存' : '已清除备注', 'ok');
+  loadList();
+ } catch { showToast('网络错误', 'err'); }
+}
+
+// ---- #3 全局快捷命令面板 (Ctrl+K / Cmd+K) + 空格快览 ----
+let cmdItems = [];
+let cmdActiveIdx = 0;
+function buildCmdCandidates(q) {
+ const kw = (q || '').trim().toLowerCase();
+ const list = [];
+ const push = (name, tag, fn) => {
+  if (!kw || name.toLowerCase().includes(kw) || tag.toLowerCase().includes(kw)) {
+   list.push({ name, tag, fn });
+  }
+ };
+ push('切换主题（跟随系统 / 浅色 / 深色）', '偏好', () => { if ($('themeBtn')) $('themeBtn').click(); });
+ push('文字 / 代码快传（Pastebin）', '上传', () => { if ($('pasteTextBtn')) $('pasteTextBtn').click(); });
+ if (authed) {
+  push('打开统计看板', '管理', () => openStatsModal());
+  push('打开分享管理中心', '管理', () => openSharesMgrModal());
+  push('打开安全审计日志', '安全', () => openAuditModal());
+  push('打开回收站', '管理', () => openTrashModal());
+  push('打开文件收集箱', '管理', () => openDropsModal());
+  push('打开存储池管理', '系统', () => openPoolsModal());
+  push('打开 API 密钥 & WebDAV', '系统', () => openTokensModal());
+  push('新建文件夹', '目录', () => { if ($('newFolderBtn')) $('newFolderBtn').click(); });
+ }
+ push('回到根目录', '目录', () => openFolder(null));
+ const allFds = (typeof folderTreeCache !== 'undefined' && Array.isArray(folderTreeCache)) ? folderTreeCache : currentFolders;
+ for (const fd of (allFds || []).slice(0, 30)) {
+  push('进入目录：' + fd.name, '目录', () => openFolder(fd.id));
+ }
+ for (const f of (allFiles || []).slice(0, 40)) {
+  push(f.name + (f.note ? ' · ' + f.note : ''), '文件', () => isPreviewable(f) ? preview(f.id) : openDetailModal(f.id));
+ }
+ return list.slice(0, 18);
+}
+function renderCmdList() {
+ const box = $('cmdList');
+ if (!box) return;
+ if (!cmdItems.length) { box.innerHTML = '<div class="empty" style="padding:16px 0">没有匹配的命令或文件</div>'; return; }
+ if (cmdActiveIdx >= cmdItems.length) cmdActiveIdx = 0;
+ box.innerHTML = cmdItems.map((it, idx) => `<div class="cmd-item${idx === cmdActiveIdx ? ' active' : ''}" onclick="runCmdItem(${idx})"><div class="cmd-item-left"><span class="cmd-item-name">${escapeHtml(it.name)}</span></div><span class="cmd-item-tag">${escapeHtml(it.tag)}</span></div>`).join('');
+}
+function openCmdPalette() {
+ if ($('shareView').style.display === 'block' || $('dropView').style.display === 'block') return;
+ cmdActiveIdx = 0;
+ if ($('cmdInput')) $('cmdInput').value = '';
+ cmdItems = buildCmdCandidates('');
+ renderCmdList();
+ $('cmdPaletteModal').classList.add('open');
+ if ($('cmdInput')) setTimeout(() => $('cmdInput').focus(), 20);
+}
+function closeCmdPalette() { $('cmdPaletteModal').classList.remove('open'); }
+function runCmdItem(idx) {
+ const it = cmdItems[idx];
+ closeCmdPalette();
+ if (it && it.fn) it.fn();
+}
+if ($('cmdBtn')) $('cmdBtn').onclick = openCmdPalette;
+if ($('cmdClose')) $('cmdClose').onclick = closeCmdPalette;
+if ($('cmdPaletteModal')) $('cmdPaletteModal').onclick = (e) => { if (e.target.id === 'cmdPaletteModal') closeCmdPalette(); };
+if ($('cmdInput')) {
+ $('cmdInput').oninput = () => { cmdActiveIdx = 0; cmdItems = buildCmdCandidates($('cmdInput').value); renderCmdList(); };
+ $('cmdInput').onkeydown = (e) => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); cmdActiveIdx = (cmdActiveIdx + 1) % Math.max(1, cmdItems.length); renderCmdList(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); cmdActiveIdx = (cmdActiveIdx - 1 + Math.max(1, cmdItems.length)) % Math.max(1, cmdItems.length); renderCmdList(); }
+  else if (e.key === 'Enter') { e.preventDefault(); runCmdItem(cmdActiveIdx); }
+ };
+}
+document.addEventListener('keydown', (e) => {
+ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+  e.preventDefault();
+  if ($('cmdPaletteModal').classList.contains('open')) closeCmdPalette();
+  else openCmdPalette();
+  return;
+ }
+ if (e.key === ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+  if (document.querySelector('.modal.open')) return;
+  if (selected.size === 1) {
+   const id = [...selected][0];
+   const f = allFiles.find(x => x.id === id);
+   if (f && isPreviewable(f)) { e.preventDefault(); preview(f.id); }
+  }
+ }
+});
+
+// ---- #7 安全审计日志弹窗 (SWR 秒开) ----
+let auditCacheLogs = null;
+let auditFilterPrefix = '';
+const AUDIT_LABELS = {
+ login: { text: '管理员登录', cls: '' },
+ login_blocked: { text: 'IP 拦截告警', cls: 'err' },
+ token_create: { text: '新建密钥', cls: '' },
+ token_revoke: { text: '吊销密钥', cls: 'warn' },
+ pool_create: { text: '新增存储池', cls: '' },
+ pool_update: { text: '修改存储池', cls: '' },
+ pool_delete: { text: '删除存储池', cls: 'warn' },
+ trash_purge: { text: '彻底删除', cls: 'warn' },
+ trash_empty: { text: '清空回收站', cls: 'err' },
+ file_meta: { text: '文件置顶/备注', cls: '' },
+};
+function renderAuditLogs() {
+ const box = $('auditListBox');
+ if (!box) return;
+ const rows = (auditCacheLogs || []).filter(x => !auditFilterPrefix || String(x.action || '').startsWith(auditFilterPrefix));
+ if (!rows.length) { box.innerHTML = '<div class="empty" style="padding:20px 0">暂无审计日志记录</div>'; return; }
+ box.innerHTML = rows.map(r => {
+  const meta = AUDIT_LABELS[r.action] || { text: r.action, cls: '' };
+  return `<div class="audit-row">
+   <div class="audit-row-top">
+    <span class="audit-act${meta.cls ? ' ' + meta.cls : ''}">${escapeHtml(meta.text)}</span>
+    <span class="meta" style="margin:0">${fmtDate(r.createdAt)}</span>
+   </div>
+   <div style="color:var(--text);font-weight:500;word-break:break-all">${escapeHtml(r.target || '—')}${r.detail ? ' · <span style="font-weight:400;color:var(--muted)">' + escapeHtml(r.detail) + '</span>' : ''}</div>
+   <div class="audit-meta"><span>IP：${escapeHtml(r.ip || '未知')}</span>${r.geo ? `<span>归属地：${escapeHtml(r.geo)}</span>` : ''}</div>
+  </div>`;
+ }).join('');
+}
+async function loadAuditLogs(silent) {
+ const box = $('auditListBox');
+ if (box && !silent && !auditCacheLogs) box.innerHTML = '<div class="empty" style="padding:20px 0">加载中…</div>';
+ try {
+  const r = await fetch('/api/audit?limit=150');
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+   if (box && !auditCacheLogs) box.innerHTML = `<div class="empty" style="padding:20px 0">${escapeHtml(d.error || '加载失败')}</div>`;
+   return;
+  }
+  auditCacheLogs = Array.isArray(d.logs) ? d.logs : [];
+  renderAuditLogs();
+ } catch {
+  if (box && !auditCacheLogs) box.innerHTML = '<div class="empty" style="padding:20px 0">网络错误，请稍后重试</div>';
+ }
+}
+async function openAuditModal() {
+ if (!authed) return;
+ if (auditCacheLogs) {
+  renderAuditLogs();
+  $('auditModal').classList.add('open');
+  loadAuditLogs(true);
+ } else {
+  $('auditModal').classList.add('open');
+  await loadAuditLogs(false);
+ }
+}
+function closeAuditModal() { $('auditModal').classList.remove('open'); }
+if ($('auditBtn')) $('auditBtn').onclick = openAuditModal;
+if ($('mobAuditBtn')) $('mobAuditBtn').onclick = () => { if (typeof closeNavDrawer === 'function') closeNavDrawer(); openAuditModal(); };
+if ($('auditClose')) $('auditClose').onclick = closeAuditModal;
+if ($('auditDoneBtn')) $('auditDoneBtn').onclick = closeAuditModal;
+if ($('auditRefreshBtn')) $('auditRefreshBtn').onclick = () => loadAuditLogs(false);
+if ($('auditModal')) $('auditModal').onclick = (e) => { if (e.target.id === 'auditModal') closeAuditModal(); };
+if ($('auditTabs')) {
+ $('auditTabs').querySelectorAll('button[data-audit-act]').forEach(b => {
+  b.onclick = () => {
+   auditFilterPrefix = b.dataset.auditAct || '';
+   $('auditTabs').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+   renderAuditLogs();
+  };
+ });
+}
 </script>
 </body>
 </html>

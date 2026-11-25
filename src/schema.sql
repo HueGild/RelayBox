@@ -21,12 +21,15 @@ CREATE TABLE files (
   width INTEGER,
   height INTEGER,
   pool_id TEXT,
-  deleted_at INTEGER
+  deleted_at INTEGER,
+  pinned INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX idx_files_folder ON files(folder_id);
 CREATE INDEX idx_files_uploaded ON files(uploaded_at);
 CREATE INDEX idx_files_deleted ON files(deleted_at);
 CREATE INDEX idx_files_dir_list ON files(folder_id, deleted_at, uploaded_at DESC);
+CREATE INDEX idx_files_pinned ON files(folder_id, deleted_at, pinned DESC, uploaded_at DESC);
 CREATE INDEX idx_files_pool_del ON files(pool_id, deleted_at);
 CREATE INDEX idx_files_expires ON files(expires_at);
 CREATE INDEX idx_files_downloads ON files(deleted_at, downloads DESC);
@@ -150,3 +153,15 @@ CREATE TABLE storage_pools (
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
+
+-- Security & admin audit logs (v3.6.0, 30-day rolling retention)
+CREATE TABLE audit_logs (
+  id TEXT PRIMARY KEY,
+  action TEXT NOT NULL,
+  target TEXT NOT NULL DEFAULT '',
+  detail TEXT NOT NULL DEFAULT '',
+  ip TEXT NOT NULL DEFAULT '',
+  geo TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX idx_audit_created ON audit_logs(created_at DESC);
