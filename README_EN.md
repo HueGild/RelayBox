@@ -15,8 +15,6 @@
 
 </div>
 
-> Since `v3.4.0`, RelayBox is Cloudflare-only. The last dual-target (CF + VPS/Node.js) release is archived on branch [`archive/dual-v3.3.11`](https://github.com/HueGild/relaybox/tree/archive/dual-v3.3.11) (tag `v3.3.11-dual-final`).
-
 ## Features
 
 - **Built-in R2 Proxy & Presigned Modes**: Proxy mode works out of the box with zero S3 API keys; presigned mode supports chunked resumable uploads up to `MAX_UPLOAD_SIZE` (default 5 GB).

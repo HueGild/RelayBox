@@ -17,8 +17,6 @@
 
 > 无需服务器、无需 NAS、无需手写配置文件——基于 **Cloudflare Workers + D1 + R2 + Static Assets** 纯 Serverless 架构，免费额度即可拥有 10 GB 起步的云端文件传输站、外链分享、反向文件收集箱、WebDAV 网盘与多存储池管理。
 
-> **架构说明**：自 `v3.4.0` 起 RelayBox 正式切换为纯 Cloudflare 架构。最后一个完整双端（CF + VPS/Node.js）版本已永久归档于分支 [`archive/dual-v3.3.11`](https://github.com/HueGild/relaybox/tree/archive/dual-v3.3.11)（及 Tag `v3.3.11-dual-final`）。
-
 ---
 
 ## 📑 目录
