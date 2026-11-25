@@ -882,13 +882,15 @@
  .ctx-item.danger:hover { background: var(--danger-bg); }
  .ctx-item.danger svg { color: var(--danger-text); }
 
- /* v3.4.1 / r21: 侧边滑出控制台抽屉（做法 B）+ 顶栏精简 */
+ /* v3.4.2 / r22: 修复抽屉被 topbar 裁剪及视口横向撑宽 + 顶栏精简 */
+ html, body { overflow-x: clip; max-width: 100%; }
  .topbar .desk-only-btn:not(#trashBtn) { display: none !important; }
  .topbar .top-more-wrap.mob-only-wrap { display: inline-flex !important; position: static; }
- .nav-drawer-mask { display: none; position: fixed; inset: 0; z-index: 82; background: rgba(15,23,42,.42); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); opacity: 0; transition: opacity .22s ease; }
- .nav-drawer-mask.open { display: block; opacity: 1; }
- .top-more-menu.nav-drawer { display: flex !important; flex-direction: column; position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important; left: auto !important; width: min(300px, 84vw) !important; min-width: 0 !important; max-height: none !important; margin: 0 !important; padding: calc(14px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom)) !important; border-radius: 18px 0 0 18px !important; z-index: 85 !important; background: var(--glass-bg-strong); backdrop-filter: blur(24px) saturate(185%); -webkit-backdrop-filter: blur(24px) saturate(185%); border-left: 1px solid var(--glass-border); box-shadow: -12px 0 36px rgba(0,0,0,.22); transform: translateX(104%); visibility: hidden; pointer-events: none; transition: transform .24s cubic-bezier(.22,1,.36,1), visibility .24s ease; overflow-y: auto; gap: 4px; }
- .top-more-menu.nav-drawer.open { transform: translateX(0); visibility: visible; pointer-events: auto; }
+ .nav-drawer-mask { display: none; position: fixed; inset: 0; z-index: 82; background: rgba(15,23,42,.42); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+ .nav-drawer-mask.open { display: block; }
+ @keyframes drawerSlideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+ .top-more-menu.nav-drawer { display: none !important; flex-direction: column; position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important; left: auto !important; width: min(300px, 84vw) !important; min-width: 0 !important; max-height: none !important; margin: 0 !important; padding: calc(14px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom)) !important; border-radius: 18px 0 0 18px !important; z-index: 85 !important; background: var(--glass-bg-strong); backdrop-filter: blur(24px) saturate(185%); -webkit-backdrop-filter: blur(24px) saturate(185%); border-left: 1px solid var(--glass-border); box-shadow: -12px 0 36px rgba(0,0,0,.22); overflow-y: auto; gap: 4px; }
+ .top-more-menu.nav-drawer.open { display: flex !important; animation: drawerSlideIn .22s cubic-bezier(.22,1,.36,1); }
  .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
  .drawer-title { font-size: 15px; font-weight: 600; color: var(--text); }
  .drawer-close { width: 30px; height: 30px; border-radius: 999px; border: 0; background: var(--surface-soft); color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
@@ -930,23 +932,6 @@
  <button class="icon-btn desk-only-btn trash-btn-wrap" id="trashBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="回收站（保留 7 天）" aria-label="回收站"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg><span class="trash-badge" id="trashBadge"></span></button>
  <span class="top-more-wrap mob-only-wrap">
   <button class="icon-btn" id="topMoreBtn" type="button" style="width:30px;height:30px;border-radius:999px" title="控制台与设置" aria-label="控制台与设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
-  <div class="nav-drawer-mask" id="navDrawerMask"></div>
-  <div class="top-more-menu nav-drawer" id="topMoreMenu" role="dialog" aria-label="控制台与设置">
-   <div class="drawer-head"><span class="drawer-title">控制台与设置</span><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div>
-   <div class="drawer-sec" id="drawerSecAdmin" style="display:none">常用管理</div>
-   <button type="button" id="mobSharesMgrBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>分享管理中心</button>
-   <button type="button" id="mobDropsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> 文件收集箱</button>
-   <button type="button" id="mobTrashBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 回收站 <span class="mob-trash-badge" id="mobTrashBadge"></span></button>
-   <div class="drawer-sec">外观与偏好</div>
-   <button type="button" id="mobCopyFmtBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认复制格式</button>
-   <button type="button" id="mobAppearanceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> 外观与壁纸</button>
-   <button type="button" id="mobAnnounceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> 设置站点公告</button>
-   <div class="drawer-sec" id="drawerSecSystem" style="display:none">存储与系统</div>
-   <button type="button" id="mobPoolsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> 存储池管理</button>
-   <button type="button" id="mobTransferModeBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> R2 传输模式</button>
-   <button type="button" id="mobNotifyBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Telegram 推送</button>
-   <button type="button" id="mobTokensBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API 密钥管理</button>
-  </div>
  </span>
  <div class="loginbar" id="loginbar"></div>
  </div>
@@ -1141,6 +1126,23 @@
 <div class="modal" id="appearanceModal"><span class="close" id="appearanceClose">×</span><div class="card appear-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">外观与壁纸设置</div><div class="meta" style="margin-bottom:8px">支持桌面端与手机端分开设置壁纸，自定义左上角站点头像、标题与网页图标，保存后全站生效。</div><div class="appear-tip-banner">提示：壁纸与头像/图标需使用<strong>公开图片直链</strong>（如 <code>/f/...</code> 或外部直链），请勿填写 <code>/s/...</code> 分享页链接（或直接点右侧「上传」自动生成公开直链）。</div><input type="file" id="appearUploadInput" accept="image/*" style="display:none"><div class="appear-field"><label>站点名称 <span>显示在左上角与浏览器标题</span></label><input type="text" id="apTitle" placeholder="RelayBox" maxlength="40" style="width:100%"></div><div class="appear-field"><label>桌面端背景图片 <span>横屏推荐 16:9</span></label><div class="appear-input-row"><input type="text" id="apBgDesktop" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgDesktop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnBgDesktop"></div><div class="appear-prev desk" id="prevBgDesktop"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgDesktop" title="清除">×</button></div></div><div class="appear-field"><label>手机端背景图片 <span>竖屏推荐 9:16，留空则沿用桌面壁纸</span></label><div class="appear-input-row"><input type="text" id="apBgMobile" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgMobile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnBgMobile"></div><div class="appear-prev mob" id="prevBgMobile"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgMobile" title="清除">×</button></div></div><div class="appear-field"><label>左上角站点头像 / Logo <span>留空使用默认蓝色图标</span></label><div class="appear-input-row"><input type="text" id="apLogo" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnLogo"></div><div class="appear-prev ico" id="prevLogo"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apLogo" title="清除">×</button></div></div><div class="appear-field"><label>网站图标 (Favicon) <span>浏览器标签页小图标</span></label><div class="appear-input-row"><input type="text" id="apFavicon" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apFavicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnFavicon"></div><div class="appear-prev ico" id="prevFavicon"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apFavicon" title="清除">×</button></div></div><div class="form-grid2"><div class="appear-field"><label>壁纸遮罩暗度 <span id="apOverlayVal">45%</span></label><input type="range" class="appear-range" id="apOverlay" min="0" max="85" value="45"></div><div class="appear-field"><label>卡片毛玻璃模糊 <span id="apBlurVal">14px</span></label><input type="range" class="appear-range" id="apBlur" min="0" max="24" value="14"></div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="apResetBtn">恢复默认</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="apCancelBtn">取消</button><button type="button" id="apSaveBtn">保存外观</button></div></div></div></div>
 <div class="modal" id="transferModeModal"><span class="close" id="transferModeClose">×</span><div class="card" style="max-width:440px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">R2 传输模式</div><div class="meta" style="margin-bottom:8px">根据网络环境与文件大小随时切换，保存后全站即时生效（无需重新部署）。</div><div class="mode-opts" id="transferModeOpts"><button type="button" class="mode-opt" data-mode="proxy"><div class="mode-opt-head"><strong>Worker 绑定中转（图床模式）</strong><span class="mode-opt-tag">校园网推荐</span></div><p>上传下载全程走当前自定义域名，绕开 r2.cloudflarestorage.com 阻断，支持公开文件边缘缓存与视频进度条拖动；零 S3 密钥、零 CORS；超过 20MB 自动分片。</p></button><button type="button" class="mode-opt" data-mode="presign" id="modeOptPresign"><div class="mode-opt-head"><strong>R2 预签名直传（大文件模式）</strong><span class="mode-opt-tag" id="modePresignTag">GB 级大文件</span></div><p>≤100MB 直连 R2 上传，下载 302 走 R2 边缘直出，最省 Worker 额度且大文件下载最稳；需要配置 R2 S3 密钥与桶 CORS。</p></button></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="transferModeCancel">取消</button><button type="button" id="transferModeSave">保存并生效</button></div></div></div>
 <div class="modal" id="copyFmtModal"><span class="close" id="copyFmtClose">×</span><div class="card" style="max-width:400px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">默认复制链接格式</div><div class="meta" style="margin-bottom:8px">点击文件上的“复制链接”图标时，自动按所选格式复制（仅保存在本机浏览器）。</div><div class="fmt-opts" id="copyFmtOpts"><button type="button" class="fmt-opt" data-fmt="raw"><strong>原始直链</strong><span>https://.../f/id</span></button><button type="button" class="fmt-opt" data-fmt="md"><strong>Markdown</strong><span>![name](url)</span></button><button type="button" class="fmt-opt" data-fmt="html"><strong>HTML</strong><span>&lt;img src="url"&gt;</span></button><button type="button" class="fmt-opt" data-fmt="bb"><strong>BBCode</strong><span>[img]url[/img]</span></button></div><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">自定义链接前缀（留空 = 使用当前站点域名）</label><input type="text" id="copyPrefixInput" placeholder="例如 https://relaybox.19660716.xyz" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="copyFmtCancel">取消</button><button type="button" id="copyFmtSave">保存设置</button></div></div></div>
+  <div class="nav-drawer-mask" id="navDrawerMask"></div>
+  <div class="top-more-menu nav-drawer" id="topMoreMenu" role="dialog" aria-label="控制台与设置">
+   <div class="drawer-head"><span class="drawer-title">控制台与设置</span><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div>
+   <div class="drawer-sec" id="drawerSecAdmin" style="display:none">常用管理</div>
+   <button type="button" id="mobSharesMgrBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>分享管理中心</button>
+   <button type="button" id="mobDropsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> 文件收集箱</button>
+   <button type="button" id="mobTrashBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 回收站 <span class="mob-trash-badge" id="mobTrashBadge"></span></button>
+   <div class="drawer-sec">外观与偏好</div>
+   <button type="button" id="mobCopyFmtBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认复制格式</button>
+   <button type="button" id="mobAppearanceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> 外观与壁纸</button>
+   <button type="button" id="mobAnnounceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> 设置站点公告</button>
+   <div class="drawer-sec" id="drawerSecSystem" style="display:none">存储与系统</div>
+   <button type="button" id="mobPoolsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> 存储池管理</button>
+   <button type="button" id="mobTransferModeBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> R2 传输模式</button>
+   <button type="button" id="mobNotifyBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Telegram 推送</button>
+   <button type="button" id="mobTokensBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API 密钥管理</button>
+  </div>
 <div class="theme-toast" id="themeToast" role="status" aria-live="polite"></div>
 <div class="ctx-menu" id="ctxMenu" role="menu"></div>
 <div class="modal" id="qrModal"><span class="close" id="qrClose">×</span><div class="card" style="max-width:320px;width:100%;text-align:center"><div id="qrBox"></div><div class="meta" id="qrUrl" style="word-break:break-all;font-size:12px;margin-top:10px"></div><button id="qrCopy" style="margin-top:12px">复制链接</button></div></div>
@@ -2363,6 +2365,25 @@ function captureVideoThumbNode(videoEl, id) {
   }, mime, 0.78);
  } catch {}
 }
+function checkVideoThumbImg(img, id) {
+ if (!img || img._rbChecked || !img.naturalWidth || !img.naturalHeight) return;
+ img._rbChecked = true;
+ try {
+  const c = document.createElement('canvas');
+  c.width = 16; c.height = 16;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, 16, 16);
+  const data = ctx.getImageData(0, 0, 16, 16).data;
+  c.width = 0; c.height = 0;
+  let opaque = 0;
+  for (let i = 3; i < data.length; i += 4) {
+   if (data[i] > 16) opaque++;
+  }
+  if (opaque < 32) {
+   videoThumbFallback(img, id);
+  }
+ } catch {}
+}
 function videoThumbFallback(img, id) {
  missingThumbIds.add(id);
  if (!img || !img.parentNode) return;
@@ -2756,7 +2777,7 @@ function renderList() {
    if (isList) {
     return `<img src="/thumb/${f.id}" loading="lazy" decoding="async" alt="" onerror="handleListVideoThumbErr(this, '${f.id}')">${badge}`;
    }
-   return `<img src="/thumb/${f.id}" loading="lazy" decoding="async" alt="" onerror="videoThumbFallback(this, '${f.id}')">${badge}`;
+   return `<img src="/thumb/${f.id}" loading="lazy" decoding="async" alt="" onload="checkVideoThumbImg(this, '${f.id}')" onerror="videoThumbFallback(this, '${f.id}')">${badge}`;
   }
   return isList ? iconFor(f) : `<span class="bigicon">${iconFor(f)}</span>`;
  };
@@ -4696,11 +4717,13 @@ function openNavDrawer() {
  const m = $('topMoreMenu'), mask = $('navDrawerMask');
  if (m) m.classList.add('open');
  if (mask) mask.classList.add('open');
+ document.body.style.overflow = 'hidden';
 }
 function closeNavDrawer() {
  const m = $('topMoreMenu'), mask = $('navDrawerMask');
  if (m) m.classList.remove('open');
  if (mask) mask.classList.remove('open');
+ document.body.style.overflow = '';
 }
 if ($('topMoreBtn')) {
  $('topMoreBtn').onclick = (e) => {
