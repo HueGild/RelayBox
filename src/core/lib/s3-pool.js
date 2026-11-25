@@ -149,7 +149,15 @@ export class S3PoolStorage {
     return new Response(res.body, { status: res.status, headers: outHeaders });
   }
 
+  publicUrl(key) {
+    if (!this.publicDomain) return '';
+    return `${this.publicDomain}/${encodeKey(key)}`;
+  }
+
   async get(key, opts = {}) {
+    if (opts.allowPublicRedirect && this.publicDomain) {
+      return Response.redirect(this.publicUrl(key), 302);
+    }
     const mode = opts.mode || this.transferMode;
     if (mode === 'proxy') return this.getStream(key, opts);
     const url = await this.presignedGetUrl(key, opts);
@@ -254,3 +262,4 @@ export class S3PoolStorage {
   async getThumb() { return null; }
   async deleteThumb() {}
 }
+

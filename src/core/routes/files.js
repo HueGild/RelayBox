@@ -273,6 +273,7 @@ export function registerFiles(app) {
         return new Response(null, { status: 304, headers: h304 });
       }
     }
+    const allowPublicRedirect = !isPrivate && !forceDownload && !shareToken;
     try {
       const res = await resolved.driver.get(item.storageKey, {
         mode: resolved.mode,
@@ -281,6 +282,7 @@ export function registerFiles(app) {
         contentType: mime,
         disposition,
         cacheControl,
+        allowPublicRedirect,
         ...(vary ? { vary } : {}),
         ...(mediaEtag ? { etag: mediaEtag } : {}),
       });
