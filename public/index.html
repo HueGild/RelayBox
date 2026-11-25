@@ -888,13 +888,19 @@
  .topbar .top-more-wrap.mob-only-wrap { display: inline-flex !important; position: static; }
  .nav-drawer-mask { display: none; position: fixed; inset: 0; z-index: 82; background: rgba(15,23,42,.42); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
  .nav-drawer-mask.open { display: block; }
- @keyframes drawerSlideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
- .top-more-menu.nav-drawer { display: none !important; flex-direction: column; position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important; left: auto !important; width: min(300px, 84vw) !important; min-width: 0 !important; max-height: none !important; margin: 0 !important; padding: calc(14px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom)) !important; border-radius: 18px 0 0 18px !important; z-index: 85 !important; background: var(--glass-bg-strong); backdrop-filter: blur(24px) saturate(185%); -webkit-backdrop-filter: blur(24px) saturate(185%); border-left: 1px solid var(--glass-border); box-shadow: -12px 0 36px rgba(0,0,0,.22); overflow-y: auto; gap: 4px; }
- .top-more-menu.nav-drawer.open { display: flex !important; animation: drawerSlideIn .22s cubic-bezier(.22,1,.36,1); }
- .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
- .drawer-title { font-size: 15px; font-weight: 600; color: var(--text); }
- .drawer-close { width: 30px; height: 30px; border-radius: 999px; border: 0; background: var(--surface-soft); color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
- .drawer-close:hover { background: var(--btn-bg); color: var(--text); }
+ @keyframes drawerSlideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+ @keyframes drawerSlideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+ .top-more-menu.nav-drawer { display: none !important; flex-direction: column; position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important; left: auto !important; width: min(248px, 68vw) !important; min-width: 0 !important; max-height: none !important; margin: 0 !important; padding: calc(14px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom)) !important; border-radius: 18px 0 0 18px !important; z-index: 85 !important; background: var(--glass-bg-strong); backdrop-filter: blur(24px) saturate(185%); -webkit-backdrop-filter: blur(24px) saturate(185%); border-left: 1px solid var(--glass-border); box-shadow: -12px 0 36px rgba(0,0,0,.22); overflow-y: auto; gap: 3px; }
+ .top-more-menu.nav-drawer.open { display: flex !important; animation: drawerSlideInRight .2s cubic-bezier(.22,1,.36,1); }
+ .top-more-menu.nav-drawer.side-left { left: 0 !important; right: auto !important; border-radius: 0 18px 18px 0 !important; border-left: 0; border-right: 1px solid var(--glass-border); box-shadow: 12px 0 36px rgba(0,0,0,.22); }
+ .top-more-menu.nav-drawer.side-left.open { animation: drawerSlideInLeft .2s cubic-bezier(.22,1,.36,1); }
+ .drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+ .drawer-title { font-size: 14.5px; font-weight: 600; color: var(--text); white-space: nowrap; flex: 1; min-width: 0; }
+ .drawer-head-acts { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+ .top-more-menu.nav-drawer .drawer-side-btn { width: auto !important; padding: 4px 8px !important; height: 26px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-soft); color: var(--muted); font-size: 11px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+ .top-more-menu.nav-drawer .drawer-side-btn:hover { background: var(--btn-bg); color: var(--text); }
+ .top-more-menu.nav-drawer .drawer-close { width: 28px !important; height: 28px !important; flex: 0 0 28px; border-radius: 999px; border: 0; background: var(--surface-soft); color: var(--muted); font-size: 17px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0 !important; }
+ .top-more-menu.nav-drawer .drawer-close:hover { background: var(--btn-bg); color: var(--text); }
  .drawer-sec { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); padding: 10px 10px 4px; }
  .top-more-menu.nav-drawer > button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 12px; border-radius: 11px; border: 0; background: transparent; color: var(--text); font-size: 13.5px; text-align: left; cursor: pointer; transition: background .14s ease; }
  .top-more-menu.nav-drawer > button:hover { background: var(--surface-soft); }
@@ -1128,7 +1134,7 @@
 <div class="modal" id="copyFmtModal"><span class="close" id="copyFmtClose">×</span><div class="card" style="max-width:400px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">默认复制链接格式</div><div class="meta" style="margin-bottom:8px">点击文件上的“复制链接”图标时，自动按所选格式复制（仅保存在本机浏览器）。</div><div class="fmt-opts" id="copyFmtOpts"><button type="button" class="fmt-opt" data-fmt="raw"><strong>原始直链</strong><span>https://.../f/id</span></button><button type="button" class="fmt-opt" data-fmt="md"><strong>Markdown</strong><span>![name](url)</span></button><button type="button" class="fmt-opt" data-fmt="html"><strong>HTML</strong><span>&lt;img src="url"&gt;</span></button><button type="button" class="fmt-opt" data-fmt="bb"><strong>BBCode</strong><span>[img]url[/img]</span></button></div><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">自定义链接前缀（留空 = 使用当前站点域名）</label><input type="text" id="copyPrefixInput" placeholder="例如 https://relaybox.19660716.xyz" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="copyFmtCancel">取消</button><button type="button" id="copyFmtSave">保存设置</button></div></div></div>
   <div class="nav-drawer-mask" id="navDrawerMask"></div>
   <div class="top-more-menu nav-drawer" id="topMoreMenu" role="dialog" aria-label="控制台与设置">
-   <div class="drawer-head"><span class="drawer-title">控制台与设置</span><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div>
+   <div class="drawer-head"><span class="drawer-title">控制台与设置</span><div class="drawer-head-acts"><button type="button" class="drawer-side-btn" id="drawerSideBtn" title="切换左侧/右侧滑出">靠右</button><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div></div>
    <div class="drawer-sec" id="drawerSecAdmin" style="display:none">常用管理</div>
    <button type="button" id="mobSharesMgrBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>分享管理中心</button>
    <button type="button" id="mobDropsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> 文件收集箱</button>
@@ -4713,7 +4719,29 @@ if ($('copyFmtSave')) $('copyFmtSave').onclick = () => {
 };
 
 // ===== r7: 手机端顶栏 ⋮ 磨砂收纳菜单 + 滚动阴影 =====
+let drawerSide = 'right';
+try { drawerSide = localStorage.getItem('fs-drawer-side') === 'left' ? 'left' : 'right'; } catch {}
+function applyDrawerSide() {
+ const m = $('topMoreMenu'), sb = $('drawerSideBtn');
+ if (m) m.classList.toggle('side-left', drawerSide === 'left');
+ if (sb) {
+  sb.textContent = drawerSide === 'left' ? '靠左 ⇄' : '靠右 ⇄';
+  sb.title = drawerSide === 'left' ? '当前左侧打开，点击切到右侧' : '当前右侧打开，点击切到左侧';
+ }
+}
+applyDrawerSide();
+if ($('drawerSideBtn')) {
+ $('drawerSideBtn').onclick = (e) => {
+  e.stopPropagation();
+  drawerSide = drawerSide === 'left' ? 'right' : 'left';
+  try { localStorage.setItem('fs-drawer-side', drawerSide); } catch {}
+  applyDrawerSide();
+ };
+}
+let drawerReturnPending = false;
 function openNavDrawer() {
+ drawerReturnPending = false;
+ applyDrawerSide();
  const m = $('topMoreMenu'), mask = $('navDrawerMask');
  if (m) m.classList.add('open');
  if (mask) mask.classList.add('open');
@@ -4733,16 +4761,52 @@ if ($('topMoreBtn')) {
   else openNavDrawer();
  };
 }
-if ($('drawerCloseBtn')) $('drawerCloseBtn').onclick = closeNavDrawer;
-if ($('navDrawerMask')) $('navDrawerMask').onclick = closeNavDrawer;
+if ($('drawerCloseBtn')) $('drawerCloseBtn').onclick = () => { drawerReturnPending = false; closeNavDrawer(); };
+if ($('navDrawerMask')) $('navDrawerMask').onclick = () => { drawerReturnPending = false; closeNavDrawer(); };
 document.addEventListener('click', (e) => {
  const m = $('topMoreMenu');
- if (m && m.classList.contains('open') && !e.target.closest('#topMoreMenu') && !e.target.closest('#topMoreBtn')) closeNavDrawer();
+ if (m && m.classList.contains('open') && !e.target.closest('#topMoreMenu') && !e.target.closest('#topMoreBtn')) {
+  drawerReturnPending = false;
+  closeNavDrawer();
+ }
 });
-window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeNavDrawer(); });
+window.addEventListener('keydown', (e) => {
+ if (e.key === 'Escape' && $('topMoreMenu') && $('topMoreMenu').classList.contains('open')) {
+  drawerReturnPending = false;
+  closeNavDrawer();
+ }
+});
 if ($('topMoreMenu')) {
  $('topMoreMenu').addEventListener('click', (e) => {
-  if (e.target.closest('button') && !e.target.closest('#drawerCloseBtn')) closeNavDrawer();
+  const btn = e.target.closest('button');
+  if (!btn || btn.id === 'drawerCloseBtn' || btn.id === 'drawerSideBtn') return;
+  drawerReturnPending = true;
+  closeNavDrawer();
+ });
+}
+// 从抽屉进入的子设置弹窗关闭后，自动返回抽屉（不直接跳回主页）
+const DRAWER_SUB_MODALS = ['sharesMgrModal', 'dropsModal', 'trashModal', 'copyFmtModal', 'appearanceModal', 'poolsModal', 'transferModeModal', 'notifyModal', 'tokensModal', 'inputModal'];
+if (typeof MutationObserver !== 'undefined') {
+ const drawerSubObs = new MutationObserver((muts) => {
+  if (!drawerReturnPending) return;
+  for (const mut of muts) {
+   const el = mut.target;
+   if (el && !el.classList.contains('open')) {
+    setTimeout(() => {
+     if (!drawerReturnPending) return;
+     const anyOpen = DRAWER_SUB_MODALS.some(id => $(id) && $(id).classList.contains('open'));
+     if (!anyOpen) {
+      drawerReturnPending = false;
+      openNavDrawer();
+     }
+    }, 60);
+    break;
+   }
+  }
+ });
+ DRAWER_SUB_MODALS.forEach(id => {
+  const el = $(id);
+  if (el) drawerSubObs.observe(el, { attributes: true, attributeFilter: ['class'] });
  });
 }
 if ($('mobCopyFmtBtn')) $('mobCopyFmtBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openCopyFmtModal(); };
