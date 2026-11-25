@@ -74,18 +74,25 @@ export default {
       return app.fetch(request, env, ctx);
     }
 
+    const withSecHeaders = (res) => {
+      const headers = new Headers(res.headers);
+      if (!headers.has('X-Content-Type-Options')) headers.set('X-Content-Type-Options', 'nosniff');
+      if (!headers.has('Referrer-Policy')) headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+    };
+
     // 2) SPA entry points: `/` and share/drop pages — index.html.
     if (path === '/' || path.startsWith('/s/') || path.startsWith('/d/')) {
-      return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
+      return withSecHeaders(await env.ASSETS.fetch(new Request(new URL('/', request.url), request)));
     }
 
     // 3) Static assets (qrcode.min.js, jszip.min.js, ...).
     const asset = await env.ASSETS.fetch(request);
     // 4) Unknown non-API path — fall back to the SPA.
     if (asset.status === 404) {
-      return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
+      return withSecHeaders(await env.ASSETS.fetch(new Request(new URL('/', request.url), request)));
     }
-    return asset;
+    return withSecHeaders(asset);
   },
 
   async scheduled(event, env, ctx) {

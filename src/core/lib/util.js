@@ -113,6 +113,18 @@ export function folderVisibleToGuest(folders, files, folderId) {
   }
   return false;
 }
+// 基于 D1 GROUP BY 统计的 O(folders) 访客可见性判断（避免全表加载 files）。
+export function folderVisibleByCountMap(folders, publicCountMap, folderId, _seen) {
+  if (!folderId || !publicCountMap) return false;
+  if ((publicCountMap.get(folderId) || 0) > 0) return true;
+  const seen = _seen || new Set();
+  if (seen.has(folderId)) return false;
+  seen.add(folderId);
+  for (const k of folders) {
+    if ((k.parentId || null) === folderId && folderVisibleByCountMap(folders, publicCountMap, k.id, seen)) return true;
+  }
+  return false;
+}
 
 /** Web Crypto id: same shape as v2.8.4 (Date.now base36 + 6 hex chars). */
 function randomHex(bytes) {

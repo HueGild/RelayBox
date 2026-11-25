@@ -12,17 +12,37 @@ function shareView(share) {
     pickupCode: share.pickupCode || null,
     maxDownloads: typeof share.maxDownloads === 'number' ? share.maxDownloads : 0,
     usedDownloads: typeof share.usedDownloads === 'number' ? share.usedDownloads : 0,
+    expiresAt: share.expiresAt || null,
   };
 }
 
-/** 分享页展示用的限次信息（不含明文提取码）。 */
+/** 分享页展示用的限次与有效期信息（不含明文提取码）。 */
 function shareLimitView(share) {
   return {
     pickupCode: share.pickupCode || null,
     maxDownloads: typeof share.maxDownloads === 'number' ? share.maxDownloads : 0,
     usedDownloads: typeof share.usedDownloads === 'number' ? share.usedDownloads : 0,
     burn: !!share.burn,
+    expiresAt: share.expiresAt || null,
   };
+}
+
+/** Parse independent share expiry from body (expiresHours: 0=permanent, >0=hours; or expiresAt: ISO/null). */
+function parseShareExpiryInput(body) {
+  if (!body || typeof body !== 'object') return { provided: false, expiresAt: null };
+  if (body.expiresHours !== undefined) {
+    const h = Number(body.expiresHours);
+    if (!Number.isFinite(h) || h <= 0) return { provided: true, expiresAt: null };
+    const clamped = Math.min(8760, h);
+    return { provided: true, expiresAt: new Date(Date.now() + clamped * 3600 * 1000).toISOString() };
+  }
+  if (body.expiresAt !== undefined) {
+    if (body.expiresAt === null || body.expiresAt === '') return { provided: true, expiresAt: null };
+    const ms = new Date(body.expiresAt).getTime();
+    if (!Number.isFinite(ms)) return { provided: true, expiresAt: null };
+    return { provided: true, expiresAt: new Date(ms).toISOString() };
+  }
+  return { provided: false, expiresAt: null };
 }
 
 /**
@@ -66,6 +86,7 @@ export function registerShares(app) {
     const hasMaxDownloads = typeof body.maxDownloads === 'number'
       && Number.isFinite(body.maxDownloads) && body.maxDownloads >= 0;
     const maxDownloads = hasMaxDownloads ? Math.floor(body.maxDownloads) : null;
+    const expiryInput = parseShareExpiryInput(body);
     const getExisting = isFolder
       ? deps.meta.getShareByFolderId(id)
       : deps.meta.getShareByFileId(id);
@@ -89,6 +110,7 @@ export function registerShares(app) {
         usedDownloads: 0,
         burn: newBurn,
         pickupCode,
+        expiresAt: expiryInput.provided ? expiryInput.expiresAt : null,
       };
       try {
         share = await deps.meta.createShare(fresh);
@@ -108,11 +130,12 @@ export function registerShares(app) {
       if (burn) patch.maxDownloads = 1;
       else if (share.maxDownloads === 1) patch.maxDownloads = 0;
     }
+    if (expiryInput.provided) patch.expiresAt = expiryInput.expiresAt;
     if (!share.pickupCode) {
       const backfill = await generateUniquePickupCode(deps);
       if (backfill) patch.pickupCode = backfill;
     }
-    if (hasCode || hasBurn || hasMaxDownloads || patch.pickupCode) {
+    if (hasCode || hasBurn || hasMaxDownloads || expiryInput.provided || patch.pickupCode) {
       share = await deps.meta.updateShare(share.token, patch);
     }
     log(isFolder ? 'folder share created:' : 'share created:', target.name, share.token, share.code ? '(有提取码)' : '', share.burn ? '(阅后即焚)' : '', share.maxDownloads ? `(限 ${share.maxDownloads} 次)` : '');
@@ -142,11 +165,12 @@ export function registerShares(app) {
   app.get('/api/shares', async (c) => {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
-    const [shares, folders, files] = await Promise.all([
+    const [shares, folders] = await Promise.all([
       typeof deps.meta.listShares === 'function' ? deps.meta.listShares() : Promise.resolve([]),
       deps.meta.listFolders(),
-      deps.meta.listAllFiles({ authed: true }),
     ]);
+    const fileIds = [...new Set((shares || []).filter((s) => s && s.fileId).map((s) => s.fileId))];
+    const files = fileIds.length ? await deps.meta.getFilesByIds(fileIds) : [];
     const folderMap = new Map((folders || []).map((f) => [f.id, f]));
     const fileMap = new Map((files || []).map((f) => [f.id, f]));
     const list = (shares || []).filter((s) => s && s.token).map((s) => {
@@ -159,7 +183,7 @@ export function registerShares(app) {
       let status = 'active';
       if (!target) {
         status = 'missing';
-      } else if (!isFolder && isExpired(target)) {
+      } else if (isExpired(s) || (!isFolder && isExpired(target))) {
         status = 'expired';
       } else if (maxDownloads > 0 && usedDownloads >= maxDownloads) {
         status = 'exhausted';
@@ -173,6 +197,7 @@ export function registerShares(app) {
         targetKind: (!isFolder && target) ? (target.kind || 'file') : null,
         targetVisibility: (!isFolder && target) ? (target.visibility || 'public') : null,
         targetExpiresAt: (!isFolder && target) ? (target.expiresAt || null) : null,
+        expiresAt: s.expiresAt || null,
         code: s.code || null,
         burn: !!s.burn,
         pickupCode: s.pickupCode || null,
@@ -210,6 +235,7 @@ export function registerShares(app) {
     const code = c.req.query('code') || '';
     const share = await deps.meta.getShareByToken(token);
     if (!share) return c.json({ ok: false, error: '分享链接不存在或已被取消' }, 404);
+    if (isExpired(share)) return c.json({ ok: false, error: '分享链接已过期', expired: true }, 410);
     if (share.code && (code || '') !== share.code) {
       return c.json({ ok: false, error: '提取码不正确', needCode: true }, 403);
     }
@@ -230,9 +256,8 @@ export function registerShares(app) {
       }
       if (!ok) return c.json({ ok: false, error: '文件夹不存在' }, 404);
       const curFolder = folders.find((f) => f.id === cur);
-      const allFiles = await deps.meta.listAllFiles({ authed: true });
-      const files = allFiles
-        .filter((f) => folderIdOf(f) === cur && !isExpired(f))
+      const folderFiles = await deps.meta.listFiles(cur, { authed: true });
+      const files = folderFiles
         .map((f) => ({
           id: f.id, name: f.name, size: f.size, ext: f.ext, kind: f.kind,
           uploadedAt: f.uploadedAt, visibility: f.visibility,
@@ -282,6 +307,9 @@ export function registerShares(app) {
     if (!share) {
       await recordFailureWithAlert(deps, ip, c, '短取件码查询');
       return c.json({ ok: false, error: '取件码不存在' }, 404);
+    }
+    if (isExpired(share)) {
+      return c.json({ ok: false, error: '分享链接已过期', expired: true }, 410);
     }
     return c.json({ ok: true, token: share.token, needCode: !!share.code });
   });

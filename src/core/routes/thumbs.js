@@ -4,6 +4,7 @@
 
 import { isExpired, parseDim } from '../lib/util.js';
 import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
+import { originOf, thumbCacheKey, matchEdgeCache, putEdgeCache, purgeEdgeCacheForFile, withCacheHeader, computePublicEdgeTtl } from '../lib/edge-cache.js';
 
 function detectThumbMime(buf) {
   if (!buf || buf.byteLength < 12) return 'image/jpeg';
@@ -49,13 +50,31 @@ export function registerThumbs(app) {
     if (w && h && (!item.width || !item.height)) {
       try { await deps.meta.updateFile(id, { width: w, height: h }); } catch {}
     }
+    await purgeEdgeCacheForFile(deps, c, id);
     return c.json({ ok: true });
   });
 
-  // 缩略图查看：权限跟原文件一致（公开文件谁都能看，私密文件只有管理员能看；过期的看不到）。
+  // 缩略图查看：权限跟原文件一致（公开文件接入 CF caches.default 边缘缓存，更新/删除时主动失效）。
   app.get('/thumb/:id', async (c) => {
     const deps = c.get('deps');
     const id = decodeURIComponent(c.req.param('id'));
+    const origin = originOf(c, deps);
+    const cacheKey = origin ? thumbCacheKey(origin, id) : null;
+    const inm = (c.req.header('If-None-Match') || '').trim();
+
+    if (cacheKey) {
+      const cached = await matchEdgeCache(deps, cacheKey);
+      if (cached) {
+        const cachedEtag = (cached.headers.get('ETag') || '').trim();
+        if (inm && cachedEtag && (inm === cachedEtag || inm === `W/${cachedEtag}`)) {
+          const h304 = new Headers(cached.headers);
+          h304.set('X-RelayBox-Cache', 'HIT');
+          return new Response(null, { status: 304, headers: h304 });
+        }
+        return withCacheHeader(cached, 'HIT');
+      }
+    }
+
     const item = await deps.meta.getFile(id);
     if (!item || isExpired(item)) return c.json({ ok: false, error: 'not found' }, 404);
     const authed = await isAuthed(c, deps);
@@ -68,21 +87,28 @@ export function registerThumbs(app) {
     const contentType = detectThumbMime(buf);
     const etag = `"th-${id}-${buf.byteLength}"`;
     const isPrivate = item.visibility !== 'public';
+    const edgeTtl = (!isPrivate && !item.deletedAt) ? computePublicEdgeTtl(item.expiresAt, 31536000, 3600) : 0;
     const cacheControl = item.deletedAt
       ? 'private, no-store'
       : isPrivate
         ? 'private, max-age=31536000, immutable'
-        : (item.expiresAt ? 'public, max-age=3600' : 'public, max-age=31536000, immutable');
+        : (item.expiresAt
+          ? (edgeTtl > 0 ? `public, max-age=${edgeTtl}` : 'private, no-store')
+          : 'public, max-age=31536000, immutable');
     const headers = {
       'Content-Type': contentType,
       'Cache-Control': cacheControl,
       'ETag': etag,
     };
     if (isPrivate || item.deletedAt) headers['Vary'] = 'Cookie';
-    const inm = (c.req.header('If-None-Match') || '').trim();
     if (!item.deletedAt && inm && (inm === etag || inm === `W/${etag}`)) {
       return new Response(null, { status: 304, headers });
     }
-    return new Response(buf, { status: 200, headers });
+    const res = new Response(buf, { status: 200, headers });
+    if (cacheKey && !isPrivate && !item.deletedAt && edgeTtl > 0) {
+      putEdgeCache(deps, c, cacheKey, res);
+      return withCacheHeader(res, 'MISS');
+    }
+    return res;
   });
 }

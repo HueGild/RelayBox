@@ -6,11 +6,12 @@ import { trashTtlMsOf, isTrashExpired, purgeFilePermanently } from '../routes/tr
 import { maybeSendDailyReport } from './notify.js';
 
 export async function cleanupExpired(deps) {
-  const list = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
   const ttlMs = trashTtlMsOf(deps);
   const now = Date.now();
-  const expired = list.filter((f) => !f.deletedAt && isExpired(f));
-  const trashExpired = list.filter((f) => isTrashExpired(f, ttlMs, now));
+  const [expired, trashExpired] = await Promise.all([
+    deps.meta.listExpiredFiles(now),
+    deps.meta.listTrashExpiredFiles(now - ttlMs),
+  ]);
 
   for (const f of expired) {
     try {
@@ -30,11 +31,13 @@ export async function cleanupExpired(deps) {
   }
 
   await deps.meta.deleteExpiredSessions(now);
+  if (typeof deps.meta.deleteExpiredShares === 'function') {
+    await deps.meta.deleteExpiredShares(now);
+  }
   await cleanupChunks(deps);
-  await maybeSendDailyReport(deps, async () => {
-    const remaining = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
-    return buildPoolSummaries(deps, remaining, { authed: true, includeAdminMeta: false });
-  });
+  await maybeSendDailyReport(deps, async () => (
+    buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: false })
+  ));
 }
 
 export async function cleanupChunks(deps) {

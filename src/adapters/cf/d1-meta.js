@@ -69,6 +69,7 @@ export class D1MetaStore {
       maxDownloads: typeof r.max_downloads === 'number' ? r.max_downloads : 0,
       usedDownloads: typeof r.used_downloads === 'number' ? r.used_downloads : 0,
       pickupCode: (typeof r.pickup_code === 'string' && r.pickup_code) ? r.pickup_code : null,
+      expiresAt: msToIso(r.expires_at),
       createdAt: msToIso(r.created_at),
     };
   }
@@ -107,12 +108,270 @@ export class D1MetaStore {
     return this._rowToFile(r);
   }
 
-  async listFiles(folderId, { authed } = {}) {
+  async listFiles(folderId, { authed, limit = 0, offset = 0 } = {}) {
+    const now = Date.now();
+    const baseSql = 'SELECT * FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) ORDER BY uploaded_at DESC';
+    if (Number.isInteger(limit) && limit > 0) {
+      const safeOffset = (Number.isInteger(offset) && offset > 0) ? offset : 0;
+      const { results } = await this.db.prepare(`${baseSql} LIMIT ? OFFSET ?`)
+        .bind(folderId || null, now, authed ? 1 : 0, 'public', limit, safeOffset).all();
+      return (results || []).map((r) => this._rowToFile(r));
+    }
+    const { results } = await this.db.prepare(baseSql)
+      .bind(folderId || null, now, authed ? 1 : 0, 'public').all();
+    return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  async getFolderFileStats(folderId, { authed } = {}) {
+    const now = Date.now();
+    const r = await this.db.prepare(
+      "SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes, COALESCE(SUM(CASE WHEN storage = 'r2' THEN size ELSE 0 END), 0) AS r2_bytes, COALESCE(SUM(CASE WHEN storage != 'r2' THEN size ELSE 0 END), 0) AS local_bytes FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)",
+    ).bind(folderId || null, now, authed ? 1 : 0, 'public').first();
+    return {
+      count: Number((r && r.count) || 0),
+      totalBytes: Number((r && r.total_bytes) || 0),
+      r2Bytes: Number((r && r.r2_bytes) || 0),
+      localBytes: Number((r && r.local_bytes) || 0),
+    };
+  }
+
+  async getFolderFileCounts({ authed } = {}) {
     const now = Date.now();
     const { results } = await this.db.prepare(
-      'SELECT * FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)',
-    ).bind(folderId || null, now, authed ? 1 : 0, 'public').all();
+      'SELECT folder_id, COUNT(*) AS cnt FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) AND folder_id IS NOT NULL GROUP BY folder_id',
+    ).bind(now, authed ? 1 : 0, 'public').all();
+    const map = new Map();
+    for (const r of (results || [])) {
+      if (r && r.folder_id) map.set(r.folder_id, Number(r.cnt || 0));
+    }
+    return map;
+  }
+
+  async getTrashStats() {
+    const r = await this.db.prepare(
+      'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes FROM files WHERE deleted_at IS NOT NULL',
+    ).first();
+    return {
+      count: Number((r && r.count) || 0),
+      totalBytes: Number((r && r.total_bytes) || 0),
+    };
+  }
+
+  async getPoolUsageStats({ includeTrashed = true } = {}) {
+    const now = Date.now();
+    const sql = includeTrashed
+      ? `SELECT CASE WHEN pool_id IS NOT NULL AND pool_id != '' THEN pool_id WHEN storage = 'r2' THEN 'builtin-r2' ELSE 'builtin-local' END AS effective_pool_id, COUNT(*) AS file_count, COALESCE(SUM(size), 0) AS used_bytes, SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) AS active_count, SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END) AS trash_count FROM files WHERE (deleted_at IS NOT NULL OR expires_at IS NULL OR expires_at > ?) GROUP BY effective_pool_id`
+      : `SELECT CASE WHEN pool_id IS NOT NULL AND pool_id != '' THEN pool_id WHEN storage = 'r2' THEN 'builtin-r2' ELSE 'builtin-local' END AS effective_pool_id, COUNT(*) AS file_count, COALESCE(SUM(size), 0) AS used_bytes, COUNT(*) AS active_count, 0 AS trash_count FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) GROUP BY effective_pool_id`;
+    const { results } = await this.db.prepare(sql).bind(now).all();
+    const map = new Map();
+    for (const r of (results || [])) {
+      if (!r || !r.effective_pool_id) continue;
+      map.set(r.effective_pool_id, {
+        fileCount: Number(r.file_count || 0),
+        usedBytes: Number(r.used_bytes || 0),
+        activeCount: Number(r.active_count || 0),
+        trashCount: Number(r.trash_count || 0),
+      });
+    }
+    return map;
+  }
+
+  async getActiveFileSummary() {
+    const now = Date.now();
+    const r = await this.db.prepare(
+      'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)',
+    ).bind(now).first();
+    return {
+      count: Number((r && r.count) || 0),
+      totalBytes: Number((r && r.total_bytes) || 0),
+    };
+  }
+
+  async hasFileWithName(folderId, name, excludeId = null) {
+    const r = await this.db.prepare(
+      'SELECT 1 FROM files WHERE folder_id IS ? AND name = ? AND deleted_at IS NULL AND (? IS NULL OR id != ?) LIMIT 1',
+    ).bind(folderId || null, name, excludeId || null, excludeId || null).first();
+    return !!r;
+  }
+
+  async hasFilesInFolder(folderId) {
+    const r = await this.db.prepare(
+      'SELECT 1 FROM files WHERE folder_id IS ? AND deleted_at IS NULL LIMIT 1',
+    ).bind(folderId || null).first();
+    return !!r;
+  }
+
+  _poolWhereClause(poolId) {
+    if (poolId === 'builtin-r2') {
+      return { sql: "(pool_id IS NULL OR pool_id = '') AND storage = 'r2'", binds: [] };
+    }
+    if (poolId === 'builtin-local') {
+      return { sql: "(pool_id IS NULL OR pool_id = '') AND storage != 'r2'", binds: [] };
+    }
+    return { sql: 'pool_id = ?', binds: [poolId] };
+  }
+
+  async listFilesByPool(poolId, { includeTrashed = false, limit = 0 } = {}) {
+    const now = Date.now();
+    const pw = this._poolWhereClause(poolId);
+    const trashClause = includeTrashed
+      ? '(deleted_at IS NOT NULL OR expires_at IS NULL OR expires_at > ?)'
+      : 'deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)';
+    let sql = `SELECT * FROM files WHERE ${pw.sql} AND ${trashClause} ORDER BY uploaded_at DESC`;
+    const binds = [...pw.binds, now];
+    if (Number.isInteger(limit) && limit > 0) {
+      sql += ' LIMIT ?';
+      binds.push(limit);
+    }
+    const { results } = await this.db.prepare(sql).bind(...binds).all();
     return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  async countFilesByPool(poolId, { includeTrashed = false } = {}) {
+    const now = Date.now();
+    const pw = this._poolWhereClause(poolId);
+    const trashClause = includeTrashed
+      ? '(deleted_at IS NOT NULL OR expires_at IS NULL OR expires_at > ?)'
+      : 'deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)';
+    const r = await this.db.prepare(
+      `SELECT COUNT(*) AS count FROM files WHERE ${pw.sql} AND ${trashClause}`,
+    ).bind(...pw.binds, now).first();
+    return Number((r && r.count) || 0);
+  }
+
+  async listExpiredFiles(now = Date.now()) {
+    const { results } = await this.db.prepare(
+      'SELECT * FROM files WHERE deleted_at IS NULL AND expires_at IS NOT NULL AND expires_at <= ?',
+    ).bind(now).all();
+    return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  async listTrashExpiredFiles(cutoffMs) {
+    const { results } = await this.db.prepare(
+      'SELECT * FROM files WHERE deleted_at IS NOT NULL AND deleted_at <= ?',
+    ).bind(cutoffMs).all();
+    return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  async getFilesByIds(ids, { includeTrashed = false } = {}) {
+    const uniq = [...new Set((ids || []).filter((x) => typeof x === 'string' && x))];
+    if (!uniq.length) return [];
+    const out = [];
+    const BATCH = 50;
+    for (let i = 0; i < uniq.length; i += BATCH) {
+      const slice = uniq.slice(i, i + BATCH);
+      const ph = slice.map(() => '?').join(', ');
+      const sql = includeTrashed
+        ? `SELECT * FROM files WHERE id IN (${ph})`
+        : `SELECT * FROM files WHERE deleted_at IS NULL AND id IN (${ph})`;
+      const { results } = await this.db.prepare(sql).bind(...slice).all();
+      for (const r of (results || [])) out.push(this._rowToFile(r));
+    }
+    return out;
+  }
+
+  async listFilesInFolders(folderIds) {
+    const list = Array.isArray(folderIds) ? folderIds : [];
+    const hasRoot = list.some((x) => x === null || x === '' || x === undefined);
+    const nonNull = [...new Set(list.filter((x) => typeof x === 'string' && x))];
+    const out = [];
+    if (hasRoot) {
+      const { results } = await this.db.prepare(
+        'SELECT * FROM files WHERE deleted_at IS NULL AND folder_id IS NULL',
+      ).all();
+      for (const r of (results || [])) out.push(this._rowToFile(r));
+    }
+    const BATCH = 50;
+    for (let i = 0; i < nonNull.length; i += BATCH) {
+      const slice = nonNull.slice(i, i + BATCH);
+      const ph = slice.map(() => '?').join(', ');
+      const { results } = await this.db.prepare(
+        `SELECT * FROM files WHERE deleted_at IS NULL AND folder_id IN (${ph})`,
+      ).bind(...slice).all();
+      for (const r of (results || [])) out.push(this._rowToFile(r));
+    }
+    return out;
+  }
+
+  async getDashboardStats(now = Date.now()) {
+    const CST_OFFSET_MS = 8 * 3600 * 1000;
+    const cstNow = new Date(now + CST_OFFSET_MS);
+    const todayCstStartUtc = Date.UTC(cstNow.getUTCFullYear(), cstNow.getUTCMonth(), cstNow.getUTCDate()) - CST_OFFSET_MS;
+    const sevenDaysStartMs = todayCstStartUtc - 6 * 24 * 3600 * 1000;
+
+    const [overviewRow, trashRow, folderRow, shareRow, kindRows, topRows, trendRows] = await Promise.all([
+      this.db.prepare(
+        'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes, COALESCE(SUM(downloads), 0) AS total_downloads FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)',
+      ).bind(now).first(),
+      this.db.prepare(
+        'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes FROM files WHERE deleted_at IS NOT NULL',
+      ).first(),
+      this.db.prepare('SELECT COUNT(*) AS count FROM folders').first(),
+      this.db.prepare(
+        'SELECT COUNT(*) AS count FROM shares WHERE (expires_at IS NULL OR expires_at > ?) AND (max_downloads = 0 OR used_downloads < max_downloads)',
+      ).bind(now).first(),
+      this.db.prepare(
+        'SELECT kind, COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) GROUP BY kind ORDER BY bytes DESC',
+      ).bind(now).all(),
+      this.db.prepare(
+        'SELECT id, name, kind, size, downloads, folder_id, visibility, uploaded_at FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND downloads > 0 ORDER BY downloads DESC, uploaded_at DESC LIMIT 10',
+      ).bind(now).all(),
+      this.db.prepare(
+        "SELECT strftime('%Y-%m-%d', (uploaded_at + 28800000) / 1000, 'unixepoch') AS day, COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM files WHERE deleted_at IS NULL AND uploaded_at >= ? GROUP BY day ORDER BY day ASC",
+      ).bind(sevenDaysStartMs).all(),
+    ]);
+
+    const totalBytes = Number((overviewRow && overviewRow.total_bytes) || 0);
+    const totalFiles = Number((overviewRow && overviewRow.count) || 0);
+    const byKind = (kindRows && kindRows.results ? kindRows.results : []).map((r) => {
+      const bytes = Number(r.bytes || 0);
+      const count = Number(r.count || 0);
+      return {
+        kind: r.kind || 'file',
+        count,
+        bytes,
+        pctBytes: totalBytes > 0 ? Number(((bytes / totalBytes) * 100).toFixed(1)) : 0,
+        pctCount: totalFiles > 0 ? Number(((count / totalFiles) * 100).toFixed(1)) : 0,
+      };
+    });
+
+    const topDownloads = (topRows && topRows.results ? topRows.results : []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      kind: r.kind || 'file',
+      size: Number(r.size || 0),
+      downloads: Number(r.downloads || 0),
+      folderId: (typeof r.folder_id === 'string' && r.folder_id) ? r.folder_id : null,
+      visibility: r.visibility === 'private' ? 'private' : 'public',
+      uploadedAt: msToIso(r.uploaded_at),
+    }));
+
+    const trendMap = new Map();
+    for (const r of (trendRows && trendRows.results ? trendRows.results : [])) {
+      if (r && r.day) trendMap.set(r.day, { count: Number(r.count || 0), bytes: Number(r.bytes || 0) });
+    }
+    const uploadTrend7d = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sevenDaysStartMs + i * 24 * 3600 * 1000 + CST_OFFSET_MS);
+      const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      const hit = trendMap.get(day) || { count: 0, bytes: 0 };
+      uploadTrend7d.push({ day, count: hit.count, bytes: hit.bytes });
+    }
+
+    return {
+      overview: {
+        totalFiles,
+        totalBytes,
+        totalDownloads: Number((overviewRow && overviewRow.total_downloads) || 0),
+        trashFiles: Number((trashRow && trashRow.count) || 0),
+        trashBytes: Number((trashRow && trashRow.total_bytes) || 0),
+        totalFolders: Number((folderRow && folderRow.count) || 0),
+        activeShares: Number((shareRow && shareRow.count) || 0),
+      },
+      byKind,
+      topDownloads,
+      uploadTrend7d,
+    };
   }
 
   async listAllFiles({ authed, includeTrashed = false } = {}) {
@@ -363,13 +622,14 @@ export class D1MetaStore {
       max_downloads: typeof share.maxDownloads === 'number' ? share.maxDownloads : 0,
       used_downloads: typeof share.usedDownloads === 'number' ? share.usedDownloads : 0,
       pickup_code: (typeof share.pickupCode === 'string' && share.pickupCode) ? share.pickupCode : null,
+      expires_at: isoToMs(share.expiresAt),
       created_at: isoToMs(share.createdAt),
     });
     await this.db.prepare(
-      'INSERT INTO shares (token, file_id, folder_id, code, burn, max_downloads, used_downloads, pickup_code, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO shares (token, file_id, folder_id, code, burn, max_downloads, used_downloads, pickup_code, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       item.token, item.fileId, item.folderId, item.code, item.burn ? 1 : 0,
-      item.maxDownloads, item.usedDownloads, item.pickupCode, isoToMs(item.createdAt),
+      item.maxDownloads, item.usedDownloads, item.pickupCode, isoToMs(item.expiresAt), isoToMs(item.createdAt),
     ).run();
     return item;
   }
@@ -382,9 +642,10 @@ export class D1MetaStore {
     if (patch.maxDownloads !== undefined) next.maxDownloads = Math.max(0, Math.floor(Number(patch.maxDownloads)) || 0);
     if (patch.usedDownloads !== undefined) next.usedDownloads = Math.max(0, Math.floor(Number(patch.usedDownloads)) || 0);
     if (patch.pickupCode !== undefined) next.pickupCode = (typeof patch.pickupCode === 'string' && patch.pickupCode) ? patch.pickupCode : null;
+    if (patch.expiresAt !== undefined) next.expiresAt = patch.expiresAt ? msToIso(isoToMs(patch.expiresAt)) : null;
     await this.db.prepare(
-      'UPDATE shares SET code = ?, burn = ?, max_downloads = ?, used_downloads = ?, pickup_code = ? WHERE token = ?',
-    ).bind(next.code, next.burn ? 1 : 0, next.maxDownloads, next.usedDownloads, next.pickupCode, token).run();
+      'UPDATE shares SET code = ?, burn = ?, max_downloads = ?, used_downloads = ?, pickup_code = ?, expires_at = ? WHERE token = ?',
+    ).bind(next.code, next.burn ? 1 : 0, next.maxDownloads, next.usedDownloads, next.pickupCode, isoToMs(next.expiresAt), token).run();
     return next;
   }
   async incrementShareDownloads(token) {
@@ -396,6 +657,10 @@ export class D1MetaStore {
   async deleteShare(token) {
     const out = await this.db.prepare('DELETE FROM shares WHERE token = ?').bind(token).run();
     return (out.meta && out.meta.changes > 0) || false;
+  }
+  async deleteExpiredShares(now = Date.now()) {
+    const out = await this.db.prepare('DELETE FROM shares WHERE expires_at IS NOT NULL AND expires_at <= ?').bind(now).run();
+    return (out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
   }
 
   // ---- API tokens (v3.1) ----

@@ -40,8 +40,7 @@ export function registerFolders(app) {
     const folders = await deps.meta.listFolders();
     const folder = folders.find((f) => f.id === id);
     if (!folder) return c.json({ ok: false, error: '文件夹不存在' }, 404);
-    const files = await deps.meta.listAllFiles({ authed: true });
-    if (files.some((f) => folderIdOf(f) === id)) {
+    if (await deps.meta.hasFilesInFolder(id)) {
       return c.json({ ok: false, error: '文件夹里还有文件，先移走或删掉' }, 400);
     }
     if (folders.some((f) => (f.parentId || null) === id)) {

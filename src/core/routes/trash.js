@@ -12,6 +12,7 @@
 import { readJsonBody, folderIdOf, folderPath, extOf, safeName, log } from '../lib/util.js';
 import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
 import { resolveStorageForFile, buildPoolSummaries, BUILTIN_R2_ID, BUILTIN_LOCAL_ID } from './pools.js';
+import { purgeEdgeCacheForFile } from '../lib/edge-cache.js';
 
 export const DEFAULT_TRASH_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天自动保留
 
@@ -28,7 +29,7 @@ export function isTrashExpired(item, ttlMs = DEFAULT_TRASH_TTL_MS, now = Date.no
 }
 
 /** 物理彻底删除一个文件（存储对象 + 缩略图 + 元数据记录 + 关联分享链接）。 */
-export async function purgeFilePermanently(deps, item) {
+export async function purgeFilePermanently(deps, item, c = null) {
   if (!item) return false;
   const resolved = await resolveStorageForFile(deps, item);
   if (resolved.ok) {
@@ -44,11 +45,12 @@ export async function purgeFilePermanently(deps, item) {
   await deps.meta.deleteFile(item.id);
   const share = await deps.meta.getShareByFileId(item.id);
   if (share) await deps.meta.deleteShare(share.token);
+  await purgeEdgeCacheForFile(deps, c, item.id);
   return true;
 }
 
 /** 软删除一个文件到回收站（保留存储对象与缩略图，吊销已有分享链接防止外泄）。 */
-export async function moveFileToTrash(deps, item) {
+export async function moveFileToTrash(deps, item, c = null) {
   if (!item) return null;
   const ttlMs = trashTtlMsOf(deps);
   if (item.deletedAt) {
@@ -64,6 +66,7 @@ export async function moveFileToTrash(deps, item) {
   const updated = await deps.meta.updateFile(item.id, { deletedAt });
   const share = await deps.meta.getShareByFileId(item.id);
   if (share) await deps.meta.deleteShare(share.token);
+  await purgeEdgeCacheForFile(deps, c, item.id);
   log('moved to trash:', item.name, item.id);
   return {
     alreadyTrashed: false,
@@ -113,7 +116,7 @@ export function registerTrash(app) {
     if (auth !== 'ok') return authFail(c, auth);
     const item = await deps.meta.getFile(id);
     if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
-    const res = await moveFileToTrash(deps, item);
+    const res = await moveFileToTrash(deps, item, c);
     return c.json({
       ok: true,
       trashed: true,
@@ -131,11 +134,10 @@ export function registerTrash(app) {
     const now = Date.now();
     const folders = await deps.meta.listFolders();
     const folderIds = new Set(folders.map((fd) => fd.id));
-    const allFilesWithTrash = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
-    const poolSummary = await buildPoolSummaries(deps, allFilesWithTrash, { authed: true, includeAdminMeta: false });
-    const trashed = typeof deps.meta.listTrashedFiles === 'function'
-      ? await deps.meta.listTrashedFiles()
-      : allFilesWithTrash.filter((f) => !!f.deletedAt);
+    const [poolSummary, trashed] = await Promise.all([
+      buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: false }),
+      deps.meta.listTrashedFiles(),
+    ]);
 
     const files = trashed.map((f) => {
       const delMs = new Date(f.deletedAt).getTime();
@@ -190,7 +192,10 @@ export function registerTrash(app) {
     if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
     if (!item.deletedAt) return c.json({ ok: false, error: '该文件不在回收站中' }, 400);
     const folders = await deps.meta.listFolders();
-    const activeFiles = await deps.meta.listAllFiles({ authed: true });
+    const folderSet = new Set(folders.map((fd) => fd.id));
+    const origFolderId = folderIdOf(item);
+    const targetFolderId = (origFolderId && !folderSet.has(origFolderId)) ? null : origFolderId;
+    const activeFiles = await deps.meta.listFilesInFolders([targetFolderId]);
     const res = await restoreOneTrashedFile(deps, item, folders, activeFiles);
     return c.json({ ok: true, ...res });
   });
@@ -201,12 +206,17 @@ export function registerTrash(app) {
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
     const body = await readJsonBody(c);
     const filterIds = Array.isArray(body.ids) && body.ids.length ? new Set(body.ids.map(String)) : null;
-    const trashed = typeof deps.meta.listTrashedFiles === 'function'
-      ? await deps.meta.listTrashedFiles()
-      : (await deps.meta.listAllFiles({ authed: true, includeTrashed: true })).filter((f) => !!f.deletedAt);
+    const [trashed, folders] = await Promise.all([
+      deps.meta.listTrashedFiles(),
+      deps.meta.listFolders(),
+    ]);
     const targets = filterIds ? trashed.filter((f) => filterIds.has(f.id)) : trashed;
-    const folders = await deps.meta.listFolders();
-    const activeFiles = await deps.meta.listAllFiles({ authed: true });
+    const folderSet = new Set(folders.map((fd) => fd.id));
+    const targetFolderIds = [...new Set(targets.map((it) => {
+      const orig = folderIdOf(it);
+      return (orig && !folderSet.has(orig)) ? null : orig;
+    }))];
+    const activeFiles = targetFolderIds.length ? await deps.meta.listFilesInFolders(targetFolderIds) : [];
     let restored = 0;
     let restoredToRoot = 0;
     for (const item of targets) {
@@ -224,7 +234,7 @@ export function registerTrash(app) {
     const id = decodeURIComponent(c.req.param('id'));
     const item = await deps.meta.getFile(id);
     if (!item || !item.deletedAt) return c.json({ ok: false, error: '回收站中找不到该文件' }, 404);
-    await purgeFilePermanently(deps, item);
+    await purgeFilePermanently(deps, item, c);
     log('purged from trash:', item.name);
     return c.json({ ok: true, purged: 1, freedBytes: item.size || 0 });
   });
@@ -235,14 +245,12 @@ export function registerTrash(app) {
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
     const body = await readJsonBody(c);
     const filterIds = Array.isArray(body.ids) && body.ids.length ? new Set(body.ids.map(String)) : null;
-    const trashed = typeof deps.meta.listTrashedFiles === 'function'
-      ? await deps.meta.listTrashedFiles()
-      : (await deps.meta.listAllFiles({ authed: true, includeTrashed: true })).filter((f) => !!f.deletedAt);
+    const trashed = await deps.meta.listTrashedFiles();
     const targets = filterIds ? trashed.filter((f) => filterIds.has(f.id)) : trashed;
     let purged = 0;
     let freedBytes = 0;
     for (const item of targets) {
-      await purgeFilePermanently(deps, item);
+      await purgeFilePermanently(deps, item, c);
       purged++;
       freedBytes += (item.size || 0);
     }

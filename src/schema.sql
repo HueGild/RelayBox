@@ -36,7 +36,7 @@ CREATE TABLE folders (
 );
 CREATE INDEX idx_folders_parent ON folders(parent_id);
 
--- Shares (file_id XOR folder_id; no independent expiry — a share follows its file)
+-- Shares (file_id XOR folder_id; v3.5.0 adds independent expires_at).
 -- v3.1: max_downloads (0 = unlimited) / used_downloads / pickup_code (5-char).
 CREATE TABLE shares (
   token TEXT PRIMARY KEY,
@@ -47,11 +47,13 @@ CREATE TABLE shares (
   max_downloads INTEGER NOT NULL DEFAULT 0,
   used_downloads INTEGER NOT NULL DEFAULT 0,
   pickup_code TEXT,
+  expires_at INTEGER,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX idx_shares_file ON shares(file_id);
 CREATE INDEX idx_shares_folder ON shares(folder_id);
 CREATE UNIQUE INDEX idx_shares_pickup_code ON shares(pickup_code);
+CREATE INDEX idx_shares_expires ON shares(expires_at);
 
 -- API Tokens (v3.1: geek one-click upload / later WebDAV reuse).
 -- Only the SHA-256 hash is stored; the plaintext token is shown once at creation.

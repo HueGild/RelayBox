@@ -342,9 +342,8 @@ export function registerMigrate(app) {
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
     const poolId = decodeURIComponent(c.req.param('id'));
     const includeTrashed = c.req.query('includeTrashed') === '1';
-    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed });
-    const matched = allFiles
-      .filter((f) => !isExpired(f) && (includeTrashed || !f.deletedAt) && poolIdOfItem(f) === poolId)
+    const poolFiles = await deps.meta.listFilesByPool(poolId, { includeTrashed });
+    const matched = poolFiles
       .map((f) => ({
         id: f.id,
         name: f.name,
@@ -418,12 +417,12 @@ export function registerMigrate(app) {
       if (sourcePoolId === poolIdOfTarget(target)) {
         return c.json({ ok: false, error: '源存储池和目标存储池不能相同' }, 400);
       }
-      const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed });
-      const matching = allFiles.filter(
-        (f) => !isExpired(f) && (includeTrashed || !f.deletedAt) && poolIdOfItem(f) === sourcePoolId,
-      );
-      candidates = matching.slice(0, limit);
-      remaining = Math.max(0, matching.length - candidates.length);
+      const [batchFiles, totalMatching] = await Promise.all([
+        deps.meta.listFilesByPool(sourcePoolId, { includeTrashed, limit }),
+        deps.meta.countFilesByPool(sourcePoolId, { includeTrashed }),
+      ]);
+      candidates = batchFiles;
+      remaining = Math.max(0, totalMatching - candidates.length);
     } else {
       return c.json({ ok: false, error: '请指定要迁移的文件列表（fileIds）或源存储池（sourcePoolId）' }, 400);
     }
@@ -454,8 +453,7 @@ export function registerMigrate(app) {
       }
     }
 
-    const allAfter = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
-    const summary = await buildPoolSummaries(deps, allAfter, { authed: true, includeAdminMeta: false });
+    const summary = await buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: false });
     return c.json({
       ok: true,
       targetPoolId: poolIdOfTarget(target),

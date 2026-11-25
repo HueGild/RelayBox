@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.4.6 UI r25 (2026-11-25 · 移动端抽屉收窄200px与两行头部/5大列表弹窗SWR无白屏秒开/桌面端顶栏平铺与左键长按拖拽排序/卡片弹窗关闭按钮归位右上角) -->
+<!-- RelayBox v3.5.0 UI r26 (2026-11-25 · 分享独立有效期/桌面端拖拽文件夹递归上传与卡片拖拽移动/轻量统计看板SWR秒开/大目录触底分页加载/上传前重复文件检测提示) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -921,6 +921,45 @@
   .quick-bar-grid > .pickup-card { flex-direction: row; align-items: center; }
   .quick-bar-grid:has(#uploadCard:not(.collapsed)) { grid-template-columns: 1fr; }
  }
+
+/* ===== v3.5.0 UI r26: 拖拽移动高亮、统计看板、分页触底条与重复文件提示 ===== */
+.drop-target-hover { outline: 2px dashed var(--accent) !important; outline-offset: -2px; background: rgba(37, 99, 235, 0.12) !important; transition: background .12s, outline-color .12s; }
+.crumb-wrap button.drop-target-hover { border-radius: 6px; padding: 2px 6px; }
+.card[draggable="true"], .file[draggable="true"] { cursor: grab; }
+.card.is-dragging, .file.is-dragging { opacity: 0.45; }
+.load-more-bar { display: none; align-items: center; justify-content: center; gap: 10px; padding: 14px 12px 6px; font-size: 12.5px; color: var(--muted); }
+.load-more-bar.show { display: flex; }
+.load-more-bar button { padding: 6px 14px; font-size: 12.5px; border-radius: 999px; }
+.stats-modal-card { max-width: 620px; width: 100%; }
+.stats-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+@media (max-width: 560px) { .stats-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stats-kpi { background: var(--surface-2, rgba(127,127,127,.07)); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+.stats-kpi-label { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+.stats-kpi-val { font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.2; }
+.stats-kpi-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.stats-sec { margin-bottom: 14px; }
+.stats-sec-title { font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+.stats-kind-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(127,127,127,.14); margin-bottom: 8px; }
+.stats-kind-seg { height: 100%; min-width: 3px; transition: width .25s ease; }
+.stats-kind-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 12px; color: var(--muted); }
+.stats-kind-dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-right: 5px; vertical-align: middle; }
+.stats-trend { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; align-items: end; height: 104px; padding: 8px 6px 2px; background: var(--surface-2, rgba(127,127,127,.05)); border: 1px solid var(--border); border-radius: 12px; }
+.stats-trend-col { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+.stats-trend-cnt { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats-trend-bar-wrap { width: 100%; max-width: 28px; flex: 1; display: flex; align-items: flex-end; }
+.stats-trend-bar { width: 100%; min-height: 3px; border-radius: 5px 5px 2px 2px; background: var(--accent); opacity: .88; transition: height .25s ease; }
+.stats-trend-day { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats-top-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+.stats-top-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 12.5px; }
+.stats-top-rank { width: 20px; height: 20px; border-radius: 999px; background: rgba(37,99,235,.12); color: var(--accent); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stats-top-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; }
+.stats-top-meta { font-size: 11.5px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.dup-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; margin: 10px 0; display: flex; flex-direction: column; gap: 6px; }
+.dup-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.dup-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.dup-item-meta { font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
+.share-exp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.share-exp-row input { width: 110px; padding: 6px 10px; border: 1px solid var(--input-border); border-radius: 9px; font-size: 13px; background: var(--input-bg); color: var(--text); }
 </style>
 </head>
 <body>
@@ -944,6 +983,7 @@
  <button class="icon-btn" id="themeBtn" type="button" title="主题：跟随系统（点击切换）" aria-label="切换主题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="copyFmtBtn" style="width:30px;height:30px;border-radius:999px" title="默认复制格式" aria-label="默认复制格式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="statsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="存储与访问统计看板" aria-label="存储与访问统计看板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
  <button class="icon-btn desk-only-btn" id="sharesMgrBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="分享管理中心" aria-label="分享管理中心"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
  <button class="icon-btn desk-only-btn" id="dropsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="文件收集箱" aria-label="文件收集箱"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="poolsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="存储池管理" aria-label="存储池管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></button>
@@ -1113,6 +1153,7 @@
  </div>
  <div class="crumbs" id="crumbs"></div>
  <div id="list"></div>
+ <div class="load-more-bar" id="loadMoreBar"><span id="loadMoreInfo"></span><button type="button" class="ghost" id="loadMoreBtn">加载更多</button></div>
  </div>
 </div>
 
@@ -1133,7 +1174,7 @@
 <div class="modal" id="moveModal"><div class="card" style="max-width:400px;width:100%"><span class="close" id="moveClose">×</span><div class="move-head"><div class="move-head-title" id="moveTitle">移动到…</div><button type="button" class="ghost move-new-toggle" id="moveNewFolderBtn" style="display:none">+ 新建文件夹</button></div><div class="move-new-box" id="moveNewFolderBox"><div class="form-field"><label>新文件夹名称 *</label><input type="text" id="moveNewFolderName" placeholder="输入文件夹名字" maxlength="80" autocomplete="off"></div><div class="form-field"><label>创建位置</label><select id="moveNewFolderParent"><option value="">根目录</option></select></div><div class="msg" id="moveNewFolderMsg" style="margin-top:0"></div><div class="move-new-acts"><button type="button" class="ghost" id="moveNewFolderCancel">取消</button><button type="button" class="ghost" id="moveNewFolderOnlyBtn">仅创建</button><button type="button" id="moveNewFolderGoBtn">创建并移入</button></div></div><div id="moveList"></div></div></div>
 <div class="modal" id="inputModal"><div class="card" style="max-width:360px;width:100%"><span class="close" id="inputClose">×</span><div style="font-size:15px;font-weight:600;margin-bottom:10px" id="inputTitle">输入</div><input type="text" id="inputField" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="inputCancel">取消</button><button id="inputOk">确定</button></div></div></div>
 <div class="modal" id="expireEditModal"><div class="card" style="max-width:360px;width:100%"><span class="close" id="expireEditClose">×</span><div style="font-size:15px;font-weight:600;margin-bottom:4px">修改有效期</div><div class="meta" id="expireEditName" style="margin-bottom:12px"></div><div id="expireEditOpts"></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="expireEditCancel">取消</button></div></div></div>
-<div class="modal" id="shareSettingsModal"><div class="card" style="max-width:400px;width:100%"><span class="close" id="shareSettingsClose">×</span><div style="font-size:15px;font-weight:600;margin-bottom:4px">分享设置</div><div class="meta" id="shareSettingsName" style="margin-bottom:12px"></div><label style="display:block;font-size:13px;margin-bottom:4px">提取码（留空 = 不设提取码）</label><input type="text" id="shareCodeInput" placeholder="如 1234" maxlength="32" style="width:100%;margin-bottom:12px"><label style="display:block;font-size:13px;margin-bottom:4px">最大下载次数（0 = 不限，1 = 阅后即焚）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="shareMaxDlInput" value="0" placeholder="0 = 不限" maxlength="6" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--input-border);border-radius:10px;font-size:14px;background:var(--input-bg);color:var(--text)"><div class="preset-row" id="shareMaxDlPresets"><button type="button" class="pill active" data-maxdl="0">不限</button><button type="button" class="pill" data-maxdl="1">1 次（阅后即焚）</button><button type="button" class="pill" data-maxdl="5">5 次</button><button type="button" class="pill" data-maxdl="10">10 次</button></div><label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;color:var(--muted)"><input type="checkbox" id="shareBurnCheck"> 阅后即焚（下载一次后链接作废）</label><div class="share-res" id="shareResultBox" style="display:none"><div class="share-res-code"><div><div class="meta" style="margin:0 0 4px">5 位短取件码</div><span class="pickup-badge" id="shareResPickup">-----</span></div><div class="meta" id="shareResQuota" style="text-align:right"></div></div><div class="share-res-url" id="shareResUrl"></div><div class="share-res-btns"><button type="button" class="ghost" id="shareCopyCodeBtn">复制取件码</button><button type="button" class="ghost" id="shareCopyUrlBtn">复制链接</button><button type="button" id="shareCopyPackBtn">复制分享文案</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="shareSettingsCancel">关闭</button><button id="shareSettingsOk">保存并复制链接</button></div></div></div>
+<div class="modal" id="shareSettingsModal"><div class="card" style="max-width:400px;width:100%"><span class="close" id="shareSettingsClose">×</span><div style="font-size:15px;font-weight:600;margin-bottom:4px">分享设置</div><div class="meta" id="shareSettingsName" style="margin-bottom:12px"></div><label style="display:block;font-size:13px;margin-bottom:4px">提取码（留空 = 不设提取码）</label><input type="text" id="shareCodeInput" placeholder="如 1234" maxlength="32" style="width:100%;margin-bottom:12px"><label style="display:block;font-size:13px;margin-bottom:4px">最大下载次数（0 = 不限，1 = 阅后即焚）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="shareMaxDlInput" value="0" placeholder="0 = 不限" maxlength="6" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--input-border);border-radius:10px;font-size:14px;background:var(--input-bg);color:var(--text)"><div class="preset-row" id="shareMaxDlPresets"><button type="button" class="pill active" data-maxdl="0">不限</button><button type="button" class="pill" data-maxdl="1">1 次（阅后即焚）</button><button type="button" class="pill" data-maxdl="5">5 次</button><button type="button" class="pill" data-maxdl="10">10 次</button></div><label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px;color:var(--muted)"><input type="checkbox" id="shareBurnCheck"> 阅后即焚（下载一次后链接作废）</label><label style="display:block;font-size:13px;margin-bottom:4px">分享链接有效期（独立于文件有效期）</label><div class="preset-row" id="shareExpPresets" style="margin-bottom:6px"><button type="button" class="pill active" data-exph="0">永久</button><button type="button" class="pill" data-exph="1">1 小时</button><button type="button" class="pill" data-exph="24">24 小时</button><button type="button" class="pill" data-exph="168">7 天</button><button type="button" class="pill" data-exph="720">30 天</button></div><div class="share-exp-row"><input type="number" id="shareExpCustom" min="0" max="8760" step="1" placeholder="自定义小时"><span class="meta" id="shareExpHint" style="margin:0">永久有效</span></div><div class="share-res" id="shareResultBox" style="display:none"><div class="share-res-code"><div><div class="meta" style="margin:0 0 4px">5 位短取件码</div><span class="pickup-badge" id="shareResPickup">-----</span></div><div class="meta" id="shareResQuota" style="text-align:right"></div></div><div class="share-res-url" id="shareResUrl"></div><div class="share-res-btns"><button type="button" class="ghost" id="shareCopyCodeBtn">复制取件码</button><button type="button" class="ghost" id="shareCopyUrlBtn">复制链接</button><button type="button" id="shareCopyPackBtn">复制分享文案</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="shareSettingsCancel">关闭</button><button id="shareSettingsOk">保存并复制链接</button></div></div></div>
 <div class="modal" id="downloadConfirmModal"><div class="card" style="max-width:360px;width:100%;text-align:center"><span class="close" id="downloadConfirmClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:10px">是否确认下载？</div><div id="downloadConfirmName" style="font-size:14px;word-break:break-all;margin-bottom:4px"></div><div class="meta" id="downloadConfirmSize" style="margin-bottom:16px"></div><button id="downloadConfirmOk" style="width:100%;padding:11px;font-size:15px">确定下载</button><button class="ghost" id="downloadConfirmCancel" style="width:100%;margin-top:8px">取消</button></div></div>
 <div class="modal" id="modal"><span class="close" id="modalClose">×</span><button class="pnav prev" id="modalPrev" aria-label="上一张">‹</button><button class="pnav next" id="modalNext" aria-label="下一张">›</button><div class="pcount" id="modalCount"></div><div id="modalBody"></div></div>
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
@@ -1145,6 +1186,8 @@
 <div class="modal" id="textEditModal"><div class="card code-modal-card"><span class="close" id="textEditClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:24px;margin-bottom:4px"><div style="font-size:15.5px;font-weight:700;word-break:break-all" id="textEditTitle">在线编辑</div><span class="pool-tag" id="textEditPoolTag"></span></div><div class="meta" style="margin-bottom:10px">支持直接修改并覆盖保存回原存储池（Tab 插入缩进，Ctrl/Cmd+S 快捷保存，单文件 ≤ 1MB）。</div><textarea id="textEditArea" class="code-editor-ta tall" placeholder="正在加载文件内容…" spellcheck="false"></textarea><div class="code-status-row"><span id="textEditStat">0 行 · 0 字符 · 0 B</span><span class="code-dirty-dot" id="textEditDirty">● 有未保存修改</span></div><div class="msg" id="textEditMsg" style="margin-top:6px"></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="textEditCopyBtn">复制全文</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="textEditCancelBtn">取消</button><button type="button" id="textEditSaveBtn">保存修改</button></div></div></div></div>
 <div class="modal" id="remoteFetchModal"><div class="card pool-modal-card"><span class="close" id="remoteFetchClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">URL 远程拉取转存</div><div class="meta" style="margin-bottom:12px">贴入直链，由服务端直接抓取文件并写入所选存储池与目录（支持自动识别文件名、防内网 SSRF，单文件 ≤ 50MB）。</div><div class="form-field"><label>文件直链 URL *</label><input type="text" id="rfUrl" placeholder="https://example.com/path/to/file.png" autocomplete="off" spellcheck="false"></div><div class="form-field" style="margin-top:8px"><label>自定义文件名（选填，留空自动识别）</label><input type="text" id="rfName" placeholder="如 banner.webp 或 资料.pdf" maxlength="120" autocomplete="off"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>目标存储池</label><select id="rfPool"></select></div><div class="form-field"><label>存入目录</label><select id="rfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="rfVis"><option value="private" selected>私密（仅管理员/分享可见）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="rfExpires"><option value="0" selected>永久有效</option><option value="24">24 小时</option><option value="168">7 天</option></select></div></div><div class="msg" id="rfMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="rfCancelBtn">取消</button><button type="button" id="rfGoBtn">开始拉取转存</button></div></div></div>
 <div class="modal" id="notifyModal"><div class="card pool-modal-card"><span class="close" id="notifyClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
+<div class="modal" id="statsModal"><div class="card stats-modal-card"><span class="close" id="statsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储与访问统计看板</div><button type="button" class="ghost" id="statsRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" id="statsGenTime" style="margin-bottom:12px">实时聚合统计（D1 原生 SQL）</div><div id="statsBody"><div class="empty" style="padding:24px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="statsDoneBtn">关闭</button></div></div></div>
+<div class="modal" id="dupCheckModal"><div class="card" style="max-width:440px;width:100%"><span class="close" id="dupCheckClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:4px">检测到重复文件</div><div class="meta" id="dupCheckSummary" style="margin-bottom:6px"></div><div class="dup-list" id="dupCheckList"></div><div class="row" style="justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:6px"><button type="button" class="ghost" id="dupHashBtn" style="font-size:12px;padding:6px 10px">SHA-256 校验</button><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="dupCancelBtn">取消</button><button type="button" class="ghost" id="dupUploadAllBtn">全部继续上传</button><button type="button" id="dupSkipBtn">跳过重复</button></div></div></div></div>
 <div class="modal" id="sharesMgrModal"><div class="card pool-modal-card"><span class="close" id="sharesMgrClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">分享管理中心</div><button type="button" class="ghost" id="sharesMgrRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" style="margin-bottom:10px">一屏管控全站文件与文件夹外链、提取码、剩余下载次数及 5 位取件码。</div><div class="sm-toolbar"><div class="sm-tabs" id="sharesMgrTabs"><button type="button" class="sm-tab active" data-filter="all">全部 <span id="smCntAll">0</span></button><button type="button" class="sm-tab" data-filter="active">活跃 <span id="smCntActive">0</span></button><button type="button" class="sm-tab" data-filter="inactive">已失效 <span id="smCntInactive">0</span></button></div><input type="text" class="sm-search" id="sharesMgrSearch" placeholder="搜索文件名或取件码…"></div><div class="pool-list" id="sharesMgrList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="sharesMgrDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="dropsModal"><div class="card pool-modal-card"><span class="close" id="dropsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">文件收集箱</div><button type="button" id="dropAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新建收集箱</button></div><div class="meta" style="margin-bottom:12px">生成反向收件链接发给他人，对方无需登录即可投递文件到指定目录，且彼此不可见已交文件。</div><div class="pool-list" id="dropListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="dropFormBox"><div style="font-size:13.5px;font-weight:600">新建文件收集箱</div><div class="form-grid2"><div class="form-field"><label>收集箱标题 *</label><input type="text" id="dfTitle" placeholder="如 作业提交 / 活动素材收集" maxlength="60"></div><div class="form-field"><label>文件存入目录</label><select id="dfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2"><div class="form-field"><label>提交口令（留空 = 免密）</label><input type="text" id="dfPassword" placeholder="可选，如 2026" maxlength="64" autocomplete="off"></div><div class="form-field"><label>最大收集份数（0 = 不限）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="dfMaxFiles" value="" placeholder="留空或 0 表示不限，如 30" maxlength="6" autocomplete="off"><div class="preset-row" id="dfMaxFilesPresets" style="margin:6px 0 0"><button type="button" class="pill active" data-dfmax="0">不限</button><button type="button" class="pill" data-dfmax="1">1 份</button><button type="button" class="pill" data-dfmax="10">10 份</button><button type="button" class="pill" data-dfmax="30">30 份</button><button type="button" class="pill" data-dfmax="50">50 份</button><button type="button" class="pill" data-dfmax="100">100 份</button></div></div></div><div class="form-grid2"><div class="form-field"><label>单文件上限</label><select id="dfMaxSize"><option value="10485760">10 MB</option><option value="52428800">50 MB</option><option value="104857600" selected>100 MB</option><option value="524288000">500 MB</option><option value="1073741824">1 GB</option></select></div><div class="form-field"><label>链接有效期</label><select id="dfExpires"><option value="24">24 小时</option><option value="72">3 天</option><option value="168" selected>7 天</option><option value="720">30 天</option><option value="0">永久有效</option></select></div></div><div class="form-field"><label>收到的文件默认可见性</label><select id="dfVis"><option value="private" selected>私密（推荐：仅管理员可见）</option><option value="public">公开（任何人可访问）</option></select></div><div class="msg" id="dfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="dfCancelBtn">取消</button><button type="button" id="dfCreateBtn">创建并复制链接</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="dropsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="poolsModal"><div class="card pool-modal-card"><span class="close" id="poolsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储池管理</div><button type="button" id="poolAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新增外部桶</button></div><div class="meta" style="margin-bottom:12px">支持内置 R2 与任意外部 Cloudflare R2 / S3 兼容桶（如亚太桶、B2、MinIO），新增即用无需重新部署。</div><div class="pool-list" id="poolListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="poolFormBox"><div style="font-size:13.5px;font-weight:600" id="poolFormTitle">新增外部存储池</div><input type="hidden" id="pfId"><div class="form-grid2"><div class="form-field"><label>显示名称 *</label><input type="text" id="pfName" placeholder="如 亚太 R2 桶" maxlength="40"></div><div class="form-field"><label>存储桶名 (Bucket) *</label><input type="text" id="pfBucket" placeholder="如 relaybox-apac" maxlength="100"></div></div><div class="form-field"><label>S3 Endpoint *</label><input type="text" id="pfEndpoint" placeholder="https://&lt;AccountID&gt;.r2.cloudflarestorage.com"></div><div class="form-field"><label>公开访问域名（选填）</label><input type="text" id="pfPublicDomain" placeholder="https://cdn.example.com（留空走默认中转/预签名）"><div class="meta" style="margin-top:3px">配置后，公开图片/视频在线预览将优先 302 直出该域名（省 Worker 流量）；私密文件与强制下载仍走原鉴权链路。</div></div><div class="form-grid2"><div class="form-field"><label>Access Key ID *</label><input type="text" id="pfAk" placeholder="S3 Access Key ID" autocomplete="off"></div><div class="form-field"><label>Secret Access Key <span id="pfSkHint">*</span></label><input type="password" id="pfSk" placeholder="加密存库，绝不回传明文" autocomplete="new-password"></div></div><div class="form-grid2"><div class="form-field"><label>Region（R2 填 auto）</label><input type="text" id="pfRegion" value="auto" placeholder="auto"></div><div class="form-field"><label>显示配额（GB）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="pfQuotaGb" value="10" placeholder="如 10" maxlength="6" autocomplete="off"></div></div><div class="form-grid2"><div class="form-field"><label>传输模式</label><select id="pfMode"><option value="proxy">Worker 中转（校园网/图床推荐）</option><option value="presign">预签名直传（大文件模式）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="pfDefault" style="width:auto"> 设为默认上传池</label></div></div><div class="msg" id="pfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="pfCancelBtn">取消</button><button type="button" class="ghost" id="pfTestBtn">测试连接</button><button type="button" id="pfSaveBtn">保存存储池</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="poolsDoneBtn">关闭</button></div></div></div>
@@ -1155,6 +1198,7 @@
   <div class="top-more-menu nav-drawer" id="topMoreMenu" role="dialog" aria-label="控制台与设置">
    <div class="drawer-head"><span class="drawer-title">控制台与设置</span><div class="drawer-head-acts"><button type="button" class="drawer-side-btn" id="drawerSideBtn" title="切换左侧/右侧滑出">靠右</button><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div></div>
    <div class="drawer-sec" id="drawerSecAdmin" style="display:none">常用管理</div>
+   <button type="button" id="mobStatsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 统计看板</button>
    <button type="button" id="mobSharesMgrBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>分享管理中心</button>
    <button type="button" id="mobDropsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> 文件收集箱</button>
    <button type="button" id="mobTrashBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 回收站 <span class="mob-trash-badge" id="mobTrashBadge"></span></button>
@@ -2562,10 +2606,20 @@ function dirDataSig(d) {
  const ps = (d.pools || []).map(p => `${p.id}:${p.usedBytes || 0}:${p.transferMode || ''}:${p.enabled !== false}`).join(',');
  return `${d.folderId || ''}#${d.trashCount || 0}#${d.r2TransferMode || ''}#${fs}#${ds}#${ps}`;
 }
+const DIR_PAGE_SIZE = 60;
+let dirTotalFiles = 0;
+let dirHasMore = false;
+let dirLoadingMore = false;
+let loadMoreObserver = null;
+
 function fetchDirData(folderId) {
  const key = dirKeyOf(folderId);
  if (inflightDirReqs.has(key)) return inflightDirReqs.get(key);
- const req = fetch('/api/files' + (folderId ? '?folderId=' + encodeURIComponent(folderId) : ''))
+ const qs = new URLSearchParams();
+ if (folderId) qs.set('folderId', folderId);
+ qs.set('limit', String(DIR_PAGE_SIZE));
+ qs.set('offset', '0');
+ const req = fetch('/api/files?' + qs.toString())
   .then(r => r.json())
   .then(d => {
    if (d && d.ok !== false) {
@@ -2578,6 +2632,54 @@ function fetchDirData(folderId) {
  inflightDirReqs.set(key, req);
  return req;
 }
+function updateLoadMoreBar() {
+ const bar = $('loadMoreBar');
+ if (!bar) return;
+ const show = !!(dirHasMore && searchResults === null);
+ bar.classList.toggle('show', show);
+ if (show) {
+  if ($('loadMoreInfo')) $('loadMoreInfo').textContent = `已加载 ${allFiles.length} / ${dirTotalFiles} 个文件`;
+  if ($('loadMoreBtn')) {
+   $('loadMoreBtn').disabled = dirLoadingMore;
+   $('loadMoreBtn').textContent = dirLoadingMore ? '加载中…' : '加载更多';
+  }
+ }
+}
+async function loadMoreFiles() {
+ if (!dirHasMore || dirLoadingMore || searchResults !== null) return;
+ dirLoadingMore = true;
+ updateLoadMoreBar();
+ const targetFolderId = currentFolderId;
+ const seq = loadListSeq;
+ try {
+  const qs = new URLSearchParams();
+  if (targetFolderId) qs.set('folderId', targetFolderId);
+  qs.set('limit', String(DIR_PAGE_SIZE));
+  qs.set('offset', String(allFiles.length));
+  const r = await fetch('/api/files?' + qs.toString());
+  const d = await r.json();
+  if (seq !== loadListSeq || !d || d.ok === false) return;
+  const seen = new Set(allFiles.map(x => x.id));
+  for (const f of (d.files || [])) {
+   if (!seen.has(f.id)) { allFiles.push(f); seen.add(f.id); }
+  }
+  dirTotalFiles = Number(d.totalFiles !== undefined ? d.totalFiles : allFiles.length);
+  dirHasMore = !!d.hasMore;
+  renderList();
+ } catch {} finally {
+  dirLoadingMore = false;
+  updateLoadMoreBar();
+ }
+}
+if ($('loadMoreBtn')) $('loadMoreBtn').onclick = loadMoreFiles;
+if ('IntersectionObserver' in window && $('loadMoreBar')) {
+ loadMoreObserver = new IntersectionObserver((entries) => {
+  if (entries.some(e => e.isIntersecting) && dirHasMore && !dirLoadingMore && searchResults === null) {
+   loadMoreFiles();
+  }
+ }, { rootMargin: '240px' });
+ loadMoreObserver.observe($('loadMoreBar'));
+}
 function prefetchFolder(folderId) {
  const key = dirKeyOf(folderId);
  const cached = dirCache.get(key);
@@ -2588,6 +2690,9 @@ function prefetchFolder(folderId) {
 function applyDirData(d) {
  const requestedFolderId = currentFolderId;
  allFiles = d.files || [];
+ dirTotalFiles = Number(d.totalFiles !== undefined ? d.totalFiles : allFiles.length);
+ dirHasMore = !!d.hasMore;
+ dirLoadingMore = false;
  currentFolders = d.folders || [];
  currentPath = d.path || [{ id: null, name: '根目录' }];
  currentFolderId = (currentPath.length > 1) ? currentPath[currentPath.length - 1].id : null;
@@ -2634,6 +2739,8 @@ function applyDirData(d) {
  updateTrashBadge(authed ? Number(d.trashCount || 0) : 0);
  if ($('notifyBtn')) $('notifyBtn').style.display = authed ? '' : 'none';
  if ($('mobNotifyBtn')) $('mobNotifyBtn').style.display = authed ? 'flex' : 'none';
+ if ($('statsBtn')) $('statsBtn').style.display = authed ? '' : 'none';
+ if ($('mobStatsBtn')) $('mobStatsBtn').style.display = authed ? 'flex' : 'none';
  if ($('sharesMgrBtn')) $('sharesMgrBtn').style.display = authed ? '' : 'none';
  if ($('drawerSecAdmin')) $('drawerSecAdmin').style.display = authed ? '' : 'none';
  if ($('drawerSecSystem')) $('drawerSecSystem').style.display = authed ? '' : 'none';
@@ -2650,7 +2757,7 @@ function applyDirData(d) {
  if ($('transferModeBtn')) $('transferModeBtn').style.display = (authed && r2ProxyAvailable) ? '' : 'none';
  if ($('mobTransferModeBtn')) $('mobTransferModeBtn').style.display = (authed && r2ProxyAvailable) ? 'flex' : 'none';
  updateUploadDestUI();
- let quotaHtml = `<div>${currentFolders.length ? `共 ${currentFolders.length} 个文件夹 · ` : '共 '}${allFiles.length} 个文件</div>`;
+ let quotaHtml = `<div>${currentFolders.length ? `共 ${currentFolders.length} 个文件夹 · ` : '共 '}${dirTotalFiles || allFiles.length} 个文件</div>`;
  if (authed) {
   quotaHtml += `<div class="quota">`;
   if (allPools.length) {
@@ -2780,7 +2887,7 @@ function renderList() {
  const last = i === currentPath.length - 1;
  const nameHtml = last
  ? `<span class="cur">${escapeHtml(p.name)}</span>`
- : `<button onpointerdown="prefetchFolder(${p.id ? `'${p.id}'` : 'null'})" onclick="openFolder(${p.id ? `'${p.id}'` : 'null'})">${escapeHtml(p.name)}</button>`;
+ : `<button data-crumb-folder="${p.id || ''}" ondragover="folderDropOver(event)" ondragleave="folderDropLeave(event)" ondrop="folderDropMove(event, ${p.id ? `'${p.id}'` : 'null'}, '${escapeHtml(p.name)}')" onpointerdown="prefetchFolder(${p.id ? `'${p.id}'` : 'null'})" onclick="openFolder(${p.id ? `'${p.id}'` : 'null'})">${escapeHtml(p.name)}</button>`;
  return (i ? '<span class="sep">/</span>' : '') + `<span class="crumb-wrap">${nameHtml}<button class="crumb-drop" title="同级文件夹" aria-label="同级文件夹" onclick="toggleCrumbDrop(event, ${i})">${chevHtml()}</button><span class="crumb-menu" id="crumbMenu-${i}" style="display:none"></span></span>`;
  }).join('');
  }
@@ -2808,7 +2915,7 @@ function renderList() {
  };
  if (viewMode === 'grid') {
  const folderSection = folders.length ? '<div class="folder-grid">' + folders.map(fd => `
- <div class="card folder-card" data-folder-id="${fd.id}" onpointerdown="prefetchFolder('${fd.id}')" onclick="folderClick(event, '${fd.id}')" ontouchstart="cardTouchStart(event, '${fd.id}', 'folder')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${fd.id}', 'folder')">
+ <div class="card folder-card" data-folder-id="${fd.id}" ondragover="folderDropOver(event)" ondragleave="folderDropLeave(event)" ondrop="folderDropMove(event, '${fd.id}', '${escapeHtml(fd.name)}')" onpointerdown="prefetchFolder('${fd.id}')" onclick="folderClick(event, '${fd.id}')" ontouchstart="cardTouchStart(event, '${fd.id}', 'folder')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${fd.id}', 'folder')">
  <div class="folder-ico-box">${ICONS.folderSolid}</div>
  <div class="folder-body">
  <div class="cname" title="${escapeHtml(fd.name)}">${escapeHtml(fd.name)}</div>
@@ -2820,7 +2927,7 @@ function renderList() {
  </div>` : ''}
  </div>`).join('') + '</div>' : '';
  const fileSection = list.length ? '<div class="grid file-grid">' + list.map(f => `
- <div class="card${selected.has(f.id) ? ' is-selected' : ''}" data-file-id="${f.id}" ontouchstart="cardTouchStart(event, '${f.id}', 'file')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${f.id}', 'file')">
+ <div class="card${selected.has(f.id) ? ' is-selected' : ''}" data-file-id="${f.id}" ${authed ? `draggable="true" ondragstart="fileCardDragStart(event, '${f.id}')" ondragend="fileCardDragEnd(event)"` : ''} ontouchstart="cardTouchStart(event, '${f.id}', 'file')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${f.id}', 'file')">
  <div class="thumb" onclick="thumbClick(event, '${f.id}')">
  ${authed ? `<input type="checkbox" class="sel" title="选择" aria-label="选择" onclick="event.stopPropagation()" onchange="toggleSelect('${f.id}', this.checked)" ${selected.has(f.id) ? 'checked' : ''}>` : ''}
  <span class="ctag">${storageBadge(f)}${visBadge(f)}</span>
@@ -2841,10 +2948,11 @@ function renderList() {
  el.innerHTML = folderSection + fileSection;
  syncSelectionClasses();
  updateBulkbar();
+ updateLoadMoreBar();
  return;
  }
  el.innerHTML = '<div class="list-head"><span class="lh-name">名称与信息</span><span class="lh-act">快捷操作</span></div>' + folders.map(fd => `
- <div class="file folder" data-folder-id="${fd.id}" onpointerdown="prefetchFolder('${fd.id}')" onclick="folderClick(event, '${fd.id}')" ontouchstart="cardTouchStart(event, '${fd.id}', 'folder')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${fd.id}', 'folder')">
+ <div class="file folder" data-folder-id="${fd.id}" ondragover="folderDropOver(event)" ondragleave="folderDropLeave(event)" ondrop="folderDropMove(event, '${fd.id}', '${escapeHtml(fd.name)}')" onpointerdown="prefetchFolder('${fd.id}')" onclick="folderClick(event, '${fd.id}')" ontouchstart="cardTouchStart(event, '${fd.id}', 'folder')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${fd.id}', 'folder')">
  <div class="list-thumb" style="color:var(--folder-icon);background:var(--folder-tint)">${ICONS.folderSolid}</div>
  <div class="info">
  <div class="name">${escapeHtml(fd.name)}</div>
@@ -2855,7 +2963,7 @@ function renderList() {
  <button class="icon-btn" title="更多操作" aria-label="更多操作" onclick="event.stopPropagation(); openSheet('${fd.id}', 'folder')">${ICONS.more}</button>
  </div>` : ''}
  </div>`).join('') + list.map(f => `
- <div class="file${selected.has(f.id) ? ' is-selected' : ''}" data-file-id="${f.id}" ontouchstart="cardTouchStart(event, '${f.id}', 'file')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${f.id}', 'file')">
+ <div class="file${selected.has(f.id) ? ' is-selected' : ''}" data-file-id="${f.id}" ${authed ? `draggable="true" ondragstart="fileCardDragStart(event, '${f.id}')" ondragend="fileCardDragEnd(event)"` : ''} ontouchstart="cardTouchStart(event, '${f.id}', 'file')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="openCtxMenu(event, '${f.id}', 'file')">
  ${authed ? `<input type="checkbox" class="sel" title="选择" aria-label="选择" onchange="toggleSelect('${f.id}', this.checked)" ${selected.has(f.id) ? 'checked' : ''}>` : ''}
  <div class="list-thumb" onclick="thumbClick(event, '${f.id}')">${renderMediaThumb(f, true)}</div>
  <div class="info">
@@ -2872,6 +2980,7 @@ function renderList() {
  </div>`).join('');
  syncSelectionClasses();
  updateBulkbar();
+ updateLoadMoreBar();
 }
 function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
@@ -3545,7 +3654,9 @@ function renderShareResultBox(data) {
  $('shareResPickup').textContent = data.pickupCode || '未生成';
  const md = Number(data.maxDownloads || (data.burn ? 1 : 0));
  const ud = Number(data.usedDownloads || 0);
- $('shareResQuota').textContent = md > 0 ? `剩余 ${Math.max(0, md - ud)} / ${md} 次` : '下载次数不限';
+ const qTxt = md > 0 ? `剩余 ${Math.max(0, md - ud)} / ${md} 次` : '下载次数不限';
+ const eTxt = data.expiresAt ? (' · ' + expiryText(data.expiresAt)) : ' · 永久有效';
+ $('shareResQuota').textContent = qTxt + eTxt;
  $('shareResUrl').textContent = fullUrl;
  $('shareCopyCodeBtn').style.display = data.pickupCode ? '' : 'none';
  box.style.display = 'block';
@@ -3563,6 +3674,7 @@ $('shareCopyPackBtn').onclick = () => {
  const lines = ['文件：' + $('shareSettingsName').textContent, '链接：' + location.origin + '/s/' + shareResData.token];
  if (shareResData.pickupCode) lines.push('取件码：' + shareResData.pickupCode);
  if (shareResData.code) lines.push('提取码：' + shareResData.code);
+ if (shareResData.expiresAt) lines.push('有效期：' + expiryText(shareResData.expiresAt));
  copyText(lines.join('\n'), '分享文案已复制');
 };
 
@@ -3574,6 +3686,7 @@ async function openShareSettings(id, kind, fallbackName) {
  $('shareSettingsName').textContent = name;
  $('shareCodeInput').value = '';
  syncMaxDlUI(0);
+ syncShareExpUI(0, false);
  renderShareResultBox(null);
  try {
  const r = await fetch(`/api/${isFolder ? 'folders' : 'files'}/${id}/share`);
@@ -3582,6 +3695,7 @@ async function openShareSettings(id, kind, fallbackName) {
  $('shareCodeInput').value = d.share.code || '';
  const md = d.share.maxDownloads !== undefined ? Number(d.share.maxDownloads) : (d.share.burn ? 1 : 0);
  syncMaxDlUI(md);
+ syncShareExpFromIso(d.share.expiresAt || null);
  renderShareResultBox(d.share);
  }
  } catch {}
@@ -3601,12 +3715,15 @@ $('shareSettingsOk').onclick = async () => {
  const code = $('shareCodeInput').value.trim();
  const maxDownloads = Math.max(0, parseInt($('shareMaxDlInput').value, 10) || 0);
  const burn = maxDownloads === 1;
+ const payload = { code, burn, maxDownloads };
+ if (shareExpDirty) payload.expiresHours = shareExpHours;
  const r = await fetch(`/api/${isFolder ? 'folders' : 'files'}/${id}/share`, {
  method: 'POST', headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ code, burn, maxDownloads }),
+ body: JSON.stringify(payload),
  });
  const d = await r.json();
  if (!d.ok) { setMsg('生成分享链接失败：' + (d.error || ''), 'err'); return; }
+ shareExpDirty = false;
  const info = {
  token: d.token,
  code: d.code !== undefined ? d.code : code,
@@ -3614,6 +3731,7 @@ $('shareSettingsOk').onclick = async () => {
  pickupCode: d.pickupCode || '',
  maxDownloads: d.maxDownloads !== undefined ? d.maxDownloads : maxDownloads,
  usedDownloads: d.usedDownloads || 0,
+ expiresAt: d.expiresAt || null,
  };
  renderShareResultBox(info);
  const tip = '分享链接已复制' + (info.pickupCode ? ' · 取件码 ' + info.pickupCode : '') + (code ? '（提取码 ' + code + '）' : '') + (maxDownloads === 1 ? '（阅后即焚）' : maxDownloads > 1 ? `（限 ${maxDownloads} 次）` : '');
@@ -3761,13 +3879,25 @@ drop.onclick = () => fi.click();
 fi.onchange = () => { if (fi.files.length) pickFiles([...fi.files]); };
 ['dragover', 'dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
-drop.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); dragDepth = 0; $('globalDrop').classList.remove('show'); const fs = [...e.dataTransfer.files]; if (fs.length) pickFiles(fs); });
+drop.addEventListener('drop', async e => {
+ e.preventDefault(); e.stopPropagation(); dragDepth = 0; $('globalDrop').classList.remove('show');
+ if (draggingFileIds.length) return;
+ const dropped = await collectDroppedItems(e.dataTransfer);
+ if (!dropped.files.length) return;
+ if (dropped.hasDirs) {
+  enqueueFolderFiles(dropped.files);
+ } else {
+  pickFiles(dropped.files);
+ }
+});
 $('globalDrop').onclick = () => { dragDepth = 0; $('globalDrop').classList.remove('show'); };
 window.addEventListener('dragend', () => { dragDepth = 0; $('globalDrop').classList.remove('show'); });
 
 // 全屏拖拽投放
 let dragDepth = 0;
+let draggingFileIds = [];
 function hasDragFiles(e) {
+ if (draggingFileIds.length) return false;
  return !!(e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files'));
 }
 window.addEventListener('dragenter', (e) => {
@@ -3785,20 +3915,25 @@ window.addEventListener('dragleave', (e) => {
  dragDepth = Math.max(0, dragDepth - 1);
  if (dragDepth === 0) $('globalDrop').classList.remove('show');
 });
-window.addEventListener('drop', (e) => {
+window.addEventListener('drop', async (e) => {
  if (!dragDepth && !$('globalDrop').classList.contains('show')) return;
  e.preventDefault();
  dragDepth = 0;
  $('globalDrop').classList.remove('show');
+ if (draggingFileIds.length) return;
  if ($('shareView').style.display === 'block' || $('dropView').style.display === 'block') return;
- const fs = [...(e.dataTransfer ? e.dataTransfer.files : [])];
- if (!fs.length) return;
+ const dropped = await collectDroppedItems(e.dataTransfer);
+ if (!dropped.files.length) return;
+ if (dropped.hasDirs) {
+  enqueueFolderFiles(dropped.files);
+  return;
+ }
  if (authed || $('password').value.trim()) {
- enqueueFiles(fs);
+  enqueueFiles(dropped.files);
  } else {
- setUploadCollapsed(false);
- pickFiles(fs);
- setMsg('已选文件，请先填上传密码再点开始上传', 'err');
+  setUploadCollapsed(false);
+  pickFiles(dropped.files);
+  setMsg('已选文件，请先填上传密码再点开始上传', 'err');
  }
 });
 
@@ -3882,21 +4017,28 @@ function pickFiles(files) {
  $('uploadBtn').disabled = false;
  setMsg('');
 }
-function enqueueFiles(files) {
- if (!authed && !$('password').value.trim()) { setMsg('请先填上传密码', 'err'); return false; }
- const valid = filterByMaxSize(files);
- if (!valid.length) return false;
+function enqueueFilesDirect(valid) {
+ if (!valid || !valid.length) return false;
  setUploadCollapsed(false);
  const visibility = document.querySelector('input[name=vis]:checked').value;
  const expires = expireHours;
  for (const f of valid) {
- const job = { jid: ++jobSeq, file: f, visibility, expires, status: 'pending', pct: 0, canceled: false, abortFn: null };
- uploadQueue.push(job);
- queueDisplay.push(job);
+  const job = { jid: ++jobSeq, file: f, visibility, expires, status: 'pending', pct: 0, canceled: false, abortFn: null };
+  uploadQueue.push(job);
+  queueDisplay.push(job);
  }
  renderUploadQueue();
  processQueue();
  return true;
+}
+function enqueueFiles(files, skipDupCheck) {
+ if (!authed && !$('password').value.trim()) { setMsg('请先填上传密码', 'err'); return false; }
+ const valid = filterByMaxSize(files);
+ if (!valid.length) return false;
+ if (!skipDupCheck && checkUploadDuplicates(valid, (chosen) => { enqueueFilesDirect(chosen); })) {
+  return true;
+ }
+ return enqueueFilesDirect(valid);
 }
 
 function normalizeRelPath(p) {
@@ -3951,7 +4093,7 @@ async function enqueueFolderFiles(files) {
  return parentId;
  };
  for (const f of valid) {
- const folderId = await resolveDir(relDirOf(f.webkitRelativePath || f.name));
+ const folderId = await resolveDir(relDirOf(f._relPath || f.webkitRelativePath || f.name));
  if (folderId === false) return;
  const job = { jid: ++jobSeq, file: f, visibility, expires, folderId, status: 'pending', pct: 0, canceled: false, abortFn: null };
  uploadQueue.push(job);
@@ -7268,7 +7410,7 @@ async function loadAdminShares(silent) {
 function shareStatusBadge(status) {
  if (status === 'active') return '<span class="sm-badge ok">活跃</span>';
  if (status === 'exhausted') return '<span class="sm-badge warn">次数用尽</span>';
- if (status === 'expired') return '<span class="sm-badge err">文件已过期</span>';
+ if (status === 'expired') return '<span class="sm-badge err">已过期</span>';
  return '<span class="sm-badge err">目标已删除</span>';
 }
 function buildShareCopyBundle(s) {
@@ -7277,6 +7419,7 @@ function buildShareCopyBundle(s) {
  if (s.pickupCode) parts.push(`取件码：${s.pickupCode}`);
  if (s.code) parts.push(`提取码：${s.code}`);
  if (s.maxDownloads > 0) parts.push(`剩余次数：${s.remainingDownloads} / ${s.maxDownloads}`);
+ if (s.expiresAt) parts.push(`链接有效期：${expiryText(s.expiresAt)}`);
  return parts.join('\n');
 }
 function renderAdminShares() {
@@ -7314,6 +7457,7 @@ function renderAdminShares() {
     ${s.pickupCode ? `<span class="sm-badge code" title="点击复制取件码" onclick="copyText('${escapeHtml(s.pickupCode)}','取件码已复制')">取件码 ${escapeHtml(s.pickupCode)}</span>` : ''}
     ${s.code ? `<span class="sm-badge">提取码 ${escapeHtml(s.code)}</span>` : '<span class="sm-badge">免提取码</span>'}
     <span class="sm-badge${s.maxDownloads > 0 && s.remainingDownloads <= 1 ? ' warn' : ''}">${escapeHtml(limitLabel)}</span>
+    ${s.expiresAt ? `<span class="sm-badge${new Date(s.expiresAt).getTime() <= Date.now() ? ' err' : (new Date(s.expiresAt).getTime() - Date.now() <= 86400000 ? ' warn' : '')}">${escapeHtml(expiryText(s.expiresAt))}</span>` : '<span class="sm-badge">永久有效</span>'}
     ${s.createdAt ? `<span class="sm-badge">${fmtDate(s.createdAt)}</span>` : ''}
    </div>
    <div class="sm-item-actions">
@@ -7482,6 +7626,347 @@ loadDropView().then(async (isDrop) => {
   loadAnnouncement();
  }
 });
+
+// ===== v3.5.0 UI r26: 分享有效期控制、拖拽递归上传、卡片拖拽移动、统计看板 SWR、上传前重复检测 =====
+let shareExpHours = 0;
+let shareExpDirty = false;
+function syncShareExpUI(hours, markDirty = true) {
+ const h = Math.max(0, Math.min(8760, Number(hours) || 0));
+ shareExpHours = h;
+ if (markDirty) shareExpDirty = true;
+ const custom = $('shareExpCustom');
+ if (custom) custom.value = h > 0 ? String(h) : '';
+ document.querySelectorAll('#shareExpPresets button').forEach(b => {
+  b.classList.toggle('active', Number(b.dataset.exph) === h);
+ });
+ if ($('shareExpHint')) {
+  $('shareExpHint').textContent = h === 0 ? '永久有效' : (h >= 24 && h % 24 === 0 ? `${h / 24} 天后过期` : `${h} 小时后过期`);
+ }
+}
+function syncShareExpFromIso(expiresAt) {
+ shareExpDirty = false;
+ shareExpHours = 0;
+ const custom = $('shareExpCustom');
+ if (custom) custom.value = '';
+ document.querySelectorAll('#shareExpPresets button').forEach(b => {
+  b.classList.toggle('active', !expiresAt && Number(b.dataset.exph) === 0);
+ });
+ if ($('shareExpHint')) {
+  $('shareExpHint').textContent = expiresAt ? ('当前：' + expiryText(expiresAt)) : '永久有效';
+ }
+}
+document.querySelectorAll('#shareExpPresets button').forEach(b => {
+ b.onclick = () => syncShareExpUI(Number(b.dataset.exph || 0), true);
+});
+if ($('shareExpCustom')) {
+ $('shareExpCustom').oninput = () => {
+  const raw = $('shareExpCustom').value.trim();
+  syncShareExpUI(raw ? Number(raw) : 0, true);
+ };
+}
+
+// ---- #4 桌面端拖拽文件夹递归扫描 (webkitGetAsEntry) ----
+function readAllDirEntries(dirReader) {
+ return new Promise((resolve) => {
+  const out = [];
+  const step = () => {
+   dirReader.readEntries((batch) => {
+    if (!batch || !batch.length) return resolve(out);
+    out.push(...batch);
+    step();
+   }, () => resolve(out));
+  };
+  step();
+ });
+}
+async function walkFileEntry(entry, prefix, out) {
+ if (!entry) return;
+ if (entry.isFile) {
+  await new Promise((resolve) => {
+   entry.file((file) => {
+    try { Object.defineProperty(file, '_relPath', { value: prefix + file.name, configurable: true }); }
+    catch { file._relPath = prefix + file.name; }
+    out.push(file);
+    resolve();
+   }, () => resolve());
+  });
+ } else if (entry.isDirectory) {
+  const children = await readAllDirEntries(entry.createReader());
+  for (const child of children) {
+   await walkFileEntry(child, prefix + entry.name + '/', out);
+  }
+ }
+}
+async function collectDroppedItems(dt) {
+ if (!dt) return { hasDirs: false, files: [] };
+ const items = dt.items ? [...dt.items] : [];
+ const entries = [];
+ let hasDirs = false;
+ for (const it of items) {
+  if (typeof it.webkitGetAsEntry === 'function') {
+   const en = it.webkitGetAsEntry();
+   if (en) {
+    entries.push(en);
+    if (en.isDirectory) hasDirs = true;
+   }
+  }
+ }
+ if (!hasDirs) {
+  return { hasDirs: false, files: [...(dt.files || [])] };
+ }
+ const files = [];
+ for (const en of entries) {
+  await walkFileEntry(en, '', files);
+ }
+ return { hasDirs: true, files };
+}
+
+// ---- #4 拖拽文件卡片到文件夹横条 / 面包屑直接移动 ----
+function fileCardDragStart(e, fileId) {
+ if (!authed) { e.preventDefault(); return; }
+ draggingFileIds = (selected.has(fileId) && selected.size > 1) ? [...selected] : [fileId];
+ try {
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', draggingFileIds.join(','));
+ } catch {}
+ if (e.currentTarget) e.currentTarget.classList.add('is-dragging');
+}
+function fileCardDragEnd(e) {
+ if (e.currentTarget) e.currentTarget.classList.remove('is-dragging');
+ draggingFileIds = [];
+ document.querySelectorAll('.drop-target-hover').forEach(el => el.classList.remove('drop-target-hover'));
+}
+function folderDropOver(e) {
+ if (!authed || !draggingFileIds.length) return;
+ e.preventDefault();
+ try { e.dataTransfer.dropEffect = 'move'; } catch {}
+ if (e.currentTarget) e.currentTarget.classList.add('drop-target-hover');
+}
+function folderDropLeave(e) {
+ if (e.currentTarget) e.currentTarget.classList.remove('drop-target-hover');
+}
+async function folderDropMove(e, targetFolderId, targetName) {
+ if (e.currentTarget) e.currentTarget.classList.remove('drop-target-hover');
+ if (!authed || !draggingFileIds.length) return;
+ e.preventDefault();
+ e.stopPropagation();
+ const ids = [...draggingFileIds];
+ draggingFileIds = [];
+ const normTarget = targetFolderId || null;
+ if (normTarget === (currentFolderId || null)) {
+  showToast('文件已在当前目录', '');
+  return;
+ }
+ try {
+  let ok = false, errMsg = '';
+  if (ids.length === 1) {
+   const r = await fetch('/api/files/' + encodeURIComponent(ids[0]) + '/move', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folderId: normTarget }),
+   });
+   const d = await r.json().catch(() => ({}));
+   ok = !!(r.ok && d.ok); errMsg = d.error || '';
+  } else {
+   const r = await fetch('/api/files/batch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'move', ids, folderId: normTarget }),
+   });
+   const d = await r.json().catch(() => ({}));
+   ok = !!(r.ok && d.ok); errMsg = d.error || '';
+  }
+  if (!ok) { showToast('移动失败：' + (errMsg || '请稍后重试'), 'err'); return; }
+  ids.forEach(id => selected.delete(id));
+  showToast(`已移动 ${ids.length} 个文件到「${targetName || '根目录'}」`, 'ok');
+  loadList();
+ } catch {
+  showToast('移动失败：网络错误', 'err');
+ }
+}
+
+// ---- #5 轻量存储与访问统计看板（SWR 秒开） ----
+let statsCacheData = null;
+const KIND_META = {
+ image: { label: '图片', color: '#2563EB' },
+ video: { label: '视频', color: '#7C3AED' },
+ audio: { label: '音频', color: '#059669' },
+ file:  { label: '文档与其他', color: '#D97706' },
+};
+function renderStatsModal(d) {
+ const body = $('statsBody');
+ if (!body || !d) return;
+ const ov = d.overview || {};
+ if ($('statsGenTime') && d.generatedAt) {
+  $('statsGenTime').textContent = '统计时间：' + fmtDate(d.generatedAt) + '（D1 原生 SQL 实时聚合）';
+ }
+ const byKind = Array.isArray(d.byKind) ? d.byKind : [];
+ const totalBytes = ov.totalBytes || 0;
+ const kindBar = byKind.length
+  ? byKind.map(k => {
+    const m = KIND_META[k.kind] || { label: k.kind, color: '#64748B' };
+    const w = totalBytes > 0 ? Math.max(2, k.pctBytes || 0) : 25;
+    return `<div class="stats-kind-seg" style="width:${w}%;background:${m.color}" title="${escapeHtml(m.label)}：${k.count} 个（${fmtSize(k.bytes)}，${k.pctBytes}%）"></div>`;
+   }).join('')
+  : '<div class="stats-kind-seg" style="width:100%;background:rgba(127,127,127,.2)"></div>';
+ const kindLegend = byKind.length
+  ? byKind.map(k => {
+    const m = KIND_META[k.kind] || { label: k.kind, color: '#64748B' };
+    return `<span><i class="stats-kind-dot" style="background:${m.color}"></i>${escapeHtml(m.label)} ${k.count} 个 · ${fmtSize(k.bytes)} (${k.pctBytes}%)</span>`;
+   }).join('')
+  : '<span>暂无文件数据</span>';
+
+ const trend = Array.isArray(d.uploadTrend7d) ? d.uploadTrend7d : [];
+ const maxCnt = Math.max(1, ...trend.map(x => x.count || 0));
+ const trendHtml = trend.map(x => {
+  const hPct = x.count > 0 ? Math.max(10, Math.round((x.count / maxCnt) * 100)) : 4;
+  const shortDay = String(x.day || '').slice(5);
+  return `<div class="stats-trend-col" title="${escapeHtml(x.day)}：上传 ${x.count} 个（${fmtSize(x.bytes || 0)}）"><div class="stats-trend-cnt">${x.count || 0}</div><div class="stats-trend-bar-wrap"><div class="stats-trend-bar" style="height:${hPct}%;opacity:${x.count > 0 ? 0.9 : 0.2}"></div></div><div class="stats-trend-day">${escapeHtml(shortDay)}</div></div>`;
+ }).join('');
+
+ const tops = Array.isArray(d.topDownloads) ? d.topDownloads : [];
+ const topHtml = tops.length
+  ? tops.map((f, idx) => `<div class="stats-top-row"><span class="stats-top-rank">${idx + 1}</span><span class="stats-top-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span><span class="stats-top-meta">${fmtSize(f.size)} · ${f.downloads} 次</span></div>`).join('')
+  : '<div class="empty" style="padding:14px 0">暂无下载记录</div>';
+
+ body.innerHTML = `
+  <div class="stats-kpi-grid">
+   <div class="stats-kpi"><div class="stats-kpi-label">有效文件</div><div class="stats-kpi-val">${ov.totalFiles || 0}</div><div class="stats-kpi-sub">${ov.totalFolders || 0} 个目录</div></div>
+   <div class="stats-kpi"><div class="stats-kpi-label">存储占用</div><div class="stats-kpi-val">${fmtSize(ov.totalBytes || 0)}</div><div class="stats-kpi-sub">回收站 ${ov.trashFiles || 0} 个</div></div>
+   <div class="stats-kpi"><div class="stats-kpi-label">累计下载</div><div class="stats-kpi-val">${ov.totalDownloads || 0}</div><div class="stats-kpi-sub">活跃文件汇总</div></div>
+   <div class="stats-kpi"><div class="stats-kpi-label">活跃分享</div><div class="stats-kpi-val">${ov.activeShares || 0}</div><div class="stats-kpi-sub">未过期外链</div></div>
+  </div>
+  <div class="stats-sec">
+   <div class="stats-sec-title"><span>文件类型占比</span><span class="meta" style="margin:0">${fmtSize(totalBytes)}</span></div>
+   <div class="stats-kind-bar">${kindBar}</div>
+   <div class="stats-kind-legend">${kindLegend}</div>
+  </div>
+  <div class="stats-sec">
+   <div class="stats-sec-title"><span>近 7 天上传趋势</span><span class="meta" style="margin:0">按日上传文件数</span></div>
+   <div class="stats-trend">${trendHtml}</div>
+  </div>
+  <div class="stats-sec" style="margin-bottom:0">
+   <div class="stats-sec-title"><span>下载排行 Top 10</span></div>
+   <div class="stats-top-list">${topHtml}</div>
+  </div>`;
+}
+async function loadStatsData(silent) {
+ const body = $('statsBody');
+ if (body && !silent && !statsCacheData) body.innerHTML = '<div class="empty" style="padding:24px 0">加载中…</div>';
+ try {
+  const r = await fetch('/api/stats');
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+   if (body && !statsCacheData) body.innerHTML = `<div class="empty" style="padding:24px 0">${escapeHtml(d.error || '加载失败')}</div>`;
+   return;
+  }
+  statsCacheData = d;
+  renderStatsModal(d);
+ } catch {
+  if (body && !statsCacheData) body.innerHTML = '<div class="empty" style="padding:24px 0">网络错误，请稍后重试</div>';
+ }
+}
+async function openStatsModal() {
+ if (!authed) return;
+ if (statsCacheData) {
+  renderStatsModal(statsCacheData);
+  $('statsModal').classList.add('open');
+  loadStatsData(true);
+ } else {
+  $('statsModal').classList.add('open');
+  await loadStatsData(false);
+ }
+}
+function closeStatsModal() { $('statsModal').classList.remove('open'); }
+if ($('statsBtn')) $('statsBtn').onclick = openStatsModal;
+if ($('mobStatsBtn')) $('mobStatsBtn').onclick = () => { if (typeof closeNavDrawer === 'function') closeNavDrawer(); openStatsModal(); };
+if ($('statsClose')) $('statsClose').onclick = closeStatsModal;
+if ($('statsDoneBtn')) $('statsDoneBtn').onclick = closeStatsModal;
+if ($('statsRefreshBtn')) $('statsRefreshBtn').onclick = () => loadStatsData(false);
+if ($('statsModal')) $('statsModal').onclick = (e) => { if (e.target.id === 'statsModal') closeStatsModal(); };
+
+// ---- #7 上传前重复文件检测 / 跳过提示（同目录同名同大小 + 可选 SHA-256 指纹） ----
+let dupPendingCtx = null;
+async function computeFileSha256Short(file) {
+ if (!file || file.size > 20 * 1024 * 1024 || !(window.crypto && crypto.subtle)) return '';
+ try {
+  const buf = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(hash)].slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join('');
+ } catch { return ''; }
+}
+function renderDupModalList(hashMap) {
+ const box = $('dupCheckList');
+ if (!box || !dupPendingCtx) return;
+ box.innerHTML = dupPendingCtx.dups.map((item, idx) => {
+  const tag = item.reason === 'batch' ? '批次内重复' : '当前目录已存在';
+  const h = hashMap && hashMap.get(idx) ? ` · SHA256:${hashMap.get(idx)}` : '';
+  return `<div class="dup-item"><span class="dup-item-name" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span><span class="dup-item-meta">${fmtSize(item.file.size)} · ${tag}${h}</span></div>`;
+ }).join('');
+}
+function checkUploadDuplicates(files, onProceed) {
+ const existingKeys = new Set(allFiles.map(f => `${f.name}::${f.size}`));
+ const batchSeen = new Set();
+ const dups = [];
+ const unique = [];
+ for (const f of files) {
+  const key = `${f.name}::${f.size}`;
+  if (existingKeys.has(key)) {
+   dups.push({ file: f, reason: 'dir' });
+  } else if (batchSeen.has(key)) {
+   dups.push({ file: f, reason: 'batch' });
+  } else {
+   batchSeen.add(key);
+   unique.push(f);
+  }
+ }
+ if (!dups.length) return false;
+ dupPendingCtx = { all: files, dups, unique, onProceed };
+ if ($('dupCheckSummary')) {
+  $('dupCheckSummary').textContent = `发现 ${dups.length} 个同名同大小文件（共选 ${files.length} 个），建议跳过避免重复占用存储。`;
+ }
+ renderDupModalList(null);
+ if ($('dupSkipBtn')) {
+  $('dupSkipBtn').textContent = unique.length ? `跳过重复（仅传 ${unique.length} 个）` : '全部跳过';
+ }
+ if ($('dupHashBtn')) {
+  $('dupHashBtn').disabled = false;
+  $('dupHashBtn').textContent = 'SHA-256 校验';
+ }
+ $('dupCheckModal').classList.add('open');
+ return true;
+}
+function closeDupModal() {
+ $('dupCheckModal').classList.remove('open');
+ dupPendingCtx = null;
+}
+if ($('dupCheckClose')) $('dupCheckClose').onclick = closeDupModal;
+if ($('dupCancelBtn')) $('dupCancelBtn').onclick = closeDupModal;
+if ($('dupCheckModal')) $('dupCheckModal').onclick = (e) => { if (e.target.id === 'dupCheckModal') closeDupModal(); };
+if ($('dupSkipBtn')) $('dupSkipBtn').onclick = () => {
+ if (!dupPendingCtx) return;
+ const { unique, onProceed } = dupPendingCtx;
+ closeDupModal();
+ if (unique.length) onProceed(unique);
+ else showToast('已跳过全部重复文件', '');
+};
+if ($('dupUploadAllBtn')) $('dupUploadAllBtn').onclick = () => {
+ if (!dupPendingCtx) return;
+ const { all, onProceed } = dupPendingCtx;
+ closeDupModal();
+ onProceed(all);
+};
+if ($('dupHashBtn')) $('dupHashBtn').onclick = async () => {
+ if (!dupPendingCtx) return;
+ const btn = $('dupHashBtn');
+ btn.disabled = true;
+ btn.textContent = '计算中…';
+ const map = new Map();
+ for (let i = 0; i < dupPendingCtx.dups.length; i++) {
+  const h = await computeFileSha256Short(dupPendingCtx.dups[i].file);
+  if (h) map.set(i, h);
+ }
+ renderDupModalList(map);
+ btn.textContent = '已计算 SHA-256';
+};
 </script>
 </body>
 </html>

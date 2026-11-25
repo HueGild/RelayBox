@@ -313,10 +313,7 @@ function isDescendantFolder(folders, ancestorId, targetId) {
 }
 
 async function deleteFolderSubtree(deps, rootFolderId, permanent = false) {
-  const [folders, allFiles] = await Promise.all([
-    deps.meta.listFolders(),
-    deps.meta.listAllFiles({ authed: true }),
-  ]);
+  const folders = await deps.meta.listFolders();
   const subtreeIds = [];
   const collect = (fid) => {
     for (const child of folders) {
@@ -326,12 +323,10 @@ async function deleteFolderSubtree(deps, rootFolderId, permanent = false) {
   };
   collect(rootFolderId);
 
-  const subtreeSet = new Set(subtreeIds);
-  for (const f of allFiles) {
-    if (subtreeSet.has(folderIdOf(f))) {
-      if (permanent) await purgeFilePermanently(deps, f);
-      else await moveFileToTrash(deps, f);
-    }
+  const subtreeFiles = subtreeIds.length ? await deps.meta.listFilesInFolders(subtreeIds) : [];
+  for (const f of subtreeFiles) {
+    if (permanent) await purgeFilePermanently(deps, f);
+    else await moveFileToTrash(deps, f);
   }
   // Delete folders bottom-up (children before parents)
   for (const fid of subtreeIds) {

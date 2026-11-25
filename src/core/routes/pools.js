@@ -97,13 +97,31 @@ export async function resolveUploadTarget(deps, requestedPoolId, legacyStorage) 
 /**
  * Build safe pool summaries for /api/files and /api/pools (never exposes secrets).
  */
-export async function buildPoolSummaries(deps, allFiles, { authed, includeAdminMeta = false, transfer: passedTransfer } = {}) {
+export async function buildPoolSummaries(deps, usageOrFiles, { authed, includeAdminMeta = false, transfer: passedTransfer } = {}) {
   const localAvailable = hasLocalDisk(deps);
-  const transfer = passedTransfer || await getTransferModeState(deps);
-  const customPools = (typeof deps.meta.listStoragePools === 'function')
-    ? await deps.meta.listStoragePools()
-    : [];
-  const activeFiles = (allFiles || []).filter((f) => !isExpired(f));
+  const [transfer, customPools, usageMap] = await Promise.all([
+    passedTransfer ? Promise.resolve(passedTransfer) : getTransferModeState(deps),
+    typeof deps.meta.listStoragePools === 'function' ? deps.meta.listStoragePools() : Promise.resolve([]),
+    (usageOrFiles instanceof Map)
+      ? Promise.resolve(usageOrFiles)
+      : Array.isArray(usageOrFiles)
+        ? Promise.resolve(null)
+        : (typeof deps.meta.getPoolUsageStats === 'function' ? deps.meta.getPoolUsageStats({ includeTrashed: true }) : Promise.resolve(new Map())),
+  ]);
+  let statsByPool = usageMap;
+  if (!statsByPool) {
+    statsByPool = new Map();
+    for (const f of (usageOrFiles || [])) {
+      if (!f || (!f.deletedAt && isExpired(f))) continue;
+      const key = f.poolId || (f.storage === 'r2' ? BUILTIN_R2_ID : BUILTIN_LOCAL_ID);
+      const cur = statsByPool.get(key) || { usedBytes: 0, fileCount: 0, activeCount: 0, trashCount: 0 };
+      cur.usedBytes += (f.size || 0);
+      cur.fileCount += 1;
+      if (f.deletedAt) cur.trashCount += 1;
+      else cur.activeCount += 1;
+      statsByPool.set(key, cur);
+    }
+  }
   const chunkSize = deps.config.chunkSize || 5 * 1024 * 1024;
   const presignThreshold = deps.config.chunkUploadThreshold || 32 * 1024 * 1024;
   const proxyThreshold = deps.config.proxyChunkUploadThreshold || Math.min(presignThreshold, chunkSize);
@@ -112,9 +130,8 @@ export async function buildPoolSummaries(deps, allFiles, { authed, includeAdminM
   const list = [];
 
   if (deps.r2 && deps.r2.enabled) {
-    const usedBytes = activeFiles
-      .filter((f) => f.storage === 'r2' && !f.poolId)
-      .reduce((a, f) => a + (f.size || 0), 0);
+    const st = statsByPool.get(BUILTIN_R2_ID) || { usedBytes: 0 };
+    const usedBytes = st.usedBytes || 0;
     list.push({
       id: BUILTIN_R2_ID,
       name: '内置 R2',
@@ -132,9 +149,8 @@ export async function buildPoolSummaries(deps, allFiles, { authed, includeAdminM
   }
 
   if (localAvailable) {
-    const usedBytes = activeFiles
-      .filter((f) => f.storage !== 'r2' && !f.poolId)
-      .reduce((a, f) => a + (f.size || 0), 0);
+    const st = statsByPool.get(BUILTIN_LOCAL_ID) || { usedBytes: 0 };
+    const usedBytes = st.usedBytes || 0;
     const diskTotal = deps.local.totalBytes();
     list.push({
       id: BUILTIN_LOCAL_ID,
@@ -154,10 +170,9 @@ export async function buildPoolSummaries(deps, allFiles, { authed, includeAdminM
 
   for (const p of customPools) {
     if (!includeAdminMeta && !p.enabled) continue;
-    const usedBytes = activeFiles
-      .filter((f) => f.poolId === p.id)
-      .reduce((a, f) => a + (f.size || 0), 0);
-    const fileCount = activeFiles.filter((f) => f.poolId === p.id).length;
+    const st = statsByPool.get(p.id) || { usedBytes: 0, fileCount: 0 };
+    const usedBytes = st.usedBytes || 0;
+    const fileCount = st.fileCount || 0;
     const entry = {
       id: p.id,
       name: p.name,
@@ -198,8 +213,7 @@ export function registerPools(app) {
   app.get('/api/pools', async (c) => {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
-    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
-    const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
+    const summary = await buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
   });
 
@@ -243,8 +257,7 @@ export function registerPools(app) {
       createdAt: Date.now(),
     });
     log('storage pool created:', created.name, created.bucket);
-    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
-    const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
+    const summary = await buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, id: created.id, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
   });
 
@@ -272,8 +285,7 @@ export function registerPools(app) {
           if (p.isDefault) await deps.meta.updateStoragePool(p.id, { isDefault: false });
         }
       }
-      const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
-      const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
+      const summary = await buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: true });
       return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
     }
 
@@ -327,8 +339,7 @@ export function registerPools(app) {
 
     await deps.meta.updateStoragePool(id, patch);
     log('storage pool updated:', id);
-    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
-    const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
+    const summary = await buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
   });
 
@@ -341,18 +352,17 @@ export function registerPools(app) {
     }
     const existing = await deps.meta.getStoragePool(id);
     if (!existing) return c.json({ ok: false, error: '存储池不存在' }, 404);
-    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
-    const activeCount = allFiles.filter((f) => !f.deletedAt && !isExpired(f) && f.poolId === id).length;
-    if (activeCount > 0) {
-      return c.json({ ok: false, error: `该存储池还有 ${activeCount} 个文件，请先删除文件后再移除存储池` }, 400);
+    const usageMap = await deps.meta.getPoolUsageStats({ includeTrashed: true });
+    const poolStat = usageMap.get(id) || { activeCount: 0, trashCount: 0 };
+    if (poolStat.activeCount > 0) {
+      return c.json({ ok: false, error: `该存储池还有 ${poolStat.activeCount} 个文件，请先删除文件后再移除存储池` }, 400);
     }
-    const trashCount = allFiles.filter((f) => !!f.deletedAt && f.poolId === id).length;
-    if (trashCount > 0) {
-      return c.json({ ok: false, error: `该存储池在回收站中还有 ${trashCount} 个文件，请先清空回收站或还原后再移除存储池` }, 400);
+    if (poolStat.trashCount > 0) {
+      return c.json({ ok: false, error: `该存储池在回收站中还有 ${poolStat.trashCount} 个文件，请先清空回收站或还原后再移除存储池` }, 400);
     }
     await deps.meta.deleteStoragePool(id);
     log('storage pool deleted:', id);
-    const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
+    const summary = await buildPoolSummaries(deps, usageMap, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
   });
 

@@ -2,7 +2,8 @@
 // visibility / expiry / delete). Supports v3.1.5 file details, v3.1.6 dual mode,
 // and v3.2 multi-storage pools.
 
-import { readJsonBody, folderIdOf, folderPath, folderVisibleToGuest, isExpired, kindOf, safeName, extOf, keyOf, parseExpiresHours, expiresAtOf, parseRange, MIME, R2_FREE_BYTES, log } from '../lib/util.js';
+import { readJsonBody, folderIdOf, folderPath, folderVisibleByCountMap, isExpired, kindOf, safeName, extOf, keyOf, parseExpiresHours, expiresAtOf, parseRange, MIME, R2_FREE_BYTES, log } from '../lib/util.js';
+import { originOf, mediaCacheKey, matchEdgeCache, putEdgeCache, purgeEdgeCacheForFile, purgeEdgeCacheForFiles, withCacheHeader, computePublicEdgeTtl } from '../lib/edge-cache.js';
 import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
 import { notifyShareConsumed } from '../lib/notify.js';
 import { getTransferModeState } from './settings.js';
@@ -34,7 +35,7 @@ function mapFile(f, shareToken, authed, poolNameMap) {
 /** Private file access via a share token (file share, or a folder share whose tree holds the file). */
 async function canAccessViaShare(deps, item, shareToken) {
   const share = await deps.meta.getShareByToken(shareToken);
-  if (!share) return false;
+  if (!share || isExpired(share)) return false;
   if (share.fileId === item.id) return true;
   if (share.folderId) {
     const folders = await deps.meta.listFolders();
@@ -94,7 +95,7 @@ async function buildShareMaps(deps, visibleFiles, visibleFolders, authed) {
   if (typeof deps.meta.listShares === 'function') {
     const shares = await deps.meta.listShares();
     for (const s of (shares || [])) {
-      if (!s || !s.token) continue;
+      if (!s || !s.token || isExpired(s)) continue;
       if (s.fileId && !fileShares.has(s.fileId)) fileShares.set(s.fileId, s.token);
       if (s.folderId && !folderShares.has(s.folderId)) folderShares.set(s.folderId, s.token);
     }
@@ -114,38 +115,37 @@ async function buildShareMaps(deps, visibleFiles, visibleFolders, authed) {
 }
 
 export function registerFiles(app) {
-  // 列表：未登录只看公开文件；管理员看全部，且能看到分享 token、上传 IP/归属地、各存储池用量与轻量目录树。
+  // 列表：未登录只看公开文件；支持可选 limit/offset 分页；全部由 D1 原生 WHERE + GROUP BY 完成，零全表扫描。
   app.get('/api/files', async (c) => {
     const deps = c.get('deps');
     const folderId = c.req.query('folderId') || null;
-    const [authed, folders, allFilesWithTrash, transfer] = await Promise.all([
-      isAuthed(c, deps),
+    const rawLimit = Number(c.req.query('limit'));
+    const rawOffset = Number(c.req.query('offset'));
+    const limit = (Number.isFinite(rawLimit) && rawLimit > 0) ? Math.min(500, Math.floor(rawLimit)) : 0;
+    const offset = (Number.isFinite(rawOffset) && rawOffset > 0) ? Math.floor(rawOffset) : 0;
+
+    const authed = await isAuthed(c, deps);
+    const [folders, visible, folderStats, fileCountByFolder, transfer, trashStats] = await Promise.all([
       deps.meta.listFolders(),
-      deps.meta.listAllFiles({ authed: true, includeTrashed: true }),
+      deps.meta.listFiles(folderId, { authed, limit, offset }),
+      deps.meta.getFolderFileStats(folderId, { authed }),
+      deps.meta.getFolderFileCounts({ authed }),
       getTransferModeState(deps),
+      authed ? deps.meta.getTrashStats() : Promise.resolve({ count: 0, totalBytes: 0 }),
     ]);
-    const allFiles = allFilesWithTrash.filter((f) => !f.deletedAt);
-    const trashedFiles = allFilesWithTrash.filter((f) => !!f.deletedAt);
-    const filesForCounts = allFiles.filter((f) => !isExpired(f) && (authed || f.visibility === 'public'));
-    const visible = filesForCounts.filter((f) => folderIdOf(f) === folderId);
     const visibleFolders = folders
       .filter((fd) => (fd.parentId || null) === folderId)
-      .filter((fd) => authed || folderVisibleToGuest(folders, allFiles, fd.id));
+      .filter((fd) => authed || folderVisibleByCountMap(folders, fileCountByFolder, fd.id));
     const [poolSummary, shareMaps] = await Promise.all([
-      buildPoolSummaries(deps, allFilesWithTrash, { authed, includeAdminMeta: false, transfer }),
+      buildPoolSummaries(deps, null, { authed, includeAdminMeta: false, transfer }),
       buildShareMaps(deps, visible, visibleFolders, authed),
     ]);
     const files = visible.map((f) => mapFile(f, shareMaps.fileShares.get(f.id) || null, authed, poolSummary.poolNameMap));
-    const fileCountByFolder = new Map();
-    for (const f of filesForCounts) {
-      const fid = folderIdOf(f);
-      if (fid) fileCountByFolder.set(fid, (fileCountByFolder.get(fid) || 0) + 1);
-    }
     const folderCountByParent = new Map();
     for (const x of folders) {
       const pid = x.parentId || null;
       if (!pid) continue;
-      if (authed || folderVisibleToGuest(folders, allFiles, x.id)) {
+      if (authed || folderVisibleByCountMap(folders, fileCountByFolder, x.id)) {
         folderCountByParent.set(pid, (folderCountByParent.get(pid) || 0) + 1);
       }
     }
@@ -159,15 +159,21 @@ export function registerFiles(app) {
       if (st) out.shareToken = st;
       return out;
     });
-    const total = files.reduce((a, f) => a + f.size, 0);
-    const r2Used = files.filter((f) => f.storage === 'r2').reduce((a, f) => a + f.size, 0);
-    const localUsed = files.filter((f) => f.storage !== 'r2').reduce((a, f) => a + f.size, 0);
+    const total = folderStats.totalBytes;
+    const r2Used = folderStats.r2Bytes;
+    const localUsed = folderStats.localBytes;
+    const totalFiles = folderStats.count;
+    const hasMore = limit > 0 ? (offset + files.length < totalFiles) : false;
     const chunkSize = deps.config.chunkSize || 5 * 1024 * 1024;
     const presignThreshold = deps.config.chunkUploadThreshold || 32 * 1024 * 1024;
     const proxyThreshold = deps.config.proxyChunkUploadThreshold || Math.min(presignThreshold, chunkSize);
     const effectiveThreshold = transfer.mode === 'proxy' ? proxyThreshold : presignThreshold;
     return c.json({
       ok: true, files, folders: subfolders, path: folderPath(folders, folderId), folderId, total,
+      totalFiles,
+      limit: limit || null,
+      offset,
+      hasMore,
       free: deps.local.freeBytes(), diskTotal: deps.local.totalBytes(),
       hasLocal: hasLocalDisk(deps),
       r2Used, localUsed, r2Total: R2_FREE_BYTES, authed, r2: deps.r2.enabled,
@@ -180,8 +186,8 @@ export function registerFiles(app) {
       chunkUploadThreshold: effectiveThreshold,
       chunkSize,
       ...(authed ? {
-        trashCount: trashedFiles.length,
-        trashBytes: trashedFiles.reduce((a, f) => a + (f.size || 0), 0),
+        trashCount: trashStats.count,
+        trashBytes: trashStats.totalBytes,
         allFolders: folders.map((fd) => ({ id: fd.id, name: fd.name, parentId: fd.parentId || null })),
       } : {}),
     });
@@ -192,17 +198,17 @@ export function registerFiles(app) {
     const deps = c.get('deps');
     const q = (c.req.query('q') || '').trim().toLowerCase();
     if (!q) return c.json({ ok: true, files: [], folders: [], total: 0 });
-    const [authed, folders, allFiles] = await Promise.all([
-      isAuthed(c, deps),
+    const authed = await isAuthed(c, deps);
+    const [folders, fileCountByFolder, matched] = await Promise.all([
       deps.meta.listFolders(),
-      deps.meta.listAllFiles({ authed: true }),
+      deps.meta.getFolderFileCounts({ authed }),
+      deps.meta.searchFiles(q, { authed }),
     ]);
-    const matched = await deps.meta.searchFiles(q, { authed });
     const matchedRawFolders = folders.filter((fd) => (
-      fd.name.toLowerCase().includes(q) && (authed || folderVisibleToGuest(folders, allFiles, fd.id))
+      fd.name.toLowerCase().includes(q) && (authed || folderVisibleByCountMap(folders, fileCountByFolder, fd.id))
     ));
     const [poolSummary, shareMaps] = await Promise.all([
-      buildPoolSummaries(deps, allFiles, { authed, includeAdminMeta: false }),
+      buildPoolSummaries(deps, null, { authed, includeAdminMeta: false }),
       buildShareMaps(deps, matched, matchedRawFolders, authed),
     ]);
     const files = matched.map((f) => {
@@ -216,8 +222,8 @@ export function registerFiles(app) {
       const out = {
         id: fd.id, name: fd.name, parentId: fd.parentId || null, createdAt: fd.createdAt,
         path: p.length > 1 ? p.slice(1).map((x) => x.name).join(' / ') : '',
-        fileCount: allFiles.filter((f) => !isExpired(f) && (authed || f.visibility === 'public') && folderIdOf(f) === fd.id).length,
-        folderCount: folders.filter((x) => (x.parentId || null) === fd.id && (authed || folderVisibleToGuest(folders, allFiles, x.id))).length,
+        fileCount: fileCountByFolder.get(fd.id) || 0,
+        folderCount: folders.filter((x) => (x.parentId || null) === fd.id && (authed || folderVisibleByCountMap(folders, fileCountByFolder, x.id))).length,
       };
       const st = shareMaps.folderShares.get(fd.id);
       if (st) out.shareToken = st;
@@ -233,11 +239,30 @@ export function registerFiles(app) {
     const forceDownload = c.req.query('download') === '1';
     const shareToken = c.req.query('share') || '';
     const shareCode = c.req.query('code') || '';
+    const range = parseRange(c.req.header('Range'));
+    const origin = originOf(c, deps);
+    const cacheKey = (!forceDownload && !shareToken && !range && origin) ? mediaCacheKey(origin, id) : null;
+    if (cacheKey) {
+      const cached = await matchEdgeCache(deps, cacheKey);
+      if (cached) {
+        const inm = (c.req.header('If-None-Match') || '').trim();
+        const cachedEtag = (cached.headers.get('ETag') || '').trim();
+        if (inm && cachedEtag && (inm === cachedEtag || inm === `W/${cachedEtag}`)) {
+          const h304 = new Headers(cached.headers);
+          h304.set('X-RelayBox-Cache', 'HIT');
+          return new Response(null, { status: 304, headers: h304 });
+        }
+        return withCacheHeader(cached, 'HIT');
+      }
+    }
     const item = await deps.meta.getFile(id);
     if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     if (isExpired(item)) return c.json({ ok: false, error: '文件已过期' }, 404);
     if (shareToken) {
       const share = await deps.meta.getShareByToken(shareToken);
+      if (share && isExpired(share)) {
+        return c.json({ ok: false, error: '分享链接已过期' }, 410);
+      }
       if (share && share.code && (shareCode || '') !== share.code) {
         return c.json({ ok: false, error: '提取码不正确' }, 403);
       }
@@ -250,17 +275,21 @@ export function registerFiles(app) {
     const mime = MIME[item.ext] || 'application/octet-stream';
     const disposition = (forceDownload ? 'attachment' : 'inline') +
       `; filename*=UTF-8''${encodeURIComponent(item.name)}`;
-    const range = parseRange(c.req.header('Range'));
     const resolved = await resolveStorageForFile(deps, item);
     if (!resolved.ok) return c.json({ ok: false, error: resolved.error }, resolved.status || 503);
 
     const isImmutableMedia = item.kind === 'image' || item.kind === 'video' || item.kind === 'audio';
     const isPrivate = item.visibility !== 'public';
+    const edgeTtl = (!isPrivate && !forceDownload && !shareToken)
+      ? computePublicEdgeTtl(item.expiresAt, isImmutableMedia ? 31536000 : 86400, 3600)
+      : 0;
     const cacheControl = (forceDownload || shareToken)
       ? 'private, no-store'
-      : (!isPrivate && !item.expiresAt)
-        ? (isImmutableMedia ? 'public, max-age=31536000, immutable' : 'public, max-age=86400')
-        : (isPrivate && isImmutableMedia)
+      : !isPrivate
+        ? (!item.expiresAt
+          ? (isImmutableMedia ? 'public, max-age=31536000, immutable' : 'public, max-age=86400')
+          : (edgeTtl > 0 ? `public, max-age=${edgeTtl}` : 'private, no-store'))
+        : isImmutableMedia
           ? 'private, max-age=3600'
           : 'private, no-store';
     const vary = (isPrivate && !forceDownload && !shareToken) ? 'Cookie' : '';
@@ -290,6 +319,10 @@ export function registerFiles(app) {
       if (forceDownload && res.status !== 416) {
         const consumed = await consumeShare(deps, c, shareToken, item);
         if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
+      }
+      if (cacheKey && res.status === 200 && !isPrivate && edgeTtl > 0) {
+        putEdgeCache(deps, c, cacheKey, res);
+        return withCacheHeader(res, 'MISS');
       }
       return res;
     } catch (e) {
@@ -351,6 +384,7 @@ export function registerFiles(app) {
         }
         out = { updatedIds, notFoundIds };
       }
+      await purgeEdgeCacheForFiles(deps, c, out.updatedIds);
       log('batch visibility:', out.updatedIds.length, 'files ->', visibility);
       return c.json({ ok: true, action, count: out.updatedIds.length, ...out });
     }
@@ -373,6 +407,7 @@ export function registerFiles(app) {
         }
         out = { trashedIds, alreadyTrashedIds, notFoundIds };
       }
+      await purgeEdgeCacheForFiles(deps, c, out.trashedIds);
       log('batch trash:', out.trashedIds.length, 'files');
       return c.json({ ok: true, action, count: out.trashedIds.length, ...out });
     }
@@ -405,8 +440,7 @@ export function registerFiles(app) {
     const clean = safeName(name);
     if (!clean || clean === 'file') return c.json({ ok: false, error: '文件名不对' }, 400);
     if (clean === item.name) return c.json({ ok: true, file: item });
-    const siblings = await deps.meta.listAllFiles({ authed: true });
-    if (siblings.some((f) => f.id !== id && folderIdOf(f) === folderIdOf(item) && f.name === clean)) {
+    if (await deps.meta.hasFileWithName(folderIdOf(item), clean, id)) {
       return c.json({ ok: false, error: '同文件夹已有同名文件' }, 400);
     }
     const oldKey = item.storageKey;
@@ -422,6 +456,7 @@ export function registerFiles(app) {
     const updated = await deps.meta.updateFile(id, {
       name: clean, ext: extOf(clean), kind: kindOf(extOf(clean)), storageKey: newKey,
     });
+    await purgeEdgeCacheForFile(deps, c, id);
     log('renamed:', oldKey, '->', newKey);
     return c.json({ ok: true, file: updated });
   });
@@ -438,6 +473,7 @@ export function registerFiles(app) {
     const item = await deps.meta.getFile(id);
     if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     const updated = await deps.meta.updateFile(id, { visibility });
+    await purgeEdgeCacheForFile(deps, c, id);
     log('visibility:', item.name, '->', visibility);
     return c.json({ ok: true, file: updated });
   });
@@ -452,6 +488,7 @@ export function registerFiles(app) {
     const item = await deps.meta.getFile(id);
     if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     const updated = await deps.meta.updateFile(id, { expiresAt: expiresAtOf(hours) });
+    await purgeEdgeCacheForFile(deps, c, id);
     log('expiry:', item.name, '->', hours === 0 ? '永久' : hours + 'h');
     return c.json({ ok: true, file: updated });
   });
@@ -468,7 +505,7 @@ export function registerFiles(app) {
     if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
     const toTrash = (c.req.query('trash') === '1' || body.trash === true) && c.req.query('permanent') !== '1';
     if (toTrash) {
-      const res = await moveFileToTrash(deps, item);
+      const res = await moveFileToTrash(deps, item, c);
       return c.json({
         ok: true,
         trashed: true,
@@ -477,7 +514,7 @@ export function registerFiles(app) {
         purgeAt: res.purgeAt,
       });
     }
-    await purgeFilePermanently(deps, item);
+    await purgeFilePermanently(deps, item, c);
     log('deleted:', item.name);
     return c.json({ ok: true });
   });

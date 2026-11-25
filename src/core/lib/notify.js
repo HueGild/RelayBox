@@ -291,17 +291,15 @@ export function notifyAuthBlocked(deps, c, info) {
 }
 
 export async function buildDailyReportMessage(deps, poolSummary, nowMs) {
-  const [allFiles, folders, drops] = await Promise.all([
-    deps.meta.listAllFiles({ authed: true }),
+  const [fileSummary, folders, drops] = await Promise.all([
+    deps.meta.getActiveFileSummary(),
     deps.meta.listFolders(),
     typeof deps.meta.listDropLinks === 'function' ? deps.meta.listDropLinks() : Promise.resolve([]),
   ]);
-  const activeFiles = (allFiles || []).filter((f) => !isExpired(f));
-  const totalBytes = activeFiles.reduce((a, f) => a + (f.size || 0), 0);
   const { dateStr } = cstDateAndHour(nowMs);
   const lines = [
     `📊 <b>RelayBox 每日存储汇总（${dateStr}）</b>`,
-    `文件总数：<b>${activeFiles.length}</b> 个（总计 ${fmtBytes(totalBytes)}）`,
+    `文件总数：<b>${fileSummary.count}</b> 个（总计 ${fmtBytes(fileSummary.totalBytes)}）`,
     `文件夹：${(folders || []).length} 个 · 收集箱：${(drops || []).length} 个`,
     '',
     '<b>存储池用量：</b>',

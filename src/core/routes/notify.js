@@ -52,8 +52,7 @@ export function registerNotify(app) {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
     const body = await readJsonBody(c);
-    const allFiles = await deps.meta.listAllFiles({ authed: true });
-    const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: false });
+    const summary = await buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: false });
     const text = await buildDailyReportMessage(deps, summary);
     const out = await sendTelegramMessage(deps, text, {
       botToken: typeof body.botToken === 'string' ? body.botToken : '',

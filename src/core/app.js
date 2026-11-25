@@ -25,6 +25,7 @@ import { registerTextTools } from './routes/text-tools.js';
 import { registerTrash } from './routes/trash.js';
 import { registerMigrate } from './routes/migrate.js';
 import { registerWebdav } from './routes/webdav.js';
+import { registerStats } from './routes/stats.js';
 
 export function createApp(deps) {
   assertImplements(deps.meta, MetaStoreMethods, 'MetaStore');
@@ -38,6 +39,25 @@ export function createApp(deps) {
   app.use('*', async (c, next) => {
     c.set('deps', deps);
     await next();
+    if (c.res && c.res.headers) {
+      const needNosniff = !c.res.headers.has('X-Content-Type-Options');
+      const needReferrer = !c.res.headers.has('Referrer-Policy');
+      if (needNosniff || needReferrer) {
+        try {
+          if (needNosniff) c.res.headers.set('X-Content-Type-Options', 'nosniff');
+          if (needReferrer) c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        } catch {
+          const headers = new Headers(c.res.headers);
+          if (needNosniff) headers.set('X-Content-Type-Options', 'nosniff');
+          if (needReferrer) headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+          c.res = new Response(c.res.body, {
+            status: c.res.status,
+            statusText: c.res.statusText,
+            headers,
+          });
+        }
+      }
+    }
   });
 
   registerAuth(app);
@@ -59,6 +79,7 @@ export function createApp(deps) {
   registerThumbs(app);
   registerTokens(app);
   registerRawUpload(app);
+  registerStats(app);
 
   // Unmatched routes: same 404 shape as v2.8.4.
   app.notFound((c) => c.json({ ok: false, error: 'not found' }, 404));
