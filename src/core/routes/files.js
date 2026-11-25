@@ -123,21 +123,35 @@ export function registerFiles(app) {
     const rawOffset = Number(c.req.query('offset'));
     const limit = (Number.isFinite(rawLimit) && rawLimit > 0) ? Math.min(500, Math.floor(rawLimit)) : 0;
     const offset = (Number.isFinite(rawOffset) && rawOffset > 0) ? Math.floor(rawOffset) : 0;
+    const rawSort = (c.req.query('sort') || 'time-desc').trim();
+    const sort = ['time-desc', 'time-asc', 'name-asc', 'name-desc', 'size-desc', 'size-asc'].includes(rawSort) ? rawSort : 'time-desc';
 
     const authed = await isAuthed(c, deps);
-    const [folders, visible, folderStats, fileCountByFolder, transfer, trashStats] = await Promise.all([
-      deps.meta.listFolders(),
-      deps.meta.listFiles(folderId, { authed, limit, offset }),
-      deps.meta.getFolderFileStats(folderId, { authed }),
-      deps.meta.getFolderFileCounts({ authed }),
-      getTransferModeState(deps),
-      authed ? deps.meta.getTrashStats() : Promise.resolve({ count: 0, totalBytes: 0 }),
-    ]);
+    let folders, visible, folderStats, fileCountByFolder, trashStats, poolUsageMap = null;
+    const transferPromise = getTransferModeState(deps);
+    if (typeof deps.meta.getDirListingBundle === 'function') {
+      const [bundle, tr] = await Promise.all([
+        deps.meta.getDirListingBundle(folderId, { authed, limit, offset, sort }),
+        transferPromise,
+      ]);
+      ({ folders, files: visible, folderStats, fileCountByFolder, poolUsageMap, trashStats } = bundle);
+      var transfer = tr;
+    } else {
+      const [flds, vis, fStats, fCounts, tr, tStats] = await Promise.all([
+        deps.meta.listFolders(),
+        deps.meta.listFiles(folderId, { authed, limit, offset, sort }),
+        deps.meta.getFolderFileStats(folderId, { authed }),
+        deps.meta.getFolderFileCounts({ authed }),
+        transferPromise,
+        authed ? deps.meta.getTrashStats() : Promise.resolve({ count: 0, totalBytes: 0 }),
+      ]);
+      folders = flds; visible = vis; folderStats = fStats; fileCountByFolder = fCounts; var transfer = tr; trashStats = tStats;
+    }
     const visibleFolders = folders
       .filter((fd) => (fd.parentId || null) === folderId)
       .filter((fd) => authed || folderVisibleByCountMap(folders, fileCountByFolder, fd.id));
     const [poolSummary, shareMaps] = await Promise.all([
-      buildPoolSummaries(deps, null, { authed, includeAdminMeta: false, transfer }),
+      buildPoolSummaries(deps, poolUsageMap, { authed, includeAdminMeta: false, transfer }),
       buildShareMaps(deps, visible, visibleFolders, authed),
     ]);
     const files = visible.map((f) => mapFile(f, shareMaps.fileShares.get(f.id) || null, authed, poolSummary.poolNameMap));
@@ -320,18 +334,55 @@ export function registerFiles(app) {
         const consumed = await consumeShare(deps, c, shareToken, item);
         if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
       }
-      if (cacheKey && res.status === 200 && !isPrivate && edgeTtl > 0) {
-        putEdgeCache(deps, c, cacheKey, res);
-        return withCacheHeader(res, 'MISS');
+      let finalRes = res;
+      const extLower = (item.ext || '').toLowerCase();
+      if (!forceDownload && (extLower === '.html' || extLower === '.htm' || extLower === '.svg' || extLower === '.xml' || extLower === '.xhtml')) {
+        const h = new Headers(finalRes.headers);
+        h.set('Content-Security-Policy', "default-src 'none'; sandbox");
+        finalRes = new Response(finalRes.body, {
+          status: finalRes.status,
+          statusText: finalRes.statusText,
+          headers: h,
+        });
       }
-      return res;
+      if (cacheKey && finalRes.status === 200 && !isPrivate && edgeTtl > 0) {
+        putEdgeCache(deps, c, cacheKey, finalRes);
+        return withCacheHeader(finalRes, 'MISS');
+      }
+      return finalRes;
     } catch (e) {
       log('storage GET failed:', e && e.message);
       return c.json({ ok: false, error: '获取文件失败' }, 500);
     }
   });
 
-  // 批量操作聚合接口（管理员，v3.3.10）：一次请求完成 move / visibility / trash，消除串行请求与 VPS JSON 写放大。
+  // 上传前全目录判重接口（v3.5.1）：支持大目录与多目录批量检测同名同大小文件。
+  app.post('/api/files/check-dup', async (c) => {
+    const deps = c.get('deps');
+    const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
+    if (auth !== 'ok') return authFail(c, auth);
+    const body = await readJsonBody(c);
+    const defaultFolderId = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;
+    const rawItems = Array.isArray(body.items) ? body.items.slice(0, 500) : [];
+    const normalized = rawItems
+      .filter((x) => x && typeof x.name === 'string' && x.name.trim())
+      .map((x, idx) => ({
+        idx,
+        folderId: (x.folderId !== undefined ? (x.folderId || null) : defaultFolderId),
+        name: safeName(x.name),
+        size: Math.max(0, Math.floor(Number(x.size) || 0)),
+      }));
+    if (!normalized.length) return c.json({ ok: true, duplicateIndexes: [] });
+    const matched = await deps.meta.findDuplicatesInFolders(normalized);
+    const duplicateIndexes = [];
+    for (const it of normalized) {
+      const k = `${it.folderId || ''}::${it.name}::${it.size}`;
+      if (matched.has(k)) duplicateIndexes.push(it.idx);
+    }
+    return c.json({ ok: true, duplicateIndexes });
+  });
+
+  // 批量操作聚合接口（管理员，v3.3.10）：一次请求完成 move / visibility / trash。
   app.post('/api/files/batch', async (c) => {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);

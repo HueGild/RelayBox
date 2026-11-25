@@ -51,8 +51,11 @@ class MockD1 {
     };
   }
   async batch(statements) {
+    // D1 的 batch 对 SELECT 返回 { results }；原先调 s.run() 会丢掉行，
+    // v3.5.1 起 GET /api/files 走 getDirListingBundle（batch），导致列表恒为空。
+    // node:sqlite 的 .all() 对 INSERT/UPDATE 也不抛错、只返回 []，写 batch 不受影响。
     const out = [];
-    for (const s of statements) out.push(await s.run());
+    for (const s of statements) out.push(await s.all());
     return out;
   }
 }

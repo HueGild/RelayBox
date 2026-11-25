@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.5.0 UI r26 (2026-11-25 · 分享独立有效期/桌面端拖拽文件夹递归上传与卡片拖拽移动/轻量统计看板SWR秒开/大目录触底分页加载/上传前重复文件检测提示) -->
+<!-- RelayBox v3.5.1 UI r27 (2026-11-25 · 大目录后端全量排序/全目录与拖拽文件夹上传判重/统计看板Top10点击直达) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -950,7 +950,8 @@
 .stats-trend-bar { width: 100%; min-height: 3px; border-radius: 5px 5px 2px 2px; background: var(--accent); opacity: .88; transition: height .25s ease; }
 .stats-trend-day { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .stats-top-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
-.stats-top-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 12.5px; }
+.stats-top-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 10px; font-size: 12.5px; cursor: pointer; transition: background .12s, border-color .12s; }
+.stats-top-row:hover { background: var(--surface-2, rgba(37,99,235,.07)); border-color: var(--accent); }
 .stats-top-rank { width: 20px; height: 20px; border-radius: 999px; background: rgba(37,99,235,.12); color: var(--accent); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .stats-top-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; }
 .stats-top-meta { font-size: 11.5px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
@@ -1596,7 +1597,11 @@ document.querySelectorAll('#sortMenu button').forEach(b => {
  try { localStorage.setItem('fs-sort', sortMode); } catch {}
  $('sortMenu').style.display = 'none'; $('sortBtn').classList.remove('dd-open');
  renderSortBtn();
- renderList();
+ if (searchResults === null && (dirHasMore || dirTotalFiles > allFiles.length)) {
+  loadList({ nav: true });
+ } else {
+  renderList();
+ }
  };
 });
 document.addEventListener('click', (e) => {
@@ -2594,7 +2599,7 @@ const dirCache = new Map();          // folderKey -> { data, sig, ts }
 const inflightDirReqs = new Map();   // folderKey -> Promise<data>
 let loadListSeq = 0;
 
-function dirKeyOf(folderId) { return folderId ? String(folderId) : '__root__'; }
+function dirKeyOf(folderId) { return (folderId ? String(folderId) : '__root__') + '::' + (typeof sortMode === 'string' ? sortMode : 'time-desc'); }
 function invalidateDirCache(folderId) {
  if (folderId === undefined) dirCache.clear();
  else dirCache.delete(dirKeyOf(folderId));
@@ -2619,6 +2624,7 @@ function fetchDirData(folderId) {
  if (folderId) qs.set('folderId', folderId);
  qs.set('limit', String(DIR_PAGE_SIZE));
  qs.set('offset', '0');
+ if (typeof sortMode === 'string' && sortMode) qs.set('sort', sortMode);
  const req = fetch('/api/files?' + qs.toString())
   .then(r => r.json())
   .then(d => {
@@ -2656,6 +2662,7 @@ async function loadMoreFiles() {
   if (targetFolderId) qs.set('folderId', targetFolderId);
   qs.set('limit', String(DIR_PAGE_SIZE));
   qs.set('offset', String(allFiles.length));
+  if (typeof sortMode === 'string' && sortMode) qs.set('sort', sortMode);
   const r = await fetch('/api/files?' + qs.toString());
   const d = await r.json();
   if (seq !== loadListSeq || !d || d.ok === false) return;
@@ -4031,12 +4038,16 @@ function enqueueFilesDirect(valid) {
  processQueue();
  return true;
 }
-function enqueueFiles(files, skipDupCheck) {
+async function enqueueFiles(files, skipDupCheck) {
  if (!authed && !$('password').value.trim()) { setMsg('请先填上传密码', 'err'); return false; }
  const valid = filterByMaxSize(files);
  if (!valid.length) return false;
- if (!skipDupCheck && checkUploadDuplicates(valid, (chosen) => { enqueueFilesDirect(chosen); })) {
-  return true;
+ if (!skipDupCheck) {
+  const entries = valid.map(f => ({ file: f, folderId: currentFolderId || null }));
+  const intercepted = await checkUploadDuplicatesAsync(entries, (chosenEntries) => {
+   enqueueFilesDirect(chosenEntries.map(e => e.file));
+  });
+  if (intercepted) return true;
  }
  return enqueueFilesDirect(valid);
 }
@@ -4092,16 +4103,25 @@ async function enqueueFolderFiles(files) {
  }
  return parentId;
  };
+ const resolvedEntries = [];
  for (const f of valid) {
- const folderId = await resolveDir(relDirOf(f._relPath || f.webkitRelativePath || f.name));
- if (folderId === false) return;
- const job = { jid: ++jobSeq, file: f, visibility, expires, folderId, status: 'pending', pct: 0, canceled: false, abortFn: null };
- uploadQueue.push(job);
- queueDisplay.push(job);
+  const folderId = await resolveDir(relDirOf(f._relPath || f.webkitRelativePath || f.name));
+  if (folderId === false) return;
+  resolvedEntries.push({ file: f, folderId });
  }
- renderUploadQueue();
- setMsg(`文件夹已加入上传队列：${valid.length} 个文件`, 'ok');
- processQueue();
+ const pushFolderEntries = (chosenEntries) => {
+  if (!chosenEntries || !chosenEntries.length) return;
+  for (const en of chosenEntries) {
+   const job = { jid: ++jobSeq, file: en.file, visibility, expires, folderId: en.folderId, status: 'pending', pct: 0, canceled: false, abortFn: null };
+   uploadQueue.push(job);
+   queueDisplay.push(job);
+  }
+  renderUploadQueue();
+  setMsg(`文件夹已加入上传队列：${chosenEntries.length} 个文件`, 'ok');
+  processQueue();
+ };
+ const intercepted = await checkUploadDuplicatesAsync(resolvedEntries, pushFolderEntries);
+ if (!intercepted) pushFolderEntries(resolvedEntries);
 }
 $('folderBtn').onclick = () => $('folderInput').click();
 $('folderInput').onchange = () => {
@@ -7824,7 +7844,7 @@ function renderStatsModal(d) {
 
  const tops = Array.isArray(d.topDownloads) ? d.topDownloads : [];
  const topHtml = tops.length
-  ? tops.map((f, idx) => `<div class="stats-top-row"><span class="stats-top-rank">${idx + 1}</span><span class="stats-top-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span><span class="stats-top-meta">${fmtSize(f.size)} · ${f.downloads} 次</span></div>`).join('')
+  ? tops.map((f, idx) => `<div class="stats-top-row" onclick="openStatsTopFile('${escapeHtml(f.id)}', ${f.folderId ? `'${escapeHtml(f.folderId)}'` : 'null'})" title="点击查看详情或定位所在目录"><span class="stats-top-rank">${idx + 1}</span><span class="stats-top-name">${escapeHtml(f.name)}</span><span class="stats-top-meta">${fmtSize(f.size)} · ${f.downloads} 次</span></div>`).join('')
   : '<div class="empty" style="padding:14px 0">暂无下载记录</div>';
 
  body.innerHTML = `
@@ -7902,26 +7922,67 @@ function renderDupModalList(hashMap) {
   return `<div class="dup-item"><span class="dup-item-name" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span><span class="dup-item-meta">${fmtSize(item.file.size)} · ${tag}${h}</span></div>`;
  }).join('');
 }
-function checkUploadDuplicates(files, onProceed) {
- const existingKeys = new Set(allFiles.map(f => `${f.name}::${f.size}`));
+async function openStatsTopFile(fileId, folderId) {
+ closeStatsModal();
+ if (allFiles.some(x => x.id === fileId)) {
+  openDetailModal(fileId);
+  return;
+ }
+ const targetFid = folderId || null;
+ if ((currentFolderId || null) !== targetFid) {
+  await openFolder(targetFid);
+ }
+ if (allFiles.some(x => x.id === fileId)) {
+  openDetailModal(fileId);
+ } else {
+  showToast('已定位到该文件所在目录', 'ok');
+ }
+}
+
+async function checkUploadDuplicatesAsync(entries, onProceed) {
+ const serverDupIdx = new Set();
+ try {
+  const headers = { 'Content-Type': 'application/json' };
+  const pwd = $('password') ? $('password').value.trim() : '';
+  if (!authed && pwd) headers['X-Upload-Password'] = pwd;
+  const r = await fetch('/api/files/check-dup', {
+   method: 'POST',
+   headers,
+   body: JSON.stringify({
+    folderId: currentFolderId || null,
+    items: entries.slice(0, 500).map(e => ({ folderId: e.folderId || null, name: e.file.name, size: e.file.size })),
+   }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (r.ok && d && d.ok && Array.isArray(d.duplicateIndexes)) {
+   d.duplicateIndexes.forEach(i => serverDupIdx.add(i));
+  } else {
+   const localKeys = new Set(allFiles.map(f => `${currentFolderId || ''}::${f.name}::${f.size}`));
+   entries.forEach((e, i) => { if (localKeys.has(`${e.folderId || ''}::${e.file.name}::${e.file.size}`)) serverDupIdx.add(i); });
+  }
+ } catch {
+  const localKeys = new Set(allFiles.map(f => `${currentFolderId || ''}::${f.name}::${f.size}`));
+  entries.forEach((e, i) => { if (localKeys.has(`${e.folderId || ''}::${e.file.name}::${e.file.size}`)) serverDupIdx.add(i); });
+ }
+
  const batchSeen = new Set();
  const dups = [];
  const unique = [];
- for (const f of files) {
-  const key = `${f.name}::${f.size}`;
-  if (existingKeys.has(key)) {
-   dups.push({ file: f, reason: 'dir' });
+ entries.forEach((e, idx) => {
+  const key = `${e.folderId || ''}::${e.file.name}::${e.file.size}`;
+  if (serverDupIdx.has(idx)) {
+   dups.push({ file: e.file, reason: 'dir' });
   } else if (batchSeen.has(key)) {
-   dups.push({ file: f, reason: 'batch' });
+   dups.push({ file: e.file, reason: 'batch' });
   } else {
    batchSeen.add(key);
-   unique.push(f);
+   unique.push(e);
   }
- }
+ });
  if (!dups.length) return false;
- dupPendingCtx = { all: files, dups, unique, onProceed };
+ dupPendingCtx = { all: entries, dups, unique, onProceed };
  if ($('dupCheckSummary')) {
-  $('dupCheckSummary').textContent = `发现 ${dups.length} 个同名同大小文件（共选 ${files.length} 个），建议跳过避免重复占用存储。`;
+  $('dupCheckSummary').textContent = `发现 ${dups.length} 个同名同大小文件（共选 ${entries.length} 个），建议跳过避免重复占用存储。`;
  }
  renderDupModalList(null);
  if ($('dupSkipBtn')) {

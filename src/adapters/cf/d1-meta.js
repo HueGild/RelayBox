@@ -108,9 +108,22 @@ export class D1MetaStore {
     return this._rowToFile(r);
   }
 
-  async listFiles(folderId, { authed, limit = 0, offset = 0 } = {}) {
+  _orderByForSort(sort) {
+    switch (sort) {
+      case 'time-asc': return 'uploaded_at ASC';
+      case 'name-asc': return 'lower(name) ASC, uploaded_at DESC';
+      case 'name-desc': return 'lower(name) DESC, uploaded_at DESC';
+      case 'size-desc': return 'size DESC, uploaded_at DESC';
+      case 'size-asc': return 'size ASC, uploaded_at DESC';
+      case 'time-desc':
+      default: return 'uploaded_at DESC';
+    }
+  }
+
+  async listFiles(folderId, { authed, limit = 0, offset = 0, sort = 'time-desc' } = {}) {
     const now = Date.now();
-    const baseSql = 'SELECT * FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) ORDER BY uploaded_at DESC';
+    const orderBy = this._orderByForSort(sort);
+    const baseSql = `SELECT * FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) ORDER BY ${orderBy}`;
     if (Number.isInteger(limit) && limit > 0) {
       const safeOffset = (Number.isInteger(offset) && offset > 0) ? offset : 0;
       const { results } = await this.db.prepare(`${baseSql} LIMIT ? OFFSET ?`)
@@ -120,6 +133,117 @@ export class D1MetaStore {
     const { results } = await this.db.prepare(baseSql)
       .bind(folderId || null, now, authed ? 1 : 0, 'public').all();
     return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  /**
+   * Single D1 db.batch() round-trip for GET /api/files (folders, page files,
+   * folder stats, folder counts, pool usage stats, and optional trash stats).
+   */
+  async getDirListingBundle(folderId, { authed, limit = 0, offset = 0, sort = 'time-desc' } = {}) {
+    const now = Date.now();
+    const orderBy = this._orderByForSort(sort);
+    const authedFlag = authed ? 1 : 0;
+    const fid = folderId || null;
+
+    if (typeof this.db.batch !== 'function') {
+      const [folders, files, folderStats, fileCountByFolder, poolUsageMap, trashStats] = await Promise.all([
+        this.listFolders(),
+        this.listFiles(fid, { authed, limit, offset, sort }),
+        this.getFolderFileStats(fid, { authed }),
+        this.getFolderFileCounts({ authed }),
+        this.getPoolUsageStats({ includeTrashed: true }),
+        authed ? this.getTrashStats() : Promise.resolve({ count: 0, totalBytes: 0 }),
+      ]);
+      return { folders, files, folderStats, fileCountByFolder, poolUsageMap, trashStats };
+    }
+
+    const baseFilesSql = `SELECT * FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) ORDER BY ${orderBy}`;
+    const filesStmt = (Number.isInteger(limit) && limit > 0)
+      ? this.db.prepare(`${baseFilesSql} LIMIT ? OFFSET ?`).bind(fid, now, authedFlag, 'public', limit, (Number.isInteger(offset) && offset > 0) ? offset : 0)
+      : this.db.prepare(baseFilesSql).bind(fid, now, authedFlag, 'public');
+
+    const stmts = [
+      this.db.prepare('SELECT * FROM folders'),
+      filesStmt,
+      this.db.prepare(
+        "SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes, COALESCE(SUM(CASE WHEN storage = 'r2' THEN size ELSE 0 END), 0) AS r2_bytes, COALESCE(SUM(CASE WHEN storage != 'r2' THEN size ELSE 0 END), 0) AS local_bytes FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)",
+      ).bind(fid, now, authedFlag, 'public'),
+      this.db.prepare(
+        'SELECT folder_id, COUNT(*) AS cnt FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) AND folder_id IS NOT NULL GROUP BY folder_id',
+      ).bind(now, authedFlag, 'public'),
+      this.db.prepare(
+        "SELECT CASE WHEN pool_id IS NOT NULL AND pool_id != '' THEN pool_id WHEN storage = 'r2' THEN 'builtin-r2' ELSE 'builtin-local' END AS effective_pool_id, COUNT(*) AS file_count, COALESCE(SUM(size), 0) AS used_bytes, SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) AS active_count, SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END) AS trash_count FROM files WHERE (deleted_at IS NOT NULL OR expires_at IS NULL OR expires_at > ?) GROUP BY effective_pool_id",
+      ).bind(now),
+    ];
+    if (authed) {
+      stmts.push(this.db.prepare('SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes FROM files WHERE deleted_at IS NOT NULL'));
+    }
+
+    const res = await this.db.batch(stmts);
+    const folders = ((res[0] && res[0].results) || []).map((r) => this._rowToFolder(r));
+    const files = ((res[1] && res[1].results) || []).map((r) => this._rowToFile(r));
+    const fsRow = (res[2] && res[2].results && res[2].results[0]) || null;
+    const folderStats = {
+      count: Number((fsRow && fsRow.count) || 0),
+      totalBytes: Number((fsRow && fsRow.total_bytes) || 0),
+      r2Bytes: Number((fsRow && fsRow.r2_bytes) || 0),
+      localBytes: Number((fsRow && fsRow.local_bytes) || 0),
+    };
+    const fileCountByFolder = new Map();
+    for (const r of ((res[3] && res[3].results) || [])) {
+      if (r && r.folder_id) fileCountByFolder.set(r.folder_id, Number(r.cnt || 0));
+    }
+    const poolUsageMap = new Map();
+    for (const r of ((res[4] && res[4].results) || [])) {
+      if (!r || !r.effective_pool_id) continue;
+      poolUsageMap.set(r.effective_pool_id, {
+        fileCount: Number(r.file_count || 0),
+        usedBytes: Number(r.used_bytes || 0),
+        activeCount: Number(r.active_count || 0),
+        trashCount: Number(r.trash_count || 0),
+      });
+    }
+    const trRow = authed ? ((res[5] && res[5].results && res[5].results[0]) || null) : null;
+    const trashStats = {
+      count: Number((trRow && trRow.count) || 0),
+      totalBytes: Number((trRow && trRow.total_bytes) || 0),
+    };
+    return { folders, files, folderStats, fileCountByFolder, poolUsageMap, trashStats };
+  }
+
+  /**
+   * Batch duplicate detection for pre-upload check across one or more folders.
+   * Returns a Set of matched keys `${folderId || ''}::${name}::${size}`.
+   */
+  async findDuplicatesInFolders(items) {
+    const matched = new Set();
+    if (!Array.isArray(items) || !items.length) return matched;
+    const now = Date.now();
+    // Group unique names per folderId to keep SQL compact
+    const byFolder = new Map();
+    for (const it of items) {
+      if (!it || typeof it.name !== 'string' || !it.name) continue;
+      const fk = it.folderId ? String(it.folderId) : '';
+      let names = byFolder.get(fk);
+      if (!names) { names = new Set(); byFolder.set(fk, names); }
+      names.add(it.name);
+    }
+    const BATCH = 40;
+    for (const [fk, nameSet] of byFolder.entries()) {
+      const fid = fk || null;
+      const nameList = [...nameSet];
+      for (let i = 0; i < nameList.length; i += BATCH) {
+        const slice = nameList.slice(i, i + BATCH);
+        const ph = slice.map(() => '?').join(', ');
+        const { results } = await this.db.prepare(
+          `SELECT name, size FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND name IN (${ph})`,
+        ).bind(fid, now, ...slice).all();
+        for (const r of (results || [])) {
+          matched.add(`${fk}::${r.name}::${Number(r.size || 0)}`);
+        }
+      }
+    }
+    return matched;
   }
 
   async getFolderFileStats(folderId, { authed } = {}) {
@@ -299,27 +423,43 @@ export class D1MetaStore {
     const todayCstStartUtc = Date.UTC(cstNow.getUTCFullYear(), cstNow.getUTCMonth(), cstNow.getUTCDate()) - CST_OFFSET_MS;
     const sevenDaysStartMs = todayCstStartUtc - 6 * 24 * 3600 * 1000;
 
-    const [overviewRow, trashRow, folderRow, shareRow, kindRows, topRows, trendRows] = await Promise.all([
+    const stmts = [
       this.db.prepare(
         'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes, COALESCE(SUM(downloads), 0) AS total_downloads FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)',
-      ).bind(now).first(),
+      ).bind(now),
       this.db.prepare(
         'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes FROM files WHERE deleted_at IS NOT NULL',
-      ).first(),
-      this.db.prepare('SELECT COUNT(*) AS count FROM folders').first(),
+      ),
+      this.db.prepare('SELECT COUNT(*) AS count FROM folders'),
       this.db.prepare(
         'SELECT COUNT(*) AS count FROM shares WHERE (expires_at IS NULL OR expires_at > ?) AND (max_downloads = 0 OR used_downloads < max_downloads)',
-      ).bind(now).first(),
+      ).bind(now),
       this.db.prepare(
         'SELECT kind, COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) GROUP BY kind ORDER BY bytes DESC',
-      ).bind(now).all(),
+      ).bind(now),
       this.db.prepare(
         'SELECT id, name, kind, size, downloads, folder_id, visibility, uploaded_at FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND downloads > 0 ORDER BY downloads DESC, uploaded_at DESC LIMIT 10',
-      ).bind(now).all(),
+      ).bind(now),
       this.db.prepare(
         "SELECT strftime('%Y-%m-%d', (uploaded_at + 28800000) / 1000, 'unixepoch') AS day, COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM files WHERE deleted_at IS NULL AND uploaded_at >= ? GROUP BY day ORDER BY day ASC",
-      ).bind(sevenDaysStartMs).all(),
-    ]);
+      ).bind(sevenDaysStartMs),
+    ];
+    let overviewRow, trashRow, folderRow, shareRow, kindRows, topRows, trendRows;
+    if (typeof this.db.batch === 'function') {
+      const b = await this.db.batch(stmts);
+      overviewRow = (b[0] && b[0].results && b[0].results[0]) || null;
+      trashRow = (b[1] && b[1].results && b[1].results[0]) || null;
+      folderRow = (b[2] && b[2].results && b[2].results[0]) || null;
+      shareRow = (b[3] && b[3].results && b[3].results[0]) || null;
+      kindRows = b[4] || { results: [] };
+      topRows = b[5] || { results: [] };
+      trendRows = b[6] || { results: [] };
+    } else {
+      [overviewRow, trashRow, folderRow, shareRow, kindRows, topRows, trendRows] = await Promise.all([
+        stmts[0].first(), stmts[1].first(), stmts[2].first(), stmts[3].first(),
+        stmts[4].all(), stmts[5].all(), stmts[6].all(),
+      ]);
+    }
 
     const totalBytes = Number((overviewRow && overviewRow.total_bytes) || 0);
     const totalFiles = Number((overviewRow && overviewRow.count) || 0);

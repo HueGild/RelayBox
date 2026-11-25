@@ -114,12 +114,22 @@ export function authFail(c, status) {
   return c.json({ ok: false, error: '密码不对' }, 401);
 }
 
-/** Cookie helpers for login/logout (same attributes as v2.8.4). */
+function isSecureRequest(c) {
+  try {
+    const xfProto = (c && c.req && c.req.header('x-forwarded-proto')) || '';
+    if (xfProto.toLowerCase().startsWith('https')) return true;
+    if (c && c.req && c.req.url && new URL(c.req.url).protocol === 'https:') return true;
+  } catch {}
+  return false;
+}
+/** Cookie helpers for login/logout (auto-adds Secure on HTTPS). */
 export function setSessionCookie(c, token) {
-  c.header('Set-Cookie', `fs_admin=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`);
+  const sec = isSecureRequest(c) ? '; Secure' : '';
+  c.header('Set-Cookie', `fs_admin=${token}; Path=/; HttpOnly; SameSite=Lax${sec}; Max-Age=${7 * 24 * 60 * 60}`);
 }
 export function clearSessionCookie(c) {
-  c.header('Set-Cookie', 'fs_admin=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  const sec = isSecureRequest(c) ? '; Secure' : '';
+  c.header('Set-Cookie', `fs_admin=; Path=/; HttpOnly; SameSite=Lax${sec}; Max-Age=0`);
 }
 export function sessionTokenOf(c) {
   return parseCookies(c.req.header('Cookie')).fs_admin || '';

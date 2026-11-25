@@ -56,6 +56,9 @@ function buildDeps(env) {
   };
 }
 
+// Module-level singleton Hono app (reuses compiled router across requests).
+const workerApp = createApp((c) => buildDeps(c.env));
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -70,8 +73,7 @@ export default {
       path.startsWith('/dav/') ||
       path.startsWith('/__')
     ) {
-      const app = createApp(buildDeps(env));
-      return app.fetch(request, env, ctx);
+      return workerApp.fetch(request, env, ctx);
     }
 
     const withSecHeaders = (res) => {

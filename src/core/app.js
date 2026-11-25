@@ -27,17 +27,21 @@ import { registerMigrate } from './routes/migrate.js';
 import { registerWebdav } from './routes/webdav.js';
 import { registerStats } from './routes/stats.js';
 
-export function createApp(deps) {
-  assertImplements(deps.meta, MetaStoreMethods, 'MetaStore');
-  assertImplements(deps.local, StorageStoreMethods, 'LocalStorage');
-  assertImplements(deps.r2, StorageStoreMethods, 'R2Storage');
-  if (!deps.config || typeof deps.config.uploadPassword !== 'string') {
-    throw new Error('createApp: config.uploadPassword is required');
+export function createApp(depsOrFactory) {
+  const isFactory = typeof depsOrFactory === 'function';
+  if (!isFactory) {
+    assertImplements(depsOrFactory.meta, MetaStoreMethods, 'MetaStore');
+    assertImplements(depsOrFactory.local, StorageStoreMethods, 'LocalStorage');
+    assertImplements(depsOrFactory.r2, StorageStoreMethods, 'R2Storage');
+    if (!depsOrFactory.config || typeof depsOrFactory.config.uploadPassword !== 'string') {
+      throw new Error('createApp: config.uploadPassword is required');
+    }
   }
 
   const app = new Hono();
   app.use('*', async (c, next) => {
-    c.set('deps', deps);
+    const reqDeps = isFactory ? depsOrFactory(c) : depsOrFactory;
+    c.set('deps', reqDeps);
     await next();
     if (c.res && c.res.headers) {
       const needNosniff = !c.res.headers.has('X-Content-Type-Options');
