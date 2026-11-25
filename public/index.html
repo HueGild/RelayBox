@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r11 (2026-11-24 · v3.3.2 Telegram 实时推送：收集箱来件、阅后即焚、密码封禁告警与每日存储池用量汇总) -->
+<!-- RelayBox v3.0 UI r12 (2026-11-24 · v3.3.3 上传前客户端自动压缩 / 转 WebP：纯浏览器 Canvas 处理、可调质量与最大边长、智能保留动图与防膨胀) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -636,6 +636,28 @@
  .tg-hour-sel { width: auto !important; padding: 4px 8px !important; font-size: 12px !important; border-radius: 8px !important; }
  body.has-wallpaper .tg-switch-row, body.has-wallpaper .tg-events-box { background: var(--glass-input-bg); }
 
+ /* r12: 上传前客户端图片压缩 / 转 WebP 控件样式 */
+ .img-comp-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding: 7px 10px; border-radius: 10px; background: var(--surface-soft); border: 1px solid var(--border); font-size: 12.5px; }
+ .img-comp-bar.on { border-color: rgba(37,99,235,.35); background: var(--accent-soft); }
+ .img-comp-toggle { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--text); font-weight: 500; user-select: none; min-width: 0; }
+ .img-comp-toggle input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; margin: 0; flex-shrink: 0; }
+ .img-comp-summary { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .img-comp-bar.on .img-comp-summary { color: var(--accent); font-weight: 500; }
+ .img-comp-cfg-btn { padding: 3px 9px; font-size: 11.5px; border-radius: 8px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 2px; }
+ .img-comp-panel { display: none; margin-top: 8px; padding: 11px 12px; border-radius: 11px; background: var(--surface-soft); border: 1px solid var(--border); font-size: 12.5px; }
+ .img-comp-panel.open { display: block; animation: menuPop .16s cubic-bezier(.22,1,.36,1); }
+ .img-comp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 9px; }
+ .img-comp-row:last-of-type { margin-bottom: 6px; }
+ .img-comp-label { color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
+ .img-comp-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+ .img-comp-pills .pill { padding: 4px 10px; font-size: 11.5px; }
+ .img-comp-slider-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 140px; max-width: 240px; }
+ .img-comp-slider-wrap input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+ .img-comp-qval { min-width: 34px; text-align: right; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+ .img-comp-tip { font-size: 11px; color: var(--muted); line-height: 1.45; }
+ .uq-saved { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 999px; background: var(--ok-bg); color: var(--ok-text); font-size: 10.5px; font-weight: 600; margin-left: 5px; flex-shrink: 0; }
+ body.has-wallpaper .img-comp-bar:not(.on), body.has-wallpaper .img-comp-panel { background: var(--glass-input-bg); }
+
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
   .mob-only-wrap { display: inline-flex; }
@@ -738,6 +760,37 @@
  <label class="seg-opt"><input type="radio" name="storage" value="r2" checked><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg> R2</span></label>
  <label class="seg-opt"><input type="radio" name="storage" value="local"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></svg> 本地</span></label>
  </div>
+ </div>
+ <div class="img-comp-bar" id="imgCompBar">
+ <label class="img-comp-toggle"><input type="checkbox" id="imgCompEnable"><span>图片压缩</span><span class="img-comp-summary" id="imgCompSummary">已关闭（上传原图）</span></label>
+ <button type="button" class="ghost img-comp-cfg-btn" id="imgCompCfgBtn">参数<span class="dd-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+ </div>
+ <div class="img-comp-panel" id="imgCompPanel">
+ <div class="img-comp-row">
+ <span class="img-comp-label">输出格式</span>
+ <div class="img-comp-pills" id="imgCompFmtPills">
+ <button type="button" class="pill active" data-icfmt="webp">转 WebP（推荐）</button>
+ <button type="button" class="pill" data-icfmt="keep">保持原格式</button>
+ <button type="button" class="pill" data-icfmt="jpeg">转 JPEG</button>
+ </div>
+ </div>
+ <div class="img-comp-row">
+ <span class="img-comp-label">压缩质量</span>
+ <div class="img-comp-slider-wrap">
+ <input type="range" id="imgCompQuality" min="50" max="95" step="1" value="82">
+ <span class="img-comp-qval" id="imgCompQVal">82%</span>
+ </div>
+ </div>
+ <div class="img-comp-row">
+ <span class="img-comp-label">最大边长</span>
+ <div class="img-comp-pills" id="imgCompDimPills">
+ <button type="button" class="pill active" data-icdim="0">原尺寸</button>
+ <button type="button" class="pill" data-icdim="1920">1920px</button>
+ <button type="button" class="pill" data-icdim="2560">2560px</button>
+ <button type="button" class="pill" data-icdim="3840">4K</button>
+ </div>
+ </div>
+ <div class="img-comp-tip">纯浏览器本地 Canvas 压缩，不消耗 Worker 额度；自动跳过 GIF 动图与 SVG，若压缩后体积反而变大将自动保留原图。</div>
  </div>
  <div class="up-row">
  <span style="position:relative;flex-shrink:0">
@@ -2710,11 +2763,14 @@ function renderUploadQueue() {
  box.innerHTML = queueDisplay.map(j => {
  const cls = j.status === 'done' ? ' done' : (j.status === 'error' || j.status === 'canceled') ? ' err' : '';
  const stateCls = j.status === 'done' ? ' ok' : (j.status === 'error' || j.status === 'canceled') ? ' err' : '';
- const stateTxt = j.status === 'pending' ? '排队中' : j.status === 'uploading' ? (j.pct + '%') : j.status === 'done' ? '已完成' : j.status === 'canceled' ? '已取消' : '失败';
- const canCancel = j.status === 'pending' || j.status === 'uploading';
+ const stateTxt = j.status === 'pending' ? '排队中' : j.status === 'compressing' ? '压缩中…' : j.status === 'uploading' ? (j.pct + '%') : j.status === 'done' ? '已完成' : j.status === 'canceled' ? '已取消' : '失败';
+ const canCancel = j.status === 'pending' || j.status === 'compressing' || j.status === 'uploading';
+ const savedBadge = (j.origSize && j.compressedSize && j.compressedSize < j.origSize)
+  ? `<span class="uq-saved" title="已压缩：${fmtSize(j.origSize)} → ${fmtSize(j.compressedSize)}">-${Math.max(1, Math.round((1 - j.compressedSize / j.origSize) * 100))}%</span>`
+  : '';
  return `<div class="uq-item${cls}">
  <div class="uq-body">
- <div class="uq-top"><span class="uq-name" title="${escapeHtml(j.file.name)}">${escapeHtml(j.file.name)}</span><span class="uq-state${stateCls}">${stateTxt}</span></div>
+ <div class="uq-top"><span class="uq-name" title="${escapeHtml(j.file.name)}">${escapeHtml(j.file.name)}</span>${savedBadge}<span class="uq-state${stateCls}">${stateTxt}</span></div>
  <div class="uq-bar"><div style="width:${j.pct}%"></div></div>
  </div>
  ${canCancel ? `<button class="uq-cancel" type="button" title="取消上传" aria-label="取消上传" onclick="cancelUploadJob(${j.jid})">${ICONS.close}</button>` : ''}
@@ -2731,7 +2787,7 @@ function cancelUploadJob(jid) {
  if (idx >= 0) uploadQueue.splice(idx, 1);
  renderUploadQueue();
  setMsg('已取消排队任务：' + job.file.name, '');
- } else if (job.status === 'uploading') {
+ } else if (job.status === 'uploading' || job.status === 'compressing') {
  job.status = 'canceled';
  if (job.abortFn) { try { job.abortFn(); } catch {} }
  renderUploadQueue();
@@ -3068,7 +3124,7 @@ async function uploadChunked(job, idx, total, targetFolderId, pw) {
  if (!d.ok) { job.status = 'error'; setMsg(`第 ${idx} 个合并失败：` + (d.error || ('HTTP ' + r.status)), 'err'); return; }
  localStorage.removeItem(resumeKey);
  job.pct = 100; job.status = 'done';
- setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok');
+ setMsg(`第 ${idx}/${total} 个上传完成：${f.name}${compressNote(job)}`, 'ok');
  await waitThumb(d.file, f);
  } catch (e) {
  job.status = 'error';
@@ -3079,11 +3135,26 @@ async function uploadChunked(job, idx, total, targetFolderId, pw) {
 }
 
 async function uploadOne(job, idx, total) {
- const f = job.file;
- const targetFolderId = job.folderId !== undefined ? job.folderId : (uploadDestOverride !== undefined ? uploadDestOverride : currentFolderId);
- job.dims = await probeMediaDims(f);
  const pw = authed ? '' : $('password').value.trim();
  if (!authed && !pw) { job.status = 'error'; setMsg('请先填上传密码', 'err'); return Promise.resolve(); }
+ const targetFolderId = job.folderId !== undefined ? job.folderId : (uploadDestOverride !== undefined ? uploadDestOverride : currentFolderId);
+ if (imgCompCfg.enabled && isCompressibleImage(job.file)) {
+  job.status = 'compressing';
+  renderUploadQueue();
+  setMsg(`正在本地压缩 ${idx}/${total}：${job.file.name}…`, '');
+  const comp = await maybeCompressImage(job.file, imgCompCfg);
+  if (job.canceled) return;
+  if (comp && comp.compressed) {
+   job.origSize = comp.origSize;
+   job.compressedSize = comp.newSize;
+   job.file = comp.file;
+   if (comp.width && comp.height) job.dims = { width: comp.width, height: comp.height };
+  }
+  job.status = 'uploading';
+  renderUploadQueue();
+ }
+ const f = job.file;
+ if (!job.dims || !job.dims.width) job.dims = await probeMediaDims(f);
  const activePool = getActivePool();
  const customPoolId = (activePool && !activePool.builtin) ? activePool.id : '';
  const activeMode = (activePool && activePool.transferMode) ? activePool.transferMode : r2TransferMode;
@@ -3128,7 +3199,7 @@ async function uploadOne(job, idx, total) {
    try { d = JSON.parse(xhr.responseText); } catch {}
    if (xhr.status === 200 && d.ok) {
     job.pct = 100; job.status = 'done';
-    setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok');
+    setMsg(`第 ${idx}/${total} 个上传完成：${f.name}${compressNote(job)}`, 'ok');
     await waitThumb(d.file, f);
    } else {
     job.status = 'error';
@@ -3169,7 +3240,7 @@ async function uploadOne(job, idx, total) {
  });
  const d2 = await r2.json();
  if (!d2.ok) { job.status = 'error'; setMsg(`第 ${idx} 个登记失败：` + (d2.error || ('HTTP ' + r2.status)), 'err'); }
- else { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok'); await waitThumb(d2.file, f); }
+ else { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}${compressNote(job)}`, 'ok'); await waitThumb(d2.file, f); }
  } catch (e) {
  if (job.canceled || (e && e.message === 'ABORTED')) return;
  job.status = 'error';
@@ -3192,7 +3263,7 @@ async function uploadOne(job, idx, total) {
  xhr.onload = async () => {
  let d = {};
  try { d = JSON.parse(xhr.responseText); } catch {}
- if (xhr.status === 200 && d.ok) { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}`, 'ok'); await waitThumb(d.file, f); }
+ if (xhr.status === 200 && d.ok) { job.pct = 100; job.status = 'done'; setMsg(`第 ${idx}/${total} 个上传完成：${f.name}${compressNote(job)}`, 'ok'); await waitThumb(d.file, f); }
  else { job.status = 'error'; setMsg(`第 ${idx} 个上传失败：` + (d.error || ('HTTP ' + xhr.status)), 'err'); }
  resolve();
  };
@@ -4674,6 +4745,243 @@ if ($('tgSaveBtn')) $('tgSaveBtn').onclick = async () => {
  } catch { msg.textContent = '网络错误'; msg.className = 'msg err'; }
  finally { btn.disabled = false; }
 };
+
+
+// ===== r12: 上传前客户端图片自动压缩 / 转 WebP（纯浏览器 Canvas，零 Worker 算力消耗） =====
+const IMG_COMP_KEY = 'fs-img-compress';
+const IMG_COMPRESSIBLE_RE = /\.(jpe?g|png|webp|bmp)$/i;
+const IMG_SKIP_RE = /\.(gif|svg)$/i;
+let imgCompCfg = { enabled: false, format: 'webp', quality: 82, maxDim: 0 };
+try {
+ const saved = JSON.parse(localStorage.getItem(IMG_COMP_KEY) || 'null');
+ if (saved && typeof saved === 'object') {
+  imgCompCfg.enabled = saved.enabled === true;
+  if (['webp', 'keep', 'jpeg'].includes(saved.format)) imgCompCfg.format = saved.format;
+  const q = Number(saved.quality);
+  if (Number.isFinite(q)) imgCompCfg.quality = Math.max(50, Math.min(95, Math.round(q)));
+  const d = Number(saved.maxDim);
+  if ([0, 1920, 2560, 3840].includes(d)) imgCompCfg.maxDim = d;
+ }
+} catch {}
+
+let _webpEncodeSupported = null;
+function supportsWebpEncode() {
+ if (_webpEncodeSupported !== null) return _webpEncodeSupported;
+ try {
+  const c = document.createElement('canvas');
+  c.width = 1; c.height = 1;
+  _webpEncodeSupported = c.toDataURL('image/webp').startsWith('data:image/webp');
+ } catch {
+  _webpEncodeSupported = false;
+ }
+ return _webpEncodeSupported;
+}
+
+function saveImgCompCfg() {
+ try { localStorage.setItem(IMG_COMP_KEY, JSON.stringify(imgCompCfg)); } catch {}
+}
+
+function renderImgCompUI() {
+ const bar = $('imgCompBar'), cb = $('imgCompEnable'), sum = $('imgCompSummary');
+ if (!bar || !cb || !sum) return;
+ cb.checked = !!imgCompCfg.enabled;
+ bar.classList.toggle('on', !!imgCompCfg.enabled);
+ const fmtLabels = { webp: '转 WebP', keep: '原格式压缩', jpeg: '转 JPEG' };
+ const dimTxt = imgCompCfg.maxDim > 0 ? ` · ≤${imgCompCfg.maxDim}px` : '';
+ sum.textContent = imgCompCfg.enabled
+  ? `${fmtLabels[imgCompCfg.format] || '转 WebP'} · ${imgCompCfg.quality}%${dimTxt}`
+  : '已关闭（上传原图）';
+ if ($('imgCompQuality')) $('imgCompQuality').value = String(imgCompCfg.quality);
+ if ($('imgCompQVal')) $('imgCompQVal').textContent = imgCompCfg.quality + '%';
+ document.querySelectorAll('#imgCompFmtPills button[data-icfmt]').forEach(b => {
+  b.classList.toggle('active', b.dataset.icfmt === imgCompCfg.format);
+ });
+ document.querySelectorAll('#imgCompDimPills button[data-icdim]').forEach(b => {
+  b.classList.toggle('active', Number(b.dataset.icdim) === imgCompCfg.maxDim);
+ });
+}
+
+function isCompressibleImage(file) {
+ if (!file || !file.name) return false;
+ const name = file.name;
+ const type = (file.type || '').toLowerCase();
+ if (IMG_SKIP_RE.test(name) || type === 'image/gif' || type === 'image/svg+xml') return false;
+ return IMG_COMPRESSIBLE_RE.test(name) || /^image\/(jpeg|jpg|png|webp|bmp)$/.test(type);
+}
+
+function replaceFileExt(name, newExt) {
+ const s = String(name || 'image');
+ const dot = s.lastIndexOf('.');
+ const base = dot > 0 ? s.slice(0, dot) : s;
+ return base + newExt;
+}
+
+function compressNote(job) {
+ if (!job || !job.origSize || !job.compressedSize || job.compressedSize >= job.origSize) return '';
+ const pct = Math.max(1, Math.round((1 - job.compressedSize / job.origSize) * 100));
+ return `（已压缩 ${fmtSize(job.origSize)} → ${fmtSize(job.compressedSize)}，省 ${pct}%）`;
+}
+
+async function maybeCompressImage(file, cfg) {
+ if (!cfg || !cfg.enabled || !isCompressibleImage(file)) return { file, compressed: false };
+ try {
+  let src = null;
+  let closeBitmap = false;
+  if (typeof createImageBitmap === 'function') {
+   try { src = await createImageBitmap(file); closeBitmap = true; } catch { src = null; }
+  }
+  if (!src) {
+   const url = URL.createObjectURL(file);
+   try {
+    src = await new Promise((res, rej) => {
+     const im = new Image();
+     im.onload = () => res(im);
+     im.onerror = rej;
+     im.src = url;
+    });
+   } finally {
+    URL.revokeObjectURL(url);
+   }
+  }
+  const origW = src.naturalWidth || src.width || 0;
+  const origH = src.naturalHeight || src.height || 0;
+  if (!origW || !origH) {
+   if (closeBitmap && src.close) src.close();
+   return { file, compressed: false };
+  }
+
+  let w = origW, h = origH;
+  const maxDim = Number(cfg.maxDim) || 0;
+  const resized = maxDim > 0 && Math.max(origW, origH) > maxDim;
+  if (resized) {
+   const scale = maxDim / Math.max(origW, origH);
+   w = Math.max(1, Math.round(origW * scale));
+   h = Math.max(1, Math.round(origH * scale));
+  }
+
+  const origType = (file.type || '').toLowerCase();
+  const isPng = /\.png$/i.test(file.name) || origType === 'image/png';
+  const isWebp = /\.webp$/i.test(file.name) || origType === 'image/webp';
+  const isBmp = /\.bmp$/i.test(file.name) || origType === 'image/bmp';
+
+  let outMime = 'image/webp';
+  let outExt = '.webp';
+  if (cfg.format === 'webp') {
+   if (supportsWebpEncode()) {
+    outMime = 'image/webp'; outExt = '.webp';
+   } else if (!isPng) {
+    outMime = 'image/jpeg'; outExt = '.jpg';
+   } else {
+    if (closeBitmap && src.close) src.close();
+    return { file, compressed: false };
+   }
+  } else if (cfg.format === 'jpeg') {
+   outMime = 'image/jpeg'; outExt = '.jpg';
+  } else {
+   // keep 原格式
+   if (isPng) {
+    if (!resized) {
+     if (closeBitmap && src.close) src.close();
+     return { file, compressed: false };
+    }
+    outMime = 'image/png'; outExt = '.png';
+   } else if (isWebp && supportsWebpEncode()) {
+    outMime = 'image/webp'; outExt = '.webp';
+   } else if (isBmp) {
+    outMime = supportsWebpEncode() ? 'image/webp' : 'image/jpeg';
+    outExt = supportsWebpEncode() ? '.webp' : '.jpg';
+   } else {
+    outMime = 'image/jpeg'; outExt = '.jpg';
+   }
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+   if (closeBitmap && src.close) src.close();
+   return { file, compressed: false };
+  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  if (outMime === 'image/jpeg') {
+   ctx.fillStyle = '#FFFFFF';
+   ctx.fillRect(0, 0, w, h);
+  }
+  ctx.drawImage(src, 0, 0, w, h);
+  if (closeBitmap && src.close) src.close();
+
+  const q = Math.max(0.5, Math.min(0.95, (Number(cfg.quality) || 82) / 100));
+  const blob = await new Promise((res) => {
+   try { canvas.toBlob(res, outMime, outMime === 'image/png' ? undefined : q); }
+   catch { res(null); }
+  });
+  canvas.width = 0; canvas.height = 0;
+
+  // 智能防膨胀：若压缩后反而大于等于原文件，直接保留原图
+  if (!blob || !blob.size || blob.size >= file.size) {
+   return { file, compressed: false };
+  }
+  const newName = (cfg.format === 'keep' && !isBmp) ? file.name : replaceFileExt(file.name, outExt);
+  const compressedFile = new File([blob], newName, {
+   type: blob.type || outMime,
+   lastModified: file.lastModified || Date.now(),
+  });
+  return {
+   file: compressedFile,
+   compressed: true,
+   origSize: file.size,
+   newSize: compressedFile.size,
+   width: w,
+   height: h,
+  };
+ } catch {
+  return { file, compressed: false };
+ }
+}
+
+if ($('imgCompEnable')) {
+ $('imgCompEnable').onchange = () => {
+  imgCompCfg.enabled = $('imgCompEnable').checked;
+  saveImgCompCfg();
+  renderImgCompUI();
+  showToast(imgCompCfg.enabled ? '已开启上传前图片自动压缩' : '已关闭图片压缩，将上传原图', 'ok');
+ };
+}
+if ($('imgCompCfgBtn')) {
+ $('imgCompCfgBtn').onclick = () => {
+  const panel = $('imgCompPanel');
+  const open = !panel.classList.contains('open');
+  panel.classList.toggle('open', open);
+  $('imgCompCfgBtn').classList.toggle('dd-open', open);
+ };
+}
+document.querySelectorAll('#imgCompFmtPills button[data-icfmt]').forEach(b => {
+ b.onclick = () => {
+  imgCompCfg.format = b.dataset.icfmt;
+  if (!imgCompCfg.enabled) imgCompCfg.enabled = true;
+  saveImgCompCfg();
+  renderImgCompUI();
+ };
+});
+document.querySelectorAll('#imgCompDimPills button[data-icdim]').forEach(b => {
+ b.onclick = () => {
+  imgCompCfg.maxDim = Number(b.dataset.icdim) || 0;
+  if (!imgCompCfg.enabled) imgCompCfg.enabled = true;
+  saveImgCompCfg();
+  renderImgCompUI();
+ };
+});
+if ($('imgCompQuality')) {
+ $('imgCompQuality').oninput = () => {
+  imgCompCfg.quality = Math.max(50, Math.min(95, Number($('imgCompQuality').value) || 82));
+  if (!imgCompCfg.enabled) imgCompCfg.enabled = true;
+  saveImgCompCfg();
+  renderImgCompUI();
+ };
+}
+renderImgCompUI();
 
 loadDropView().then(async (isDrop) => {
  if (isDrop) return;
