@@ -205,6 +205,9 @@ export class JsonMetaStore {
   _writeShares(list) {
     this._writeJson(this.sharesFile, list);
   }
+  async listShares() {
+    return this._readShares().map((s) => this._normalizeShare(s)).filter(Boolean);
+  }
   async getShareByToken(token) {
     const s = this._readShares().find((x) => x.token === token);
     return s ? this._normalizeShare(s) : null;

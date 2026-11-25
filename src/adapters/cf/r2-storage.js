@@ -111,6 +111,7 @@ export class R2Storage {
     };
     if (opts.disposition) baseHeaders['Content-Disposition'] = opts.disposition;
     if (opts.cacheControl) baseHeaders['Cache-Control'] = opts.cacheControl;
+    if (opts.vary) baseHeaders['Vary'] = opts.vary;
 
     if (hasRange) {
       const head = await this.binding.head(key);
@@ -152,7 +153,8 @@ export class R2Storage {
       ...baseHeaders,
       'Content-Length': String(obj.size),
     };
-    if (obj.httpEtag) headers['ETag'] = obj.httpEtag;
+    if (opts.etag) headers['ETag'] = opts.etag;
+    else if (obj.httpEtag) headers['ETag'] = obj.httpEtag;
     return new Response(obj.body, { status: 200, headers });
   }
 
@@ -252,8 +254,8 @@ export class R2Storage {
   }
 
   // ---- thumbnails (R2, `thumbs/` prefix) ----
-  async putThumb(id, buffer) {
-    await this.put(THUMB_PREFIX + id + '.jpg', buffer, 'image/jpeg');
+  async putThumb(id, buffer, contentType) {
+    await this.put(THUMB_PREFIX + id + '.jpg', buffer, contentType || 'image/jpeg');
   }
   async getThumb(id) {
     this._needBinding();

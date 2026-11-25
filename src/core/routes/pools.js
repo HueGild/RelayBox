@@ -97,9 +97,9 @@ export async function resolveUploadTarget(deps, requestedPoolId, legacyStorage) 
 /**
  * Build safe pool summaries for /api/files and /api/pools (never exposes secrets).
  */
-export async function buildPoolSummaries(deps, allFiles, { authed, includeAdminMeta = false } = {}) {
+export async function buildPoolSummaries(deps, allFiles, { authed, includeAdminMeta = false, transfer: passedTransfer } = {}) {
   const localAvailable = hasLocalDisk(deps);
-  const transfer = await getTransferModeState(deps);
+  const transfer = passedTransfer || await getTransferModeState(deps);
   const customPools = (typeof deps.meta.listStoragePools === 'function')
     ? await deps.meta.listStoragePools()
     : [];

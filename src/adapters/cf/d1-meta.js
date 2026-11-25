@@ -245,6 +245,10 @@ export class D1MetaStore {
   }
 
   // ---- shares ----
+  async listShares() {
+    const { results } = await this.db.prepare('SELECT * FROM shares').all();
+    return (results || []).map((r) => this._rowToShare(r));
+  }
   async getShareByToken(token) {
     const r = await this.db.prepare('SELECT * FROM shares WHERE token = ?').bind(token).first();
     return this._rowToShare(r);

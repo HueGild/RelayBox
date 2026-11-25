@@ -5,6 +5,20 @@
 import { isExpired, parseDim } from '../lib/util.js';
 import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
 
+function detectThumbMime(buf) {
+  if (!buf || buf.byteLength < 12) return 'image/jpeg';
+  // WebP: RIFF....WEBP
+  if (
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) return 'image/webp';
+  // PNG: 89 50 4E 47
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return 'image/png';
+  // GIF: GIF8
+  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return 'image/gif';
+  return 'image/jpeg';
+}
+
 export function registerThumbs(app) {
   // 缩略图上传：浏览器在图片或视频上传成功后用 canvas 生成 320px JPEG 传上来（几十 KB）。
   app.post('/api/thumbs/:id', async (c) => {
@@ -27,7 +41,8 @@ export function registerThumbs(app) {
     }
     if (buf.byteLength > 512 * 1024) return c.json({ ok: false, error: '缩略图太大' }, 413);
     if (!buf.byteLength) return c.json({ ok: false, error: '没有收到缩略图' }, 400);
-    await deps.local.putThumb(id, buf);
+    const thumbMime = detectThumbMime(buf);
+    await deps.local.putThumb(id, buf, thumbMime);
     // 顺手回填媒体分辨率（仅当原记录尚未写入宽高时）。
     const w = parseDim(c.req.header('X-Media-Width'));
     const h = parseDim(c.req.header('X-Media-Height'));
@@ -50,12 +65,24 @@ export function registerThumbs(app) {
     }
     const buf = await deps.local.getThumb(id);
     if (!buf) return c.json({ ok: false, error: 'not found' }, 404);
-    return new Response(buf, {
-      status: 200,
-      headers: {
-        'Content-Type': 'image/jpeg',
-        'Cache-Control': item.deletedAt ? 'private, no-store' : 'public, max-age=86400',
-      },
-    });
+    const contentType = detectThumbMime(buf);
+    const etag = `"th-${id}-${buf.byteLength}"`;
+    const isPrivate = item.visibility !== 'public';
+    const cacheControl = item.deletedAt
+      ? 'private, no-store'
+      : isPrivate
+        ? 'private, max-age=31536000, immutable'
+        : (item.expiresAt ? 'public, max-age=3600' : 'public, max-age=31536000, immutable');
+    const headers = {
+      'Content-Type': contentType,
+      'Cache-Control': cacheControl,
+      'ETag': etag,
+    };
+    if (isPrivate || item.deletedAt) headers['Vary'] = 'Cookie';
+    const inm = (c.req.header('If-None-Match') || '').trim();
+    if (!item.deletedAt && inm && (inm === etag || inm === `W/${etag}`)) {
+      return new Response(null, { status: 304, headers });
+    }
+    return new Response(buf, { status: 200, headers });
   });
 }

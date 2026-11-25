@@ -139,11 +139,12 @@ export class S3PoolStorage {
     };
     if (opts.disposition) outHeaders['Content-Disposition'] = opts.disposition;
     if (opts.cacheControl) outHeaders['Cache-Control'] = opts.cacheControl;
+    if (opts.vary) outHeaders['Vary'] = opts.vary;
     const cl = res.headers.get('content-length');
     if (cl) outHeaders['Content-Length'] = cl;
     const cr = res.headers.get('content-range');
     if (cr) outHeaders['Content-Range'] = cr;
-    const etag = res.headers.get('etag');
+    const etag = (!hasRange && opts.etag) ? opts.etag : res.headers.get('etag');
     if (etag) outHeaders['ETag'] = etag;
     return new Response(res.body, { status: res.status, headers: outHeaders });
   }

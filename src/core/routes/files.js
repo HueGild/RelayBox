@@ -86,44 +86,82 @@ async function consumeShare(deps, c, token, item) {
   return { ok: true };
 }
 
+/** 一次性批量加载分享映射（消除列表与搜索的 N+1 查库；若自定义 MetaStore 未实现 listShares 则自动降级）。 */
+async function buildShareMaps(deps, visibleFiles, visibleFolders, authed) {
+  const fileShares = new Map();
+  const folderShares = new Map();
+  if (!authed) return { fileShares, folderShares };
+  if (typeof deps.meta.listShares === 'function') {
+    const shares = await deps.meta.listShares();
+    for (const s of (shares || [])) {
+      if (!s || !s.token) continue;
+      if (s.fileId && !fileShares.has(s.fileId)) fileShares.set(s.fileId, s.token);
+      if (s.folderId && !folderShares.has(s.folderId)) folderShares.set(s.folderId, s.token);
+    }
+    return { fileShares, folderShares };
+  }
+  await Promise.all([
+    ...(visibleFiles || []).map(async (f) => {
+      const s = await deps.meta.getShareByFileId(f.id);
+      if (s && s.token) fileShares.set(f.id, s.token);
+    }),
+    ...(visibleFolders || []).map(async (fd) => {
+      const s = await deps.meta.getShareByFolderId(fd.id);
+      if (s && s.token) folderShares.set(fd.id, s.token);
+    }),
+  ]);
+  return { fileShares, folderShares };
+}
+
 export function registerFiles(app) {
-  // 列表：未登录只看公开文件；管理员看全部，且能看到分享 token、上传 IP/归属地与各存储池用量。
+  // 列表：未登录只看公开文件；管理员看全部，且能看到分享 token、上传 IP/归属地、各存储池用量与轻量目录树。
   app.get('/api/files', async (c) => {
     const deps = c.get('deps');
-    const authed = await isAuthed(c, deps);
-    const folders = await deps.meta.listFolders();
     const folderId = c.req.query('folderId') || null;
-    const visible = await deps.meta.listFiles(folderId, { authed });
-    const allFilesWithTrash = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
+    const [authed, folders, allFilesWithTrash, transfer] = await Promise.all([
+      isAuthed(c, deps),
+      deps.meta.listFolders(),
+      deps.meta.listAllFiles({ authed: true, includeTrashed: true }),
+      getTransferModeState(deps),
+    ]);
     const allFiles = allFilesWithTrash.filter((f) => !f.deletedAt);
     const trashedFiles = allFilesWithTrash.filter((f) => !!f.deletedAt);
-    const poolSummary = await buildPoolSummaries(deps, allFilesWithTrash, { authed, includeAdminMeta: false });
-    const files = [];
-    for (const f of visible) {
-      const s = authed ? await deps.meta.getShareByFileId(f.id) : null;
-      files.push(mapFile(f, s ? s.token : null, authed, poolSummary.poolNameMap));
-    }
     const filesForCounts = allFiles.filter((f) => !isExpired(f) && (authed || f.visibility === 'public'));
+    const visible = filesForCounts.filter((f) => folderIdOf(f) === folderId);
     const visibleFolders = folders
       .filter((fd) => (fd.parentId || null) === folderId)
       .filter((fd) => authed || folderVisibleToGuest(folders, allFiles, fd.id));
-    const subfolders = [];
-    for (const fd of visibleFolders) {
+    const [poolSummary, shareMaps] = await Promise.all([
+      buildPoolSummaries(deps, allFilesWithTrash, { authed, includeAdminMeta: false, transfer }),
+      buildShareMaps(deps, visible, visibleFolders, authed),
+    ]);
+    const files = visible.map((f) => mapFile(f, shareMaps.fileShares.get(f.id) || null, authed, poolSummary.poolNameMap));
+    const fileCountByFolder = new Map();
+    for (const f of filesForCounts) {
+      const fid = folderIdOf(f);
+      if (fid) fileCountByFolder.set(fid, (fileCountByFolder.get(fid) || 0) + 1);
+    }
+    const folderCountByParent = new Map();
+    for (const x of folders) {
+      const pid = x.parentId || null;
+      if (!pid) continue;
+      if (authed || folderVisibleToGuest(folders, allFiles, x.id)) {
+        folderCountByParent.set(pid, (folderCountByParent.get(pid) || 0) + 1);
+      }
+    }
+    const subfolders = visibleFolders.map((fd) => {
       const out = {
         id: fd.id, name: fd.name, parentId: fd.parentId || null, createdAt: fd.createdAt,
-        fileCount: filesForCounts.filter((f) => folderIdOf(f) === fd.id).length,
-        folderCount: folders.filter((x) => (x.parentId || null) === fd.id && (authed || folderVisibleToGuest(folders, allFiles, x.id))).length,
+        fileCount: fileCountByFolder.get(fd.id) || 0,
+        folderCount: folderCountByParent.get(fd.id) || 0,
       };
-      if (authed) {
-        const s = await deps.meta.getShareByFolderId(fd.id);
-        if (s) out.shareToken = s.token;
-      }
-      subfolders.push(out);
-    }
+      const st = shareMaps.folderShares.get(fd.id);
+      if (st) out.shareToken = st;
+      return out;
+    });
     const total = files.reduce((a, f) => a + f.size, 0);
     const r2Used = files.filter((f) => f.storage === 'r2').reduce((a, f) => a + f.size, 0);
     const localUsed = files.filter((f) => f.storage !== 'r2').reduce((a, f) => a + f.size, 0);
-    const transfer = await getTransferModeState(deps);
     const chunkSize = deps.config.chunkSize || 5 * 1024 * 1024;
     const presignThreshold = deps.config.chunkUploadThreshold || 32 * 1024 * 1024;
     const proxyThreshold = deps.config.proxyChunkUploadThreshold || Math.min(presignThreshold, chunkSize);
@@ -144,6 +182,7 @@ export function registerFiles(app) {
       ...(authed ? {
         trashCount: trashedFiles.length,
         trashBytes: trashedFiles.reduce((a, f) => a + (f.size || 0), 0),
+        allFolders: folders.map((fd) => ({ id: fd.id, name: fd.name, parentId: fd.parentId || null })),
       } : {}),
     });
   });
@@ -151,25 +190,28 @@ export function registerFiles(app) {
   // 全局搜索：跨所有文件夹按文件名搜（不区分大小写）；访客只搜得到公开文件。
   app.get('/api/search', async (c) => {
     const deps = c.get('deps');
-    const authed = await isAuthed(c, deps);
     const q = (c.req.query('q') || '').trim().toLowerCase();
     if (!q) return c.json({ ok: true, files: [], folders: [], total: 0 });
-    const folders = await deps.meta.listFolders();
-    const allFiles = await deps.meta.listAllFiles({ authed: true });
-    const poolSummary = await buildPoolSummaries(deps, allFiles, { authed, includeAdminMeta: false });
+    const [authed, folders, allFiles] = await Promise.all([
+      isAuthed(c, deps),
+      deps.meta.listFolders(),
+      deps.meta.listAllFiles({ authed: true }),
+    ]);
     const matched = await deps.meta.searchFiles(q, { authed });
-    const files = [];
-    for (const f of matched) {
-      const s = authed ? await deps.meta.getShareByFileId(f.id) : null;
-      const out = mapFile(f, s ? s.token : null, authed, poolSummary.poolNameMap);
+    const matchedRawFolders = folders.filter((fd) => (
+      fd.name.toLowerCase().includes(q) && (authed || folderVisibleToGuest(folders, allFiles, fd.id))
+    ));
+    const [poolSummary, shareMaps] = await Promise.all([
+      buildPoolSummaries(deps, allFiles, { authed, includeAdminMeta: false }),
+      buildShareMaps(deps, matched, matchedRawFolders, authed),
+    ]);
+    const files = matched.map((f) => {
+      const out = mapFile(f, shareMaps.fileShares.get(f.id) || null, authed, poolSummary.poolNameMap);
       const p = folderPath(folders, folderIdOf(f));
       out.folderPath = p.length > 1 ? p.slice(1).map((x) => x.name).join(' / ') : '';
-      files.push(out);
-    }
-    const matchedFolders = [];
-    for (const fd of folders) {
-      if (!fd.name.toLowerCase().includes(q)) continue;
-      if (!(authed || folderVisibleToGuest(folders, allFiles, fd.id))) continue;
+      return out;
+    });
+    const matchedFolders = matchedRawFolders.map((fd) => {
       const p = folderPath(folders, fd.parentId || null);
       const out = {
         id: fd.id, name: fd.name, parentId: fd.parentId || null, createdAt: fd.createdAt,
@@ -177,12 +219,10 @@ export function registerFiles(app) {
         fileCount: allFiles.filter((f) => !isExpired(f) && (authed || f.visibility === 'public') && folderIdOf(f) === fd.id).length,
         folderCount: folders.filter((x) => (x.parentId || null) === fd.id && (authed || folderVisibleToGuest(folders, allFiles, x.id))).length,
       };
-      if (authed) {
-        const s = await deps.meta.getShareByFolderId(fd.id);
-        if (s) out.shareToken = s.token;
-      }
-      matchedFolders.push(out);
-    }
+      const st = shareMaps.folderShares.get(fd.id);
+      if (st) out.shareToken = st;
+      return out;
+    });
     return c.json({ ok: true, files, folders: matchedFolders, total: files.length + matchedFolders.length });
   });
 
@@ -214,9 +254,25 @@ export function registerFiles(app) {
     const resolved = await resolveStorageForFile(deps, item);
     if (!resolved.ok) return c.json({ ok: false, error: resolved.error }, resolved.status || 503);
 
-    const cacheControl = (!forceDownload && item.visibility === 'public' && !item.expiresAt && !shareToken)
-      ? 'public, max-age=86400'
-      : 'private, no-store';
+    const isImmutableMedia = item.kind === 'image' || item.kind === 'video' || item.kind === 'audio';
+    const isPrivate = item.visibility !== 'public';
+    const cacheControl = (forceDownload || shareToken)
+      ? 'private, no-store'
+      : (!isPrivate && !item.expiresAt)
+        ? (isImmutableMedia ? 'public, max-age=31536000, immutable' : 'public, max-age=86400')
+        : (isPrivate && isImmutableMedia)
+          ? 'private, max-age=3600'
+          : 'private, no-store';
+    const vary = (isPrivate && !forceDownload && !shareToken) ? 'Cookie' : '';
+    const mediaEtag = (isImmutableMedia && !forceDownload && !shareToken) ? `"f-${item.id}-${item.size}"` : '';
+    if (mediaEtag && !range && (resolved.mode === 'proxy' || resolved.mode === 'local')) {
+      const inm = (c.req.header('If-None-Match') || '').trim();
+      if (inm && (inm === mediaEtag || inm === `W/${mediaEtag}`)) {
+        const h304 = { 'Cache-Control': cacheControl, 'ETag': mediaEtag };
+        if (vary) h304['Vary'] = vary;
+        return new Response(null, { status: 304, headers: h304 });
+      }
+    }
     try {
       const res = await resolved.driver.get(item.storageKey, {
         mode: resolved.mode,
@@ -225,6 +281,8 @@ export function registerFiles(app) {
         contentType: mime,
         disposition,
         cacheControl,
+        ...(vary ? { vary } : {}),
+        ...(mediaEtag ? { etag: mediaEtag } : {}),
       });
       if (!res) return c.json({ ok: false, error: '文件不存在' }, 404);
       if (forceDownload && res.status !== 416) {

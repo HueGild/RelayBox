@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r17 (2026-11-25 · 修复收集箱份数/自定义毛玻璃下拉/有效期菜单层级/移动弹窗内建文件夹) -->
+<!-- RelayBox v3.0 UI r18 (2026-11-25 · 顶栏主题纯图标/移动端方案A紧凑横条文件夹与4:3缩略图/目录SWR缓存与预取/目录树全局缓存/缩略图WebP+首帧快照回填/jsdom select setter修复) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -376,7 +376,8 @@
  .topbar { position: sticky; top: max(8px, env(safe-area-inset-top)); z-index: 32; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: nowrap; margin-bottom: 14px; padding: 8px 12px; border-radius: 16px; background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: 0 0 0 1px var(--glass-stroke), var(--glass-shadow); backdrop-filter: blur(18px) saturate(180%); -webkit-backdrop-filter: blur(18px) saturate(180%); }
  .topbar h1 { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 17px; }
  .top-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
- #themeBtn { padding: 6px 10px; font-size: 12px; border-radius: 999px; margin-top: 0; white-space: nowrap; flex-shrink: 0; }
+ #themeBtn { width: 30px; height: 30px; padding: 0; border-radius: 999px; margin-top: 0; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+ #themeBtn svg { width: 16px; height: 16px; }
  .user-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--btn-bg); color: var(--btn-text); border-radius: 999px; padding: 4px 6px 4px 10px; font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
  .user-chip .chip-exit { background: none; border: 0; padding: 2px 4px; cursor: pointer; font-size: 13px; line-height: 1; color: var(--muted); }
  .user-chip .chip-exit:hover { color: var(--danger-text); background: none; }
@@ -761,15 +762,60 @@
  #moveList { max-height: 50vh; overflow-y: auto; padding-right: 2px; }
  body.has-wallpaper .move-new-box { background: var(--glass-input-bg); }
 
+ /* r18: 方案 A — 独立紧凑横条文件夹网格 + 移动端 4:3 高密度文件卡片 + 顶栏全标题保真 */
+ .folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-bottom: 12px; }
+ .folder-grid .card.folder-card { display: flex; flex-direction: row; align-items: center; gap: 10px; height: 58px; padding: 8px 10px; margin-bottom: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; content-visibility: auto; contain: layout paint style; contain-intrinsic-size: 58px; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+ .folder-grid .card.folder-card:hover { transform: translateY(-1px); border-color: rgba(59,130,246,.45); box-shadow: var(--card-hover-shadow); }
+ .folder-ico-box { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(145deg, var(--folder-tint) 0%, var(--folder-tint-end) 100%); color: var(--folder-icon); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+ .folder-ico-box svg { width: 20px; height: 20px; filter: drop-shadow(0 2px 6px rgba(59,130,246,.22)); }
+ .folder-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+ .folder-grid .card.folder-card .cname { font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
+ .folder-grid .card.folder-card .cmeta { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; }
+ .folder-grid .card.folder-card .cactions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; margin-right: -4px; }
+ .folder-grid .card.folder-card .cactions .icon-btn { width: 26px; height: 26px; border-radius: 7px; background: transparent; color: var(--muted); }
+ .folder-grid .card.folder-card .cactions .icon-btn:hover { background: var(--btn-bg); color: var(--text); }
+ .folder-grid .card.folder-card .cactions .icon-btn svg { width: 14px; height: 14px; }
+ body.has-wallpaper .folder-grid .card.folder-card { background: var(--glass-bg); border-color: var(--glass-border); backdrop-filter: blur(var(--card-blur)) saturate(175%); -webkit-backdrop-filter: blur(var(--card-blur)) saturate(175%); }
+
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
   .mob-only-wrap { display: inline-flex; }
-  .topbar { top: max(6px, env(safe-area-inset-top)); padding: 6px 10px; border-radius: 14px; margin-bottom: 10px; }
+  .topbar { top: max(6px, env(safe-area-inset-top)); padding: 6px 10px; border-radius: 14px; margin-bottom: 10px; gap: 6px; }
+  .topbar h1 { font-size: 16.5px; gap: 7px; }
+  .topbar .brand-mark { width: 28px; height: 28px; border-radius: 8px; }
+  .top-actions { gap: 5px; }
+  .user-chip { padding: 3px 5px 3px 8px; font-size: 11.5px; gap: 3px; }
   .sticky-tools { top: calc(max(6px, env(safe-area-inset-top)) + 48px); margin: 0 -6px 6px; padding: 7px 8px 6px; border-radius: 14px; }
   .list-head { display: none; }
   .detail-grid { grid-template-columns: 1fr; }
   .pv-img-tools { padding: 4px 6px; }
   .pv-img-tools button { width: 32px; height: 32px; }
+
+  /* 移动端方案 A：文件夹 2 列扁平横条 */
+  .folder-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+  .folder-grid .card.folder-card { height: 54px; padding: 6px 8px; gap: 7px; border-radius: 11px; contain-intrinsic-size: 54px; }
+  .folder-ico-box { width: 32px; height: 32px; border-radius: 9px; }
+  .folder-ico-box svg { width: 18px; height: 18px; }
+  .folder-grid .card.folder-card .cname { font-size: 12.5px; }
+  .folder-grid .card.folder-card .cmeta { font-size: 10.5px; }
+  .folder-grid .card.folder-card .folder-share-btn { display: none; }
+
+  /* 移动端方案 A：文件 2 列 4:3 紧凑卡片 */
+  .grid.file-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .grid.file-grid .card { height: auto; contain-intrinsic-size: 164px; border-radius: 12px; }
+  .grid.file-grid .card .thumb { flex: 0 0 auto; height: auto; aspect-ratio: 4 / 3; }
+  .grid.file-grid .card .thumb .bigicon svg { width: 34px; height: 34px; }
+  .grid.file-grid .card .cinfo { padding: 6px 8px; gap: 2px; }
+  .grid.file-grid .card .cname { font-size: 12px; }
+  .grid.file-grid .card .cmeta { font-size: 10.5px; }
+  .grid.file-grid .card .cactions { gap: 1px; margin-right: -3px; }
+  .grid.file-grid .card .cactions .icon-btn { width: 24px; height: 24px; border-radius: 6px; }
+  .grid.file-grid .card .cactions .icon-btn svg { width: 13px; height: 13px; }
+  .grid.file-grid .card .ctag { top: 6px; left: 6px; gap: 3px; }
+  .grid.file-grid .card .ctag .badge { font-size: 9.5px; padding: 3px 6px; }
+  .grid.file-grid .card .sel { top: 6px; right: 6px; width: 20px; height: 20px; }
+  .grid.file-grid .play-badge { width: 24px; height: 24px; right: 6px; bottom: 6px; }
+  .grid.file-grid .play-badge svg { width: 11px; height: 11px; }
  }
 </style>
 </head>
@@ -791,7 +837,7 @@
  <div class="topbar">
  <h1><span class="brand-mark" id="brandMark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span> <span id="brandTitleText">RelayBox</span></h1>
  <div class="top-actions">
- <button class="ghost" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg> 自动</button>
+ <button class="icon-btn" id="themeBtn" type="button" title="主题：跟随系统（点击切换）" aria-label="切换主题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="copyFmtBtn" style="width:30px;height:30px;border-radius:999px" title="默认复制格式" aria-label="默认复制格式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
  <button class="icon-btn desk-only-btn" id="dropsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="文件收集箱" aria-label="文件收集箱"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
@@ -1205,14 +1251,22 @@ if (!['auto', 'dark', 'light'].includes(themeMode)) themeMode = 'auto';
 function applyTheme() {
  const dark = themeMode === 'dark' || (themeMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
- $('themeBtn').innerHTML = themeMode === 'auto' ? ICONS.contrast + ' 自动' : dark ? ICONS.moon + ' 深色' : ICONS.sun + ' 浅色';
+ const btn = $('themeBtn');
+ if (!btn) return;
+ const tip = themeMode === 'auto' ? '主题：跟随系统（点击切换）' : dark ? '主题：深色模式（点击切换）' : '主题：浅色模式（点击切换）';
+ btn.innerHTML = themeMode === 'auto' ? ICONS.contrast : dark ? ICONS.moon : ICONS.sun;
+ btn.setAttribute('aria-label', tip);
+ if (btn.dataset && btn.dataset.tip !== undefined) btn.dataset.tip = tip;
+ else btn.title = tip;
 }
 function cycleTheme(e) {
  const nextMode = themeMode === 'auto' ? 'dark' : themeMode === 'dark' ? 'light' : 'auto';
+ const modeLabels = { auto: '跟随系统', dark: '深色模式', light: '浅色模式' };
  const doSwitch = () => {
   themeMode = nextMode;
   try { localStorage.setItem('fs-theme', themeMode); } catch {}
   applyTheme();
+  showToast('主题：' + (modeLabels[themeMode] || themeMode), '');
  };
  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  if (!document.startViewTransition || reduce) { doSwitch(); return; }
@@ -1262,28 +1316,109 @@ $('sortBtn').onclick = (e) => {
  const open = m.style.display === 'none'; m.style.display = open ? 'block' : 'none'; $('sortBtn').classList.toggle('dd-open', open);
 };
 
+// ===== r18: 全局轻量目录树缓存（下拉与弹窗 0ms 秒开） =====
+const FOLDER_TREE_STORAGE_KEY = 'rb-folder-tree-v1';
+let folderTreeCache = null;
+let folderTreeTs = 0;
+let folderTreeInflight = null;
+
+function setFolderTreeCache(list) {
+ if (!Array.isArray(list)) return;
+ folderTreeCache = list.map(fd => ({ id: fd.id, name: fd.name, parentId: fd.parentId || null }));
+ folderTreeTs = Date.now();
+ try { sessionStorage.setItem(FOLDER_TREE_STORAGE_KEY, JSON.stringify({ ts: folderTreeTs, folders: folderTreeCache })); } catch {}
+}
+function invalidateFolderTree() {
+ folderTreeCache = null;
+ folderTreeTs = 0;
+ try { sessionStorage.removeItem(FOLDER_TREE_STORAGE_KEY); } catch {}
+}
+function getFolderTreeSync() {
+ if (folderTreeCache) return folderTreeCache;
+ if (!authed) return null;
+ try {
+  const raw = sessionStorage.getItem(FOLDER_TREE_STORAGE_KEY);
+  if (raw) {
+   const parsed = JSON.parse(raw);
+   if (parsed && Array.isArray(parsed.folders)) {
+    folderTreeCache = parsed.folders;
+    folderTreeTs = Number(parsed.ts || 0);
+    return folderTreeCache;
+   }
+  }
+ } catch {}
+ return null;
+}
+async function getFolderTree(forceRefresh) {
+ if (!forceRefresh) {
+  const cached = getFolderTreeSync();
+  if (cached) return cached;
+ }
+ if (folderTreeInflight) return folderTreeInflight;
+ folderTreeInflight = fetch('/api/folders')
+  .then(r => r.json())
+  .then(d => {
+   const list = (d && Array.isArray(d.folders)) ? d.folders : [];
+   if (d && d.ok !== false) setFolderTreeCache(list);
+   return list;
+  })
+  .finally(() => { folderTreeInflight = null; });
+ return folderTreeInflight;
+}
+function folderTreePathOf(all, fd) {
+ const names = [fd.name];
+ let cur = fd;
+ const seen = new Set([fd.id]);
+ while (cur && cur.parentId) {
+  const p = all.find(x => x.id === cur.parentId);
+  if (!p || seen.has(p.id)) break;
+  seen.add(p.id);
+  names.unshift(p.name);
+  cur = p;
+ }
+ return names.join(' / ');
+}
+function fillFolderSelectFromList(sel, all, selectedVal) {
+ if (!sel) return;
+ sel.innerHTML = '<option value="">根目录</option>' + (all || []).map(fd =>
+  `<option value="${escapeHtml(fd.id)}">${escapeHtml(folderTreePathOf(all, fd))}</option>`
+ ).join('');
+ if (selectedVal !== undefined) sel.value = selectedVal || '';
+ if (typeof syncCustomSelect === 'function') syncCustomSelect(sel);
+}
+
 async function toggleCrumbDrop(e, idx) {
  e.stopPropagation();
  const menu = $('crumbMenu-' + idx);
  if (!menu) return;
  document.querySelectorAll('.crumb-menu').forEach(m => { if (m !== menu) m.style.display = 'none'; });
  if (menu.style.display !== 'none') { menu.style.display = 'none'; return; }
- menu.innerHTML = '<div class="empty">加载中…</div>';
+ const renderSiblings = (all) => {
+  const crumb = currentPath[idx];
+  let parentId = null;
+  if (crumb && crumb.id) {
+   const self = all.find(x => x.id === crumb.id);
+   parentId = self ? (self.parentId || null) : null;
+  }
+  const siblings = all.filter(x => (x.parentId || null) === parentId);
+  if (!siblings.length) { menu.innerHTML = '<div class="empty">没有同级文件夹</div>'; return; }
+  menu.innerHTML = siblings.map(fd => `<button onpointerdown="prefetchFolder('${fd.id}')" onclick="openFolder('${fd.id}')">${escapeHtml(fd.name)}<span class="tick">${crumb && fd.id === crumb.id ? '✓' : ''}</span></button>`).join('');
+ };
+ const cached = getFolderTreeSync();
  menu.style.display = 'block';
- try {
- const d = await (await fetch('/api/folders')).json();
- const all = d.folders || [];
- const crumb = currentPath[idx];
- let parentId = null;
- if (crumb && crumb.id) {
- const self = all.find(x => x.id === crumb.id);
- parentId = self ? (self.parentId || null) : null;
+ if (cached) {
+  renderSiblings(cached);
+  if (Date.now() - folderTreeTs > 60000) {
+   getFolderTree(true).then(fresh => { if (menu.style.display !== 'none') renderSiblings(fresh); }).catch(() => {});
+  }
+  return;
  }
- const siblings = all.filter(x => (x.parentId || null) === parentId);
- if (!siblings.length) { menu.innerHTML = '<div class="empty">没有同级文件夹</div>'; return; }
- menu.innerHTML = siblings.map(fd => `<button onclick="openFolder('${fd.id}')">${escapeHtml(fd.name)}<span class="tick">${crumb && fd.id === crumb.id ? '✓' : ''}</span></button>`).join('');
+ menu.innerHTML = '<div class="empty">加载中…</div>';
+ try {
+  const all = await getFolderTree(true);
+  renderSiblings(all);
  } catch {
- menu.innerHTML = '<div class="empty">加载失败</div>';
+  menu.innerHTML = '<div class="empty">加载失败</div>';
  }
 }
 document.addEventListener('click', (e) => {
@@ -1381,7 +1516,13 @@ document.addEventListener('click', (e) => {
 });
 renderExpireBtn();
 
-function folderMeta(fd) {
+function folderMeta(fd, compact) {
+ if (compact) {
+  const parts = [];
+  if (fd.fileCount) parts.push(fd.fileCount + ' 文件');
+  if (fd.folderCount) parts.push(fd.folderCount + ' 目录');
+  return parts.length ? parts.join(' · ') : '空文件夹';
+ }
  const parts = ['文件夹'];
  if (fd.fileCount) parts.push(fd.fileCount + ' 个文件');
  if (fd.folderCount) parts.push(fd.folderCount + ' 个子文件夹');
@@ -1525,7 +1666,7 @@ function openFolder(id) {
  currentFolderId = id || null;
  uploadDestOverride = undefined; uploadDestName = '';
  clearSelection();
- loadList(true);
+ loadList({ nav: true });
 }
 
 let inputResolve = null;
@@ -1588,7 +1729,12 @@ async function createFolder() {
  if (!name.trim()) { setMsg('名字不能为空', 'err'); return; }
  const r = await fetch('/api/folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), parentId: currentFolderId }) });
  const d = await r.json();
- if (d.ok) { setMsg('已新建文件夹', 'ok'); loadList(); } else setMsg('新建失败：' + (d.error || ''), 'err');
+ if (d.ok) {
+  if (d.folder && folderTreeCache) setFolderTreeCache([...folderTreeCache, d.folder]);
+  else invalidateFolderTree();
+  setMsg('已新建文件夹', 'ok');
+  loadList();
+ } else setMsg('新建失败：' + (d.error || ''), 'err');
 }
 async function renameFolder(id, name) {
  const next = await askInput('文件夹改名：', name);
@@ -1596,13 +1742,23 @@ async function renameFolder(id, name) {
  if (!next.trim()) { setMsg('名字不能为空', 'err'); return; }
  const r = await fetch('/api/folders/' + id + '/rename', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: next.trim() }) });
  const d = await r.json();
- if (d.ok) { setMsg('改名成功', 'ok'); loadList(); } else setMsg('改名失败：' + (d.error || ''), 'err');
+ if (d.ok) {
+  if (folderTreeCache) setFolderTreeCache(folderTreeCache.map(x => x.id === id ? { ...x, name: next.trim() } : x));
+  else invalidateFolderTree();
+  setMsg('改名成功', 'ok');
+  loadList();
+ } else setMsg('改名失败：' + (d.error || ''), 'err');
 }
 async function deleteFolder(id, name) {
  if (!confirm(`确定删除文件夹「${name}」吗？只有空文件夹能删。`)) return;
  const r = await fetch('/api/folders/' + id, { method: 'DELETE' });
  const d = await r.json();
- if (d.ok) { setMsg('文件夹已删除', 'ok'); loadList(); } else setMsg('删除失败：' + (d.error || ''), 'err');
+ if (d.ok) {
+  if (folderTreeCache) setFolderTreeCache(folderTreeCache.filter(x => x.id !== id));
+  else invalidateFolderTree();
+  setMsg('文件夹已删除', 'ok');
+  loadList();
+ } else setMsg('删除失败：' + (d.error || ''), 'err');
 }
 async function renameFile(id, name) {
  const next = await askInput('文件改名：', name);
@@ -1622,33 +1778,19 @@ function closeMoveNewFolderBox() {
  if ($('moveNewFolderMsg')) { $('moveNewFolderMsg').textContent = ''; $('moveNewFolderMsg').className = 'msg'; }
  if ($('moveNewFolderName')) $('moveNewFolderName').value = '';
 }
-function loadMoveFolderOptions(preferParentId) {
- $('moveList').innerHTML = '<div class="empty">加载中…</div>';
- return fetch('/api/folders').then(r => r.json()).then(d => {
- const all = d.folders || [];
- const pathOf = (fd) => {
- const names = [fd.name];
- let cur = fd;
- const seen = new Set([fd.id]);
- while (cur.parentId) {
- const p = all.find(x => x.id === cur.parentId);
- if (!p || seen.has(p.id)) break;
- seen.add(p.id);
- names.unshift(p.name);
- cur = p;
- }
- return names.join(' / ');
- };
+function renderMoveFolderOptionsFromList(all, preferParentId) {
  const blocked = new Set();
  if (moveKind === 'folder') {
- const stack = [...moveIds];
- while (stack.length) {
- const cur = stack.pop();
- blocked.add(cur);
- all.filter(x => x.parentId === cur).forEach(x => stack.push(x.id));
+  const stack = [...moveIds];
+  while (stack.length) {
+   const cur = stack.pop();
+   blocked.add(cur);
+   all.filter(x => x.parentId === cur).forEach(x => stack.push(x.id));
+  }
  }
- }
- const opts = [{ id: null, label: '根目录', icon: '' }].concat(all.filter(fd => !blocked.has(fd.id)).map(fd => ({ id: fd.id, label: pathOf(fd), icon: ICONS.folder })));
+ const opts = [{ id: null, label: '根目录', icon: '' }].concat(
+  all.filter(fd => !blocked.has(fd.id)).map(fd => ({ id: fd.id, label: folderTreePathOf(all, fd), icon: ICONS.folder }))
+ );
  moveModalOpts = opts;
  $('moveList').innerHTML = opts.map(o => `<button class="move-opt" data-label="${escapeHtml(o.label)}" onclick="moveFilesTo(${o.id ? `'${o.id}'` : 'null'}, this.dataset.label)">${o.icon ? o.icon + ' ' : ''}${escapeHtml(o.label)}</button>`).join('');
  const pSel = $('moveNewFolderParent');
@@ -1659,6 +1801,23 @@ function loadMoveFolderOptions(preferParentId) {
   else pSel.value = '';
   syncAllCustomSelects($('moveNewFolderBox'));
  }
+}
+function loadMoveFolderOptions(preferParentId, forceRefresh) {
+ const cached = !forceRefresh ? getFolderTreeSync() : null;
+ if (cached) {
+  renderMoveFolderOptionsFromList(cached, preferParentId);
+  if (Date.now() - folderTreeTs > 60000) {
+   getFolderTree(true).then(fresh => {
+    if ($('moveModal') && $('moveModal').classList.contains('open')) {
+     renderMoveFolderOptionsFromList(fresh, preferParentId);
+    }
+   }).catch(() => {});
+  }
+  return Promise.resolve();
+ }
+ $('moveList').innerHTML = '<div class="empty">加载中…</div>';
+ return getFolderTree(true).then(all => {
+  renderMoveFolderOptionsFromList(all, preferParentId);
  }).catch(() => { $('moveList').innerHTML = '<div class="empty">加载失败</div>'; });
 }
 function openMoveModal(ids, kind, label) {
@@ -1703,6 +1862,7 @@ async function moveFilesTo(folderId, label) {
  const d = await r.json();
  if (!d.ok) setMsg('移动失败：' + (d.error || ''), 'err');
  }
+ invalidateFolderTree();
  } else {
  for (const id of moveIds) {
  await fetch('/api/files/' + id + '/move', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folderId }) });
@@ -1733,6 +1893,8 @@ function renderLoginbar() {
  $('logoutBtn').onclick = async () => {
  await fetch('/api/logout', { method: 'POST' });
  authed = false;
+ invalidateDirCache();
+ invalidateFolderTree();
  renderLoginbar();
  $('passwordRow').style.display = '';
  setMsg('已退出登录', '');
@@ -1764,6 +1926,8 @@ $('loginBtn').onclick = async () => {
  const d = await r.json();
  if (r.ok && d.ok) {
  authed = true;
+ invalidateDirCache();
+ invalidateFolderTree();
  $('loginCard').classList.remove('open');
  $('loginPass').value = '';
  lm.textContent = '';
@@ -1806,14 +1970,92 @@ function storageBadge(f) {
  if (f.poolId) return `<span class="badge s3">${escapeHtml(f.poolName || 'S3')}</span>`;
  return f.storage === 'r2' ? '<span class="badge r2">R2</span>' : '<span class="badge local">本地</span>';
 }
-function videoThumbFallback(img, id) {
+// ===== r18: 缩略图内存快照复用 + 老视频首帧截帧与静默回填 =====
+const thumbBlobCache = new Map();       // fileId -> blobUrl (0ms 切回复用)
+const missingThumbIds = new Set();      // 已确认 404 的缩略图，避免反复请求
+const thumbBackfillInflight = new Set();
+
+function thumbImgSrc(f) {
+ if (thumbBlobCache.has(f.id)) return thumbBlobCache.get(f.id);
+ if (missingThumbIds.has(f.id)) return f.kind === 'image' ? ('/f/' + f.id) : '';
+ return '/thumb/' + f.id;
+}
+function handleImgThumbErr(img, id) {
+ missingThumbIds.add(id);
+ img.onerror = null;
+ img.src = '/f/' + id;
+}
+function handleListVideoThumbErr(img, id) {
+ missingThumbIds.add(id);
  if (!img || !img.parentNode) return;
+ if (thumbBlobCache.has(id)) {
+  img.onerror = null;
+  img.src = thumbBlobCache.get(id);
+  return;
+ }
+ const s = document.createElement('span');
+ s.innerHTML = ICONS.film;
+ if (s.firstElementChild) img.replaceWith(s.firstElementChild);
+}
+function captureVideoThumbNode(videoEl, id) {
+ if (!videoEl || videoEl._rbCaptured) return;
+ if (!videoEl.videoWidth || !videoEl.videoHeight) return;
+ videoEl._rbCaptured = true;
+ try {
+  const max = 400;
+  const scale = Math.min(1, max / Math.max(videoEl.videoWidth, videoEl.videoHeight));
+  const cw = Math.max(1, Math.round(videoEl.videoWidth * scale));
+  const ch = Math.max(1, Math.round(videoEl.videoHeight * scale));
+  const c = document.createElement('canvas');
+  c.width = cw; c.height = ch;
+  c.getContext('2d').drawImage(videoEl, 0, 0, cw, ch);
+  const useWebp = (typeof supportsWebpEncode === 'function' && supportsWebpEncode());
+  const mime = useWebp ? 'image/webp' : 'image/jpeg';
+  c.toBlob((blob) => {
+   c.width = 0; c.height = 0;
+   if (!blob || !blob.size) return;
+   const prev = thumbBlobCache.get(id);
+   if (prev) { try { URL.revokeObjectURL(prev); } catch {} }
+   const url = URL.createObjectURL(blob);
+   thumbBlobCache.set(id, url);
+   if (videoEl.parentNode) {
+    const im = document.createElement('img');
+    im.src = url;
+    im.alt = '';
+    im.decoding = 'async';
+    videoEl.replaceWith(im);
+   }
+   // 管理员登录态后台静默回填封面图与分辨率到 R2，后续跨设备刷新也秒开
+   if (authed && !thumbBackfillInflight.has(id)) {
+    thumbBackfillInflight.add(id);
+    const hdrs = { 'Content-Type': blob.type || mime };
+    if (videoEl.videoWidth && videoEl.videoHeight) {
+     hdrs['X-Media-Width'] = String(videoEl.videoWidth);
+     hdrs['X-Media-Height'] = String(videoEl.videoHeight);
+    }
+    fetch('/api/thumbs/' + encodeURIComponent(id), { method: 'POST', headers: hdrs, body: blob })
+     .then(r => { if (r.ok) missingThumbIds.delete(id); })
+     .catch(() => {})
+     .finally(() => thumbBackfillInflight.delete(id));
+   }
+  }, mime, 0.78);
+ } catch {}
+}
+function videoThumbFallback(img, id) {
+ missingThumbIds.add(id);
+ if (!img || !img.parentNode) return;
+ if (thumbBlobCache.has(id)) {
+  img.onerror = null;
+  img.src = thumbBlobCache.get(id);
+  return;
+ }
  const v = document.createElement('video');
  v.src = '/f/' + id + '#t=0.1';
  v.preload = 'metadata';
  v.muted = true;
  v.playsInline = true;
  v.style.background = '#000';
+ v.addEventListener('loadeddata', () => captureVideoThumbNode(v, id), { once: true });
  v.onmouseenter = function() { this.play().catch(() => {}); };
  v.onmouseleave = function() { this.pause(); this.currentTime = 0; };
  img.replaceWith(v);
@@ -1822,7 +2064,7 @@ function renderSkeleton() {
  const el = $('list');
  if (!el) return;
  if (viewMode === 'grid') {
- el.innerHTML = '<div class="grid">' + Array.from({ length: 6 }, () =>
+ el.innerHTML = '<div class="grid file-grid">' + Array.from({ length: 6 }, () =>
  '<div class="card skel-card"><div class="thumb"></div><div class="cinfo"><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div></div>'
  ).join('') + '</div>';
  } else {
@@ -1853,11 +2095,47 @@ function setMsg(text, cls) {
  if (text && (cls === 'ok' || cls === 'err')) showToast(text, cls);
 }
 
-async function loadList(showSkel) {
- if (showSkel || !$('list').children.length) renderSkeleton();
- try {
- const r = await fetch('/api/files' + (currentFolderId ? '?folderId=' + encodeURIComponent(currentFolderId) : ''));
- const d = await r.json();
+// ===== r18: 目录级内存 SWR 缓存 + 请求去重 + 点击前预取 + 延迟骨架屏 =====
+const dirCache = new Map();          // folderKey -> { data, sig, ts }
+const inflightDirReqs = new Map();   // folderKey -> Promise<data>
+let loadListSeq = 0;
+
+function dirKeyOf(folderId) { return folderId ? String(folderId) : '__root__'; }
+function invalidateDirCache(folderId) {
+ if (folderId === undefined) dirCache.clear();
+ else dirCache.delete(dirKeyOf(folderId));
+}
+function dirDataSig(d) {
+ if (!d) return '';
+ const fs = (d.files || []).map(f => `${f.id}|${f.name}|${f.size}|${f.visibility}|${f.expiresAt || ''}|${f.downloads || 0}|${f.shareToken || ''}|${f.poolId || ''}|${f.width || 0}x${f.height || 0}`).join(',');
+ const ds = (d.folders || []).map(fd => `${fd.id}|${fd.name}|${fd.fileCount || 0}|${fd.folderCount || 0}|${fd.shareToken || ''}`).join(',');
+ const ps = (d.pools || []).map(p => `${p.id}:${p.usedBytes || 0}:${p.transferMode || ''}:${p.enabled !== false}`).join(',');
+ return `${d.folderId || ''}#${d.trashCount || 0}#${d.r2TransferMode || ''}#${fs}#${ds}#${ps}`;
+}
+function fetchDirData(folderId) {
+ const key = dirKeyOf(folderId);
+ if (inflightDirReqs.has(key)) return inflightDirReqs.get(key);
+ const req = fetch('/api/files' + (folderId ? '?folderId=' + encodeURIComponent(folderId) : ''))
+  .then(r => r.json())
+  .then(d => {
+   if (d && d.ok !== false) {
+    dirCache.set(key, { data: d, sig: dirDataSig(d), ts: Date.now() });
+    if (Array.isArray(d.allFolders)) setFolderTreeCache(d.allFolders);
+   }
+   return d;
+  })
+  .finally(() => { inflightDirReqs.delete(key); });
+ inflightDirReqs.set(key, req);
+ return req;
+}
+function prefetchFolder(folderId) {
+ const key = dirKeyOf(folderId);
+ const cached = dirCache.get(key);
+ if (cached && (Date.now() - cached.ts < 30000)) return;
+ if (inflightDirReqs.has(key)) return;
+ fetchDirData(folderId || null).catch(() => {});
+}
+function applyDirData(d) {
  allFiles = d.files || [];
  currentFolders = d.folders || [];
  currentPath = d.path || [{ id: null, name: '根目录' }];
@@ -1870,6 +2148,7 @@ async function loadList(showSkel) {
  allPools = Array.isArray(d.pools) ? d.pools : [];
  defaultPoolId = d.defaultPoolId || 'builtin-r2';
  allPools.forEach(p => { if (poolFilter[p.id] === undefined) poolFilter[p.id] = true; });
+ if (Array.isArray(d.allFolders)) setFolderTreeCache(d.allFolders);
  maxUploadSize = Number(d.maxUploadSize || d.maxFileSize || 0);
  if (Number(d.chunkUploadThreshold) > 0) CHUNK_UPLOAD_THRESHOLD = Number(d.chunkUploadThreshold);
  if (Number(d.chunkSize) > 0) CHUNK_SIZE = Number(d.chunkSize);
@@ -1942,8 +2221,51 @@ async function loadList(showSkel) {
  }
  $('stats').innerHTML = quotaHtml;
  renderList();
+ // 空闲预热父目录，确保点击返回上一级或根目录 0ms 秒出
+ if (currentPath.length > 1) {
+  const parentId = currentPath[currentPath.length - 2].id || null;
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 260));
+  idle(() => prefetchFolder(parentId));
+ }
+}
+async function loadList(opts) {
+ const isNav = !!(opts && typeof opts === 'object' && opts.nav);
+ const isBootSkel = opts === true;
+ const isMutationRefresh = !isNav && !isBootSkel;
+ const targetFolderId = currentFolderId;
+ const key = dirKeyOf(targetFolderId);
+ const seq = ++loadListSeq;
+
+ if (isMutationRefresh) {
+  invalidateDirCache();
+ }
+
+ const cached = (isNav || isBootSkel) ? dirCache.get(key) : null;
+ if (cached) {
+  // 命中缓存：0ms 立即渲染，不闪骨架屏；后台静默刷新仅在数据有变化时重绘
+  applyDirData(cached.data);
+  fetchDirData(targetFolderId).then(fresh => {
+   if (seq !== loadListSeq) return;
+   if (dirDataSig(fresh) !== cached.sig) applyDirData(fresh);
+  }).catch(() => {});
+  return;
+ }
+
+ let skelTimer = null;
+ const listEmpty = !$('list') || !$('list').children.length;
+ if (isBootSkel && listEmpty) {
+  renderSkeleton();
+ } else if (isNav || listEmpty) {
+  skelTimer = setTimeout(() => { if (seq === loadListSeq) renderSkeleton(); }, 150);
+ }
+ try {
+  const d = await fetchDirData(targetFolderId);
+  if (skelTimer) clearTimeout(skelTimer);
+  if (seq !== loadListSeq) return;
+  applyDirData(d);
  } catch (e) {
- $('stats').textContent = '列表加载失败';
+  if (skelTimer) clearTimeout(skelTimer);
+  if (seq === loadListSeq) $('stats').textContent = '列表加载失败';
  }
 }
 function expiryText(expiresAt) {
@@ -2000,32 +2322,51 @@ function renderList() {
  const last = i === currentPath.length - 1;
  const nameHtml = last
  ? `<span class="cur">${escapeHtml(p.name)}</span>`
- : `<button onclick="openFolder(${p.id ? `'${p.id}'` : 'null'})">${escapeHtml(p.name)}</button>`;
+ : `<button onpointerdown="prefetchFolder(${p.id ? `'${p.id}'` : 'null'})" onclick="openFolder(${p.id ? `'${p.id}'` : 'null'})">${escapeHtml(p.name)}</button>`;
  return (i ? '<span class="sep">/</span>' : '') + `<span class="crumb-wrap">${nameHtml}<button class="crumb-drop" title="同级文件夹" aria-label="同级文件夹" onclick="toggleCrumbDrop(event, ${i})">${chevHtml()}</button><span class="crumb-menu" id="crumbMenu-${i}" style="display:none"></span></span>`;
  }).join('');
  }
  const el = $('list');
  if (!folders.length && !list.length) { el.innerHTML = `<div class="empty">${searching ? '没有找到相关文件' : '这个文件夹是空的，先上传一个吧'}</div>`; updateBulkbar(); return; }
+ const renderMediaThumb = (f, isList) => {
+  if (f.kind === 'image') {
+   return `<img src="${thumbImgSrc(f)}" loading="lazy" decoding="async" alt="" onerror="handleImgThumbErr(this, '${f.id}')">`;
+  }
+  if (f.kind === 'video') {
+   const badge = `<span class="${isList ? 'lt-play' : 'play-badge'}">${ICONS.play}</span>`;
+   if (thumbBlobCache.has(f.id)) {
+    return `<img src="${thumbBlobCache.get(f.id)}" loading="lazy" decoding="async" alt="">${badge}`;
+   }
+   if (missingThumbIds.has(f.id)) {
+    if (isList) return `${ICONS.film}${badge}`;
+    return `<video src="/f/${f.id}#t=0.1" preload="metadata" muted playsinline style="background:#000" onloadeddata="captureVideoThumbNode(this, '${f.id}')" onmouseenter="this.play().catch(()=>{})" onmouseleave="this.pause();this.currentTime=0"></video>${badge}`;
+   }
+   if (isList) {
+    return `<img src="/thumb/${f.id}" loading="lazy" decoding="async" alt="" onerror="handleListVideoThumbErr(this, '${f.id}')">${badge}`;
+   }
+   return `<img src="/thumb/${f.id}" loading="lazy" decoding="async" alt="" onerror="videoThumbFallback(this, '${f.id}')">${badge}`;
+  }
+  return isList ? iconFor(f) : `<span class="bigicon">${iconFor(f)}</span>`;
+ };
  if (viewMode === 'grid') {
- el.innerHTML = '<div class="grid">' + folders.map(fd => `
- <div class="card folder-card" onclick="folderClick(event, '${fd.id}')" ontouchstart="cardTouchStart(event, '${fd.id}', 'folder')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="event.preventDefault()">
- <div class="thumb"><span class="bigicon">${ICONS.folderSolid}</span></div>
- <div class="cinfo">
+ const folderSection = folders.length ? '<div class="folder-grid">' + folders.map(fd => `
+ <div class="card folder-card" data-folder-id="${fd.id}" onpointerdown="prefetchFolder('${fd.id}')" onclick="folderClick(event, '${fd.id}')" ontouchstart="cardTouchStart(event, '${fd.id}', 'folder')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="event.preventDefault()">
+ <div class="folder-ico-box">${ICONS.folderSolid}</div>
+ <div class="folder-body">
  <div class="cname" title="${escapeHtml(fd.name)}">${escapeHtml(fd.name)}</div>
- <div class="cfoot">
- <div class="cmeta">${folderMeta(fd)}${searching && fd.path ? ' · ' + escapeHtml(fd.path) : ''}</div>
+ <div class="cmeta">${folderMeta(fd, true)}${searching && fd.path ? ' · ' + escapeHtml(fd.path) : ''}</div>
+ </div>
  ${authed ? `<div class="cactions">
- <button class="icon-btn" title="复制文件夹分享链接" aria-label="复制文件夹分享链接" onclick="event.stopPropagation(); copyFolderLink('${fd.id}', this)">${ICONS.link}</button>
+ <button class="icon-btn folder-share-btn" title="复制文件夹分享链接" aria-label="复制文件夹分享链接" onclick="event.stopPropagation(); copyFolderLink('${fd.id}', this)">${ICONS.link}</button>
  <button class="icon-btn" title="更多操作" aria-label="更多操作" onclick="event.stopPropagation(); openSheet('${fd.id}', 'folder')">${ICONS.more}</button>
  </div>` : ''}
- </div>
- </div>
- </div>`).join('') + list.map(f => `
+ </div>`).join('') + '</div>' : '';
+ const fileSection = list.length ? '<div class="grid file-grid">' + list.map(f => `
  <div class="card${selected.has(f.id) ? ' is-selected' : ''}" data-file-id="${f.id}" ontouchstart="cardTouchStart(event, '${f.id}', 'file')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="event.preventDefault()">
  <div class="thumb" onclick="thumbClick(event, '${f.id}')">
  ${authed ? `<input type="checkbox" class="sel" title="选择" aria-label="选择" onclick="event.stopPropagation()" onchange="toggleSelect('${f.id}', this.checked)" ${selected.has(f.id) ? 'checked' : ''}>` : ''}
  <span class="ctag">${storageBadge(f)}${visBadge(f)}</span>
- ${f.kind === 'image' ? `<img src="/thumb/${f.id}" loading="lazy" alt="" onerror="this.onerror=null;this.src='/f/${f.id}'">` : f.kind === 'video' ? `<img src="/thumb/${f.id}" loading="lazy" alt="" onerror="videoThumbFallback(this, '${f.id}')"><span class="play-badge">${ICONS.play}</span>` : `<span class="bigicon">${iconFor(f)}</span>`}
+ ${renderMediaThumb(f, false)}
  </div>
  <div class="cinfo">
  <div class="cname" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
@@ -2038,13 +2379,14 @@ function renderList() {
  </div>
  </div>
  </div>
- </div>`).join('') + '</div>';
+ </div>`).join('') + '</div>' : '';
+ el.innerHTML = folderSection + fileSection;
  syncSelectionClasses();
  updateBulkbar();
  return;
  }
  el.innerHTML = '<div class="list-head"><span class="lh-name">名称与信息</span><span class="lh-act">快捷操作</span></div>' + folders.map(fd => `
- <div class="file folder" onclick="folderClick(event, '${fd.id}')" ontouchstart="cardTouchStart(event, '${fd.id}', 'folder')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="event.preventDefault()">
+ <div class="file folder" data-folder-id="${fd.id}" onpointerdown="prefetchFolder('${fd.id}')" onclick="folderClick(event, '${fd.id}')" ontouchstart="cardTouchStart(event, '${fd.id}', 'folder')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="event.preventDefault()">
  <div class="list-thumb" style="color:var(--folder-icon);background:var(--folder-tint)">${ICONS.folderSolid}</div>
  <div class="info">
  <div class="name">${escapeHtml(fd.name)}</div>
@@ -2057,7 +2399,7 @@ function renderList() {
  </div>`).join('') + list.map(f => `
  <div class="file${selected.has(f.id) ? ' is-selected' : ''}" data-file-id="${f.id}" ontouchstart="cardTouchStart(event, '${f.id}', 'file')" ontouchend="cardTouchEnd()" ontouchmove="cardTouchEnd()" oncontextmenu="event.preventDefault()">
  ${authed ? `<input type="checkbox" class="sel" title="选择" aria-label="选择" onchange="toggleSelect('${f.id}', this.checked)" ${selected.has(f.id) ? 'checked' : ''}>` : ''}
- <div class="list-thumb" onclick="thumbClick(event, '${f.id}')">${f.kind === 'image' ? `<img src="/thumb/${f.id}" loading="lazy" alt="" onerror="this.onerror=null;this.src='/f/${f.id}'">` : f.kind === 'video' ? `<img src="/thumb/${f.id}" loading="lazy" alt="" onerror="this.parentNode.innerHTML=ICONS.film"><span class="lt-play">${ICONS.play}</span>` : iconFor(f)}</div>
+ <div class="list-thumb" onclick="thumbClick(event, '${f.id}')">${renderMediaThumb(f, true)}</div>
  <div class="info">
  <div class="name">${escapeHtml(f.name)}</div>
  <div class="meta">${storageBadge(f)} ${visBadge(f)} · ${fmtSize(f.size)}${f.width && f.height ? ' · ' + f.width + '×' + f.height : ''} · ${fmtDate(f.uploadedAt)}${expiryHtml(f.expiresAt)}${f.shareToken ? ' · 已分享' : ''}${f.downloads ? ' · 下载 ' + f.downloads + ' 次' : ''}${searching && f.folderPath ? ' · 在 ' + escapeHtml(f.folderPath) : ''}</div>
@@ -3030,9 +3372,7 @@ async function enqueueFolderFiles(files) {
  if (!valid.length) return;
  const visibility = document.querySelector('input[name=vis]:checked').value;
  const expires = expireHours;
- const r = await fetch('/api/folders');
- const d = await r.json();
- const all = d.folders || [];
+ const all = [...(await getFolderTree(true))];
  const cache = new Map();
  const resolveDir = async (relDir) => {
  if (!relDir) return currentFolderId;
@@ -3056,6 +3396,7 @@ async function enqueueFolderFiles(files) {
  } else {
  child = cd.folder;
  all.push(child);
+ setFolderTreeCache(all);
  }
  }
  cache.set(path, child.id);
@@ -3134,14 +3475,16 @@ function probeMediaDims(file) {
  });
 }
 
-// 图片 & 视频自动生成 320px 缩略图上传到 /api/thumbs/:id（视频自动截取 0.5s 首帧，并回传媒体宽高）
+// 图片 & 视频自动生成 400px 轻量 WebP（兼容降级 JPEG）缩略图上传到 /api/thumbs/:id 并即时写入本地内存缓存
 async function waitThumb(fileObj, file) { await Promise.race([maybeUploadThumb(fileObj, file), new Promise(r => setTimeout(r, 1800))]); }
 async function maybeUploadThumb(fileObj, file) {
  if (!fileObj || (fileObj.kind !== 'image' && fileObj.kind !== 'video')) return;
  try {
  let blob = null;
  let mediaW = null, mediaH = null;
- const max = 320;
+ const max = 400;
+ const outMime = (typeof supportsWebpEncode === 'function' && supportsWebpEncode()) ? 'image/webp' : 'image/jpeg';
+ const outQuality = outMime === 'image/webp' ? 0.78 : 0.8;
  if (fileObj.kind === 'image') {
  let bmp = null;
  try { bmp = await createImageBitmap(file); } catch {
@@ -3159,7 +3502,8 @@ async function maybeUploadThumb(fileObj, file) {
  c.width = w; c.height = h;
  c.getContext('2d').drawImage(bmp, 0, 0, w, h);
  if (bmp.close) bmp.close();
- blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.8));
+ blob = await new Promise(res => c.toBlob(res, outMime, outQuality));
+ c.width = 0; c.height = 0;
  } else if (fileObj.kind === 'video') {
  const url = URL.createObjectURL(file);
  try {
@@ -3170,7 +3514,7 @@ async function maybeUploadThumb(fileObj, file) {
  const timer = setTimeout(() => finish(null), 5000);
  v.muted = true; v.playsInline = true; v.preload = 'auto';
  v.onloadeddata = () => {
- try { v.currentTime = Math.min(0.5, (v.duration && isFinite(v.duration)) ? v.duration / 2 : 0.1); }
+ try { v.currentTime = Math.min(0.8, (v.duration && isFinite(v.duration)) ? v.duration * 0.1 : 0.1); }
  catch { clearTimeout(timer); finish(null); }
  };
  v.onseeked = () => {
@@ -3183,7 +3527,7 @@ async function maybeUploadThumb(fileObj, file) {
  const c = document.createElement('canvas');
  c.width = cw; c.height = ch;
  c.getContext('2d').drawImage(v, 0, 0, cw, ch);
- c.toBlob((b) => finish(b), 'image/jpeg', 0.8);
+ c.toBlob((b) => { c.width = 0; c.height = 0; finish(b); }, outMime, outQuality);
  };
  v.onerror = () => { clearTimeout(timer); finish(null); };
  v.src = url;
@@ -3191,8 +3535,14 @@ async function maybeUploadThumb(fileObj, file) {
  } finally { URL.revokeObjectURL(url); }
  }
  if (!blob) return;
+ try {
+  const prev = thumbBlobCache.get(fileObj.id);
+  if (prev) URL.revokeObjectURL(prev);
+  thumbBlobCache.set(fileObj.id, URL.createObjectURL(blob));
+  missingThumbIds.delete(fileObj.id);
+ } catch {}
  const pw = authed ? '' : $('password').value.trim();
- const hdrs = { 'Content-Type': 'image/jpeg' };
+ const hdrs = { 'Content-Type': blob.type || outMime };
  if (pw) hdrs['X-Upload-Password'] = pw;
  if (mediaW && mediaH) { hdrs['X-Media-Width'] = String(mediaW); hdrs['X-Media-Height'] = String(mediaH); }
  await fetch('/api/thumbs/' + fileObj.id, { method: 'POST', headers: hdrs, body: blob });
@@ -4440,27 +4790,18 @@ function closeDropForm() { $('dropFormBox').classList.remove('open'); }
 async function populateDropFolderSelect() {
  const sel = $('dfFolder');
  if (!sel) return;
+ const target = preselectDropFolderId || '';
+ const cached = getFolderTreeSync();
+ if (cached) {
+  fillFolderSelectFromList(sel, cached, target);
+  if (Date.now() - folderTreeTs > 60000) {
+   getFolderTree(true).then(fresh => fillFolderSelectFromList(sel, fresh, sel.value || target)).catch(() => {});
+  }
+  return;
+ }
  try {
-  const r = await fetch('/api/folders');
-  const d = await r.json();
-  const all = d.folders || [];
-  const pathOf = (fd) => {
-   const names = [fd.name];
-   let cur = fd;
-   const seen = new Set([fd.id]);
-   while (cur.parentId) {
-    const p = all.find(x => x.id === cur.parentId);
-    if (!p || seen.has(p.id)) break;
-    seen.add(p.id);
-    names.unshift(p.name);
-    cur = p;
-   }
-   return names.join(' / ');
-  };
-  sel.innerHTML = '<option value="">根目录</option>' + all.map(fd =>
-   `<option value="${escapeHtml(fd.id)}">${escapeHtml(pathOf(fd))}</option>`
-  ).join('');
-  if (preselectDropFolderId) sel.value = preselectDropFolderId;
+  const all = await getFolderTree(true);
+  fillFolderSelectFromList(sel, all, target);
  } catch {}
 }
 
@@ -5206,29 +5547,20 @@ async function populateRemoteFetchOptions() {
  const folderSel = $('rfFolder');
  if (folderSel) {
   const targetFolder = uploadDestOverride !== undefined ? (uploadDestOverride || '') : (currentFolderId || '');
-  try {
-   const r = await fetch('/api/folders');
-   const d = await r.json();
-   const all = d.folders || [];
-   const pathOf = (fd) => {
-    const names = [fd.name];
-    let cur = fd;
-    const seen = new Set([fd.id]);
-    while (cur.parentId) {
-     const p = all.find(x => x.id === cur.parentId);
-     if (!p || seen.has(p.id)) break;
-     seen.add(p.id);
-     names.unshift(p.name);
-     cur = p;
-    }
-    return names.join(' / ');
-   };
-   folderSel.innerHTML = '<option value="">根目录</option>' + all.map(fd =>
-    `<option value="${escapeHtml(fd.id)}">${escapeHtml(pathOf(fd))}</option>`
-   ).join('');
-   folderSel.value = targetFolder;
-  } catch {
-   folderSel.innerHTML = '<option value="">根目录</option>';
+  const cached = getFolderTreeSync();
+  if (cached) {
+   fillFolderSelectFromList(folderSel, cached, targetFolder);
+   if (Date.now() - folderTreeTs > 60000) {
+    getFolderTree(true).then(fresh => fillFolderSelectFromList(folderSel, fresh, folderSel.value || targetFolder)).catch(() => {});
+   }
+  } else {
+   try {
+    const all = await getFolderTree(true);
+    fillFolderSelectFromList(folderSel, all, targetFolder);
+   } catch {
+    folderSel.innerHTML = '<option value="">根目录</option>';
+    syncCustomSelect(folderSel);
+   }
   }
  }
 }
@@ -5352,29 +5684,20 @@ async function populatePasteOptions() {
  const folderSel = $('pasteFolder');
  if (folderSel) {
   const targetFolder = uploadDestOverride !== undefined ? (uploadDestOverride || '') : (currentFolderId || '');
-  try {
-   const r = await fetch('/api/folders');
-   const d = await r.json();
-   const all = d.folders || [];
-   const pathOf = (fd) => {
-    const names = [fd.name];
-    let cur = fd;
-    const seen = new Set([fd.id]);
-    while (cur.parentId) {
-     const p = all.find(x => x.id === cur.parentId);
-     if (!p || seen.has(p.id)) break;
-     seen.add(p.id);
-     names.unshift(p.name);
-     cur = p;
-    }
-    return names.join(' / ');
-   };
-   folderSel.innerHTML = '<option value="">根目录</option>' + all.map(fd =>
-    `<option value="${escapeHtml(fd.id)}">${escapeHtml(pathOf(fd))}</option>`
-   ).join('');
-   folderSel.value = targetFolder;
-  } catch {
-   folderSel.innerHTML = '<option value="">根目录</option>';
+  const cached = getFolderTreeSync();
+  if (cached) {
+   fillFolderSelectFromList(folderSel, cached, targetFolder);
+   if (Date.now() - folderTreeTs > 60000) {
+    getFolderTree(true).then(fresh => fillFolderSelectFromList(folderSel, fresh, folderSel.value || targetFolder)).catch(() => {});
+   }
+  } else {
+   try {
+    const all = await getFolderTree(true);
+    fillFolderSelectFromList(folderSel, all, targetFolder);
+   } catch {
+    folderSel.innerHTML = '<option value="">根目录</option>';
+    syncCustomSelect(folderSel);
+   }
   }
  }
 }
@@ -6063,7 +6386,7 @@ function enhanceSelect(sel) {
    Object.defineProperty(sel, 'value', {
     configurable: true,
     get() { return protoDesc.get.call(this); },
-    set(v) { protoDesc.set.call(this, v); syncCustomSelect(this); },
+    set(v) { protoDesc.set.call(this, v); syncCustomSelect(this); return true; },
    });
   }
  } catch {}
@@ -6123,6 +6446,9 @@ async function submitMoveNewFolder(autoMove) {
    return;
   }
   const created = d.folder;
+  if (folderTreeCache) setFolderTreeCache([...folderTreeCache, created]);
+  else invalidateFolderTree();
+  invalidateDirCache();
   const parentOpt = moveModalOpts.find(o => (o.id || null) === parentId);
   const fullLabel = (parentOpt && parentOpt.id) ? `${parentOpt.label} / ${created.name}` : created.name;
   closeMoveNewFolderBox();
