@@ -20,6 +20,7 @@ import { registerSettings } from './routes/settings.js';
 import { registerPools } from './routes/pools.js';
 import { registerDrops } from './routes/drops.js';
 import { registerNotify } from './routes/notify.js';
+import { registerRemoteFetch } from './routes/remote-fetch.js';
 
 export function createApp(deps) {
   assertImplements(deps.meta, MetaStoreMethods, 'MetaStore');
@@ -41,6 +42,7 @@ export function createApp(deps) {
   registerPools(app);
   registerDrops(app);
   registerNotify(app);
+  registerRemoteFetch(app);
   registerFiles(app);
   registerFolders(app);
   registerShares(app);
