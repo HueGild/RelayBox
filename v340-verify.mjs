@@ -195,7 +195,8 @@ async function uploadProxy(app, H, name, bytes, extra = '') {
 const mockR2 = new MockR2();
 const deps = buildDeps({ mockR2 });
 const app = createApp(deps);
-const imgBytes = fs.readFileSync('/home/hatch/relaybox-test-r7/test-img.png');
+// 1x1 transparent PNG, inline so `npm test` needs no local fixture file.
+const imgBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
 // ================= A. D1 schema (fresh baseline) =================
 console.log('--- A. D1 schema ---');
