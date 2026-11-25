@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r13 (2026-11-24 · v3.3.4 URL 远程拉取转存到指定存储池 + r12 客户端压缩/转 WebP) -->
+<!-- RelayBox v3.0 UI r14 (2026-11-24 · v3.3.5 文字/代码快传 Pastebin + 文本/代码在线编辑 + r13/r12) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -658,11 +658,28 @@
  .uq-saved { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 999px; background: var(--ok-bg); color: var(--ok-text); font-size: 10.5px; font-weight: 600; margin-left: 5px; flex-shrink: 0; }
  body.has-wallpaper .img-comp-bar:not(.on), body.has-wallpaper .img-comp-panel { background: var(--glass-input-bg); }
 
- /* r13: URL 远程拉取转存快捷按钮行 */
- .upload-extra-row { display: none; gap: 8px; margin-top: 8px; }
- .upload-extra-row.show { display: flex; }
- .upload-extra-row button { flex: 1 1 0; min-width: 0; margin-top: 0 !important; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 8px 10px; }
+ /* r13/r14: 上传区快捷功能行（文字快传 / 上传文件夹 / URL 远程拉取） */
+ .upload-extra-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+ .upload-extra-row button { flex: 1 1 0; min-width: 112px; margin-top: 0 !important; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 8px 10px; white-space: nowrap; }
  .upload-extra-row button svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+ /* r14: 文字/代码快传（Pastebin）与在线文本编辑器弹窗样式 */
+ .code-modal-card { max-width: 760px; width: 100%; max-height: 90vh; overflow-y: auto; }
+ .code-editor-ta { width: 100%; min-height: 220px; max-height: 54vh; resize: vertical; padding: 11px 13px; border: 1px solid var(--input-border); border-radius: 11px; background: var(--input-bg); color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 13px; line-height: 1.6; tab-size: 2; outline: none; transition: border-color .16s, box-shadow .16s; }
+ .code-editor-ta:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+ .code-editor-ta.tall { min-height: 360px; max-height: 62vh; }
+ .code-status-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 11.5px; color: var(--muted); flex-wrap: wrap; }
+ .code-dirty-dot { display: none; align-items: center; gap: 5px; color: #D97706; font-weight: 600; }
+ html[data-theme="dark"] .code-dirty-dot { color: #FBBF24; }
+ .code-dirty-dot.show { display: inline-flex; }
+ .paste-share-box { margin-top: 10px; padding: 10px 12px; border-radius: 11px; background: var(--surface-soft); border: 1px solid var(--border); }
+ .paste-share-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; user-select: none; }
+ .paste-share-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+ .paste-share-opts { margin-top: 10px; }
+ .pv-doc-acts { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+ .pv-doc-btn.ghost-doc { background: var(--btn-bg); color: var(--btn-text); }
+ .pv-doc-btn.ghost-doc:hover { background: var(--btn-hover); }
+ body.has-wallpaper .paste-share-box { background: var(--glass-input-bg); }
 
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
@@ -755,8 +772,9 @@
  <div class="drop-sub">大文件自动分片断点续传</div>
  </div>
  <div class="upload-extra-row" id="uploadExtraRow">
- <button class="ghost" id="folderBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 上传文件夹</button>
- <button class="ghost" id="remoteFetchBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> URL 远程拉取</button>
+ <button class="ghost" id="pasteTextBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> 文字 / 代码快传</button>
+ <button class="ghost" id="folderBtn" type="button" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 上传文件夹</button>
+ <button class="ghost" id="remoteFetchBtn" type="button" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> URL 远程拉取</button>
  </div>
  <input type="file" id="fileInput" style="display:none" multiple>
  <input type="file" id="folderInput" style="display:none" webkitdirectory>
@@ -894,6 +912,8 @@
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
 <div class="modal" id="tokensModal"><span class="close" id="tokensClose">×</span><div class="card token-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">API 密钥管理</div><div class="meta" style="margin-bottom:12px">用于 curl、ShareX、PicGo、iOS 快捷指令一键直传（单文件 ≤ 32MB，默认公开直链）。</div><div class="row" style="margin-top:0"><input type="text" id="tokenNameInput" placeholder="备注名，如 Mac ShareX / 快捷指令" maxlength="40"><button id="tokenCreateBtn" type="button">生成密钥</button></div><div class="token-created" id="tokenCreatedBox" style="display:none"><div style="font-size:12px;font-weight:600;color:var(--ok-text)">已生成新密钥（明文仅展示这一次，请立即保存）：</div><div class="token-created-val" id="tokenCreatedVal"></div><div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tokenCopyKeyBtn" style="flex:1;padding:7px 10px;font-size:12px">复制密钥</button><button type="button" id="tokenCopyCurlBtn" style="flex:1;padding:7px 10px;font-size:12px">复制 curl 上传命令</button></div></div><div class="token-list" id="tokenList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="token-curl"><div style="font-weight:600;color:var(--text)">极客上传接口示例（POST /api/raw-upload）</div><pre id="tokenCurlExample"></pre></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="tokensDoneBtn" type="button">关闭</button></div></div></div>
 <div class="modal" id="detailModal"><span class="close" id="detailClose">×</span><div class="card detail-card" id="detailCardBody"></div></div>
+<div class="modal" id="pasteModal"><span class="close" id="pasteClose">×</span><div class="card code-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">文字 / 代码快传（Pastebin）</div><div class="meta" style="margin-bottom:12px">贴入文字、笔记、配置或代码片段，一键存为文件并生成 5 位短取件码与分享链接（支持阅后即焚 / 提取码，单份 ≤ 1MB）。</div><div class="form-grid2"><div class="form-field"><label>文件名（选填，留空自动按时间命名）</label><input type="text" id="pasteName" placeholder="如 notes.md 或 config.json" maxlength="120" autocomplete="off"></div><div class="form-field"><label>格式 / 扩展名</label><select id="pasteLang"><option value="txt" selected>纯文本 (.txt)</option><option value="md">Markdown (.md)</option><option value="json">JSON (.json)</option><option value="js">JavaScript (.js)</option><option value="ts">TypeScript (.ts)</option><option value="py">Python (.py)</option><option value="html">HTML (.html)</option><option value="css">CSS (.css)</option><option value="sh">Shell (.sh)</option><option value="sql">SQL (.sql)</option><option value="yaml">YAML (.yaml)</option><option value="go">Go (.go)</option><option value="rs">Rust (.rs)</option><option value="java">Java (.java)</option><option value="cpp">C++ (.cpp)</option><option value="ini">配置 (.ini)</option><option value="log">日志 (.log)</option></select></div></div><div class="form-field" style="margin-top:8px"><label>内容 *</label><textarea id="pasteContent" class="code-editor-ta" placeholder="在这里粘贴或输入文字、代码、命令、配置…（支持 Tab 缩进，Ctrl/Cmd+Enter 快速保存）" spellcheck="false"></textarea><div class="code-status-row"><span id="pasteMetaStat">0 行 · 0 字符 · 0 B</span><span>单份上限 1 MB</span></div></div><div class="form-grid2" style="margin-top:8px" id="pasteAdminDestRow"><div class="form-field"><label>目标存储池</label><select id="pastePool"></select></div><div class="form-field"><label>存入目录</label><select id="pasteFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>可见性</label><select id="pasteVis"><option value="private" selected>私密（凭分享链接 / 取件码访问）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="pasteExpires"><option value="0">永久有效</option><option value="24" selected>24 小时</option><option value="168">7 天</option></select></div></div><div class="paste-share-box"><label class="paste-share-toggle"><input type="checkbox" id="pasteCreateShare" checked> 保存后立即生成分享链接与 5 位短取件码</label><div class="paste-share-opts" id="pasteShareOpts"><div class="form-grid2"><div class="form-field"><label>提取码（选填，留空免密）</label><input type="text" id="pasteShareCode" placeholder="如 1234" maxlength="32" autocomplete="off"></div><div class="form-field"><label>下载次数限制</label><select id="pasteMaxDl"><option value="0" selected>不限次数</option><option value="1">1 次（阅后即焚）</option><option value="5">5 次</option><option value="10">10 次</option></select></div></div></div></div><div class="share-res" id="pasteResultBox" style="display:none"><div class="share-res-code"><div><div class="meta" style="margin:0 0 4px">5 位短取件码</div><span class="pickup-badge" id="pasteResPickup">-----</span></div><div class="meta" id="pasteResInfo" style="text-align:right"></div></div><div class="share-res-url" id="pasteResUrl"></div><div class="share-res-btns"><button type="button" class="ghost" id="pasteCopyCodeBtn">复制取件码</button><button type="button" class="ghost" id="pasteCopyUrlBtn">复制链接</button><button type="button" id="pasteCopyPackBtn">复制分享文案</button></div></div><div class="msg" id="pasteMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="pasteCancelBtn">关闭</button><button type="button" id="pasteGoBtn">保存并生成快传</button></div></div></div>
+<div class="modal" id="textEditModal"><span class="close" id="textEditClose">×</span><div class="card code-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:24px;margin-bottom:4px"><div style="font-size:15.5px;font-weight:700;word-break:break-all" id="textEditTitle">在线编辑</div><span class="pool-tag" id="textEditPoolTag"></span></div><div class="meta" style="margin-bottom:10px">支持直接修改并覆盖保存回原存储池（Tab 插入缩进，Ctrl/Cmd+S 快捷保存，单文件 ≤ 1MB）。</div><textarea id="textEditArea" class="code-editor-ta tall" placeholder="正在加载文件内容…" spellcheck="false"></textarea><div class="code-status-row"><span id="textEditStat">0 行 · 0 字符 · 0 B</span><span class="code-dirty-dot" id="textEditDirty">● 有未保存修改</span></div><div class="msg" id="textEditMsg" style="margin-top:6px"></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="textEditCopyBtn">复制全文</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="textEditCancelBtn">取消</button><button type="button" id="textEditSaveBtn">保存修改</button></div></div></div></div>
 <div class="modal" id="remoteFetchModal"><span class="close" id="remoteFetchClose">×</span><div class="card pool-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">URL 远程拉取转存</div><div class="meta" style="margin-bottom:12px">贴入直链，由服务端直接抓取文件并写入所选存储池与目录（支持自动识别文件名、防内网 SSRF，单文件 ≤ 50MB）。</div><div class="form-field"><label>文件直链 URL *</label><input type="text" id="rfUrl" placeholder="https://example.com/path/to/file.png" autocomplete="off" spellcheck="false"></div><div class="form-field" style="margin-top:8px"><label>自定义文件名（选填，留空自动识别）</label><input type="text" id="rfName" placeholder="如 banner.webp 或 资料.pdf" maxlength="120" autocomplete="off"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>目标存储池</label><select id="rfPool"></select></div><div class="form-field"><label>存入目录</label><select id="rfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="rfVis"><option value="private" selected>私密（仅管理员/分享可见）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="rfExpires"><option value="0" selected>永久有效</option><option value="24">24 小时</option><option value="168">7 天</option></select></div></div><div class="msg" id="rfMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="rfCancelBtn">取消</button><button type="button" id="rfGoBtn">开始拉取转存</button></div></div></div>
 <div class="modal" id="notifyModal"><span class="close" id="notifyClose">×</span><div class="card pool-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
 <div class="modal" id="dropsModal"><span class="close" id="dropsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">文件收集箱</div><button type="button" id="dropAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新建收集箱</button></div><div class="meta" style="margin-bottom:12px">生成反向收件链接发给他人，对方无需登录即可投递文件到指定目录，且彼此不可见已交文件。</div><div class="pool-list" id="dropListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="dropFormBox"><div style="font-size:13.5px;font-weight:600">新建文件收集箱</div><div class="form-grid2"><div class="form-field"><label>收集箱标题 *</label><input type="text" id="dfTitle" placeholder="如 作业提交 / 活动素材收集" maxlength="60"></div><div class="form-field"><label>文件存入目录</label><select id="dfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2"><div class="form-field"><label>提交口令（留空 = 免密）</label><input type="text" id="dfPassword" placeholder="可选，如 2026" maxlength="64" autocomplete="off"></div><div class="form-field"><label>最大收集份数（0 = 不限）</label><input type="number" id="dfMaxFiles" value="0" min="0" max="100000"></div></div><div class="form-grid2"><div class="form-field"><label>单文件上限</label><select id="dfMaxSize"><option value="10485760">10 MB</option><option value="52428800">50 MB</option><option value="104857600" selected>100 MB</option><option value="524288000">500 MB</option><option value="1073741824">1 GB</option></select></div><div class="form-field"><label>链接有效期</label><select id="dfExpires"><option value="24">24 小时</option><option value="72">3 天</option><option value="168" selected>7 天</option><option value="720">30 天</option><option value="0">永久有效</option></select></div></div><div class="form-field"><label>收到的文件默认可见性</label><select id="dfVis"><option value="private" selected>私密（推荐：仅管理员可见）</option><option value="public">公开（任何人可访问）</option></select></div><div class="msg" id="dfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="dfCancelBtn">取消</button><button type="button" id="dfCreateBtn">创建并复制链接</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="dropsDoneBtn">关闭</button></div></div></div>
@@ -1646,7 +1666,7 @@ function iconFor(f) {
  if (/\.(zip|rar|7z|tar|gz)$/i.test(f.name)) return ICONS.archive;
  return ICONS.file;
 }
-const TEXT_PREVIEW_RE = /\.(txt|md|markdown|json|js|mjs|cjs|ts|tsx|jsx|css|scss|html|htm|xml|svg|yaml|yml|toml|ini|conf|cfg|env|log|sh|bash|py|sql|csv|c|cpp|h|hpp|java|go|rs)$/i;
+const TEXT_PREVIEW_RE = /\.(txt|md|markdown|json|js|mjs|cjs|ts|tsx|jsx|css|scss|less|html|htm|xml|svg|yaml|yml|toml|ini|conf|cfg|env|log|sh|bash|zsh|bat|ps1|py|rb|php|sql|csv|c|cpp|h|hpp|java|kt|go|rs|swift|vue|svelte)$/i;
 function isTextFile(f) { return !!(f && f.name && TEXT_PREVIEW_RE.test(f.name)); }
 function isPdfFile(f) { return !!(f && f.name && /\.pdf$/i.test(f.name)); }
 function isPreviewable(f) { return !!(f && (f.kind === 'video' || f.kind === 'image' || f.kind === 'audio' || isTextFile(f) || isPdfFile(f))); }
@@ -1743,7 +1763,6 @@ async function loadList(showSkel) {
  $('newFolderBtn').style.display = authed ? '' : 'none';
  $('folderBtn').style.display = authed ? '' : 'none';
  if ($('remoteFetchBtn')) $('remoteFetchBtn').style.display = authed ? '' : 'none';
- if ($('uploadExtraRow')) $('uploadExtraRow').classList.toggle('show', !!authed);
  $('selectAllBtn').style.display = authed ? '' : 'none';
  $('announceBtn').style.display = authed ? '' : 'none';
  if ($('tokensBtn')) $('tokensBtn').style.display = authed ? '' : 'none';
@@ -1964,9 +1983,15 @@ function renderPreview() {
  } else if (isPdfFile(f)) {
  body.innerHTML = `<div class="pv-doc"><div class="pv-doc-bar"><span class="pv-doc-title">${escapeHtml(f.name)}</span><a class="pv-doc-btn" href="/f/${f.id}${qs}" target="_blank" rel="noopener">新标签打开</a></div><iframe class="pv-pdf" src="/f/${f.id}${qs}"></iframe></div>`;
  } else if (isTextFile(f)) {
- body.innerHTML = `<div class="pv-doc"><div class="pv-doc-bar"><span class="pv-doc-title">${escapeHtml(f.name)}</span><button class="pv-doc-btn" id="pvCopyTextBtn" type="button">复制全文</button></div><pre class="pv-text" id="pvTextPre">正在加载文本内容…</pre></div>`;
+ const canEdit = authed && !previewToken;
+ body.innerHTML = `<div class="pv-doc"><div class="pv-doc-bar"><span class="pv-doc-title">${escapeHtml(f.name)}</span><div class="pv-doc-acts">${canEdit ? `<button class="pv-doc-btn ghost-doc" id="pvEditTextBtn" type="button">在线编辑</button>` : ''}<button class="pv-doc-btn" id="pvCopyTextBtn" type="button">复制全文</button></div></div><pre class="pv-text" id="pvTextPre">正在加载文本内容…</pre></div>`;
+ if (canEdit && $('pvEditTextBtn')) $('pvEditTextBtn').onclick = () => { closePreviewModal(); openTextEditModal(f.id); };
  const curId = f.id;
- fetch(`/f/${f.id}${qs}`).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }).then(txt => {
+ const bust = (qs ? qs + '&' : '?') + '_t=' + Date.now();
+ const loadPromise = canEdit
+  ? fetch(`/api/files/${encodeURIComponent(f.id)}/content`, { cache: 'no-store' }).then(r => r.json().then(d => { if (!r.ok || !d.ok) throw new Error(d.error || ('HTTP ' + r.status)); return d.content; }))
+  : fetch(`/f/${f.id}${bust}`, { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); });
+ loadPromise.then(txt => {
  const pre = $('pvTextPre');
  if (!pre || !previewList[previewIdx] || previewList[previewIdx].id !== curId) return;
  const limit = 512 * 1024;
@@ -2200,6 +2225,8 @@ document.addEventListener('keydown', (e) => {
  if ($('dropsModal') && $('dropsModal').classList.contains('open')) { closeDropsModal(); return; }
  if ($('notifyModal') && $('notifyModal').classList.contains('open')) { closeNotifyModal(); return; }
  if ($('remoteFetchModal') && $('remoteFetchModal').classList.contains('open')) { closeRemoteFetchModal(); return; }
+ if ($('pasteModal') && $('pasteModal').classList.contains('open')) { closePasteModal(); return; }
+ if ($('textEditModal') && $('textEditModal').classList.contains('open')) { closeTextEditModal(); return; }
  if ($('appearanceModal') && $('appearanceModal').classList.contains('open')) { closeAppearanceModal(false); return; }
 });
 
@@ -2258,6 +2285,7 @@ function openSheet(id, kind) {
  const f = obj;
  items.push({ icon: ICONS.info, label: '文件详情', fn: () => openDetailModal(f.id) });
  if (isPreviewable(f)) items.push({ icon: ICONS.eye, label: '预览', fn: () => preview(f.id) });
+ if (authed && isTextFile(f)) items.push({ icon: ICONS.pencil, label: '在线编辑内容', fn: () => openTextEditModal(f.id) });
  items.push({ icon: ICONS.download, label: '下载', fn: () => { location.href = '/f/' + f.id + '?download=1'; } });
  items.push({ icon: ICONS.link, label: '复制链接', fn: () => copyLink(f.id) });
  if (f.kind === 'image' && f.visibility === 'public') {
@@ -3564,6 +3592,7 @@ async function openDetailModal(id) {
   <div class="detail-head"><span class="icon" style="width:28px">${iconFor(f)}</span><div class="detail-title">${escapeHtml(f.name)}</div></div>
   <div class="detail-actions">
    ${isPreviewable(f) ? `<button type="button" class="detail-act blue" onclick="closeDetailModal(); preview('${f.id}')">${ICONS.eye} 预览</button>` : ''}
+   ${authed && isTextFile(f) ? `<button type="button" class="detail-act blue" onclick="closeDetailModal(); openTextEditModal('${f.id}')">${ICONS.pencil} 在线编辑</button>` : ''}
    <button type="button" class="detail-act green" onclick="location.href='/f/${f.id}?download=1'">${ICONS.download} 下载</button>
    <button type="button" class="detail-act" onclick="showQR('${f.id}')">${ICONS.qr} 二维码</button>
    ${authed ? `<button type="button" class="detail-act" onclick="closeDetailModal(); openShareSettings('${f.id}', 'file')">${ICONS.lock} 分享设置</button>` : ''}
@@ -5100,6 +5129,312 @@ if ($('rfGoBtn')) $('rfGoBtn').onclick = async () => {
   btn.textContent = '开始拉取转存';
  }
 };
+
+
+// ===== r14: 文字/代码快传（Pastebin + 5 位短取件码） & 文本/代码在线编辑保存 =====
+function utf8ByteLength(str) {
+ try { return new TextEncoder().encode(String(str || '')).byteLength; }
+ catch { return String(str || '').length; }
+}
+function formatCodeStats(str) {
+ const s = String(str || '');
+ const lines = s ? s.split('\n').length : 0;
+ const bytes = utf8ByteLength(s);
+ return `${lines} 行 · ${s.length} 字符 · ${fmtSize(bytes)}`;
+}
+function bindCodeTextareaKeys(ta, onSaveShortcut) {
+ if (!ta) return;
+ ta.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+   e.preventDefault();
+   const start = ta.selectionStart, end = ta.selectionEnd;
+   const val = ta.value;
+   ta.value = val.slice(0, start) + '  ' + val.slice(end);
+   ta.selectionStart = ta.selectionEnd = start + 2;
+   ta.dispatchEvent(new Event('input'));
+   return;
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'Enter')) {
+   if (onSaveShortcut) { e.preventDefault(); onSaveShortcut(); }
+  }
+ });
+}
+
+// ---- Part A: Pastebin 文字/代码快传 ----
+let pasteResData = null;
+function syncPasteShareOpts() {
+ const on = !!($('pasteCreateShare') && $('pasteCreateShare').checked);
+ if ($('pasteShareOpts')) $('pasteShareOpts').style.display = on ? '' : 'none';
+ if ($('pasteGoBtn')) $('pasteGoBtn').textContent = on ? '保存并生成快传' : '仅保存为文件';
+}
+async function populatePasteOptions() {
+ const adminRow = $('pasteAdminDestRow');
+ if (adminRow) adminRow.style.display = authed ? '' : 'none';
+ if (!authed) return;
+ const poolSel = $('pastePool');
+ if (poolSel) {
+  const enabled = getEnabledPools();
+  const active = getActivePool();
+  if (enabled.length) {
+   poolSel.innerHTML = enabled.map(p =>
+    `<option value="${escapeHtml(p.id)}"${active && p.id === active.id ? ' selected' : ''}>${escapeHtml(p.name)}${p.isDefault ? '（默认）' : ''}</option>`
+   ).join('');
+  } else {
+   poolSel.innerHTML = '<option value="builtin-r2">内置 R2</option>';
+  }
+ }
+ const folderSel = $('pasteFolder');
+ if (folderSel) {
+  const targetFolder = uploadDestOverride !== undefined ? (uploadDestOverride || '') : (currentFolderId || '');
+  try {
+   const r = await fetch('/api/folders');
+   const d = await r.json();
+   const all = d.folders || [];
+   const pathOf = (fd) => {
+    const names = [fd.name];
+    let cur = fd;
+    const seen = new Set([fd.id]);
+    while (cur.parentId) {
+     const p = all.find(x => x.id === cur.parentId);
+     if (!p || seen.has(p.id)) break;
+     seen.add(p.id);
+     names.unshift(p.name);
+     cur = p;
+    }
+    return names.join(' / ');
+   };
+   folderSel.innerHTML = '<option value="">根目录</option>' + all.map(fd =>
+    `<option value="${escapeHtml(fd.id)}">${escapeHtml(pathOf(fd))}</option>`
+   ).join('');
+   folderSel.value = targetFolder;
+  } catch {
+   folderSel.innerHTML = '<option value="">根目录</option>';
+  }
+ }
+}
+function renderPasteResult(file, share) {
+ const box = $('pasteResultBox');
+ if (!box) return;
+ if (!file) { box.style.display = 'none'; pasteResData = null; return; }
+ const shareUrl = share && share.token
+  ? (location.origin + '/s/' + share.token)
+  : (file.visibility === 'public' ? (location.origin + '/f/' + file.id) : '');
+ pasteResData = { file, share, url: shareUrl };
+ $('pasteResPickup').textContent = (share && share.pickupCode) ? share.pickupCode : '未开启分享';
+ const md = share ? Number(share.maxDownloads || (share.burn ? 1 : 0)) : 0;
+ $('pasteResInfo').textContent = `${file.name} · ${fmtSize(file.size)}${md === 1 ? ' · 阅后即焚' : md > 1 ? ` · 限 ${md} 次` : ''}`;
+ $('pasteResUrl').textContent = shareUrl || '私密文件（未开启分享链接）';
+ $('pasteCopyCodeBtn').style.display = (share && share.pickupCode) ? '' : 'none';
+ $('pasteCopyUrlBtn').style.display = shareUrl ? '' : 'none';
+ box.style.display = 'block';
+}
+async function openPasteModal() {
+ $('pasteName').value = '';
+ $('pasteContent').value = '';
+ $('pasteLang').value = 'txt';
+ $('pasteShareCode').value = '';
+ $('pasteMaxDl').value = '0';
+ $('pasteCreateShare').checked = true;
+ $('pasteMsg').textContent = '';
+ $('pasteMsg').className = 'msg';
+ $('pasteMetaStat').textContent = formatCodeStats('');
+ renderPasteResult(null, null);
+ syncPasteShareOpts();
+ $('pasteModal').classList.add('open');
+ await populatePasteOptions();
+ setTimeout(() => { try { $('pasteContent').focus(); } catch {} }, 60);
+}
+function closePasteModal() { $('pasteModal').classList.remove('open'); }
+
+if ($('pasteTextBtn')) $('pasteTextBtn').onclick = openPasteModal;
+if ($('pasteClose')) $('pasteClose').onclick = closePasteModal;
+if ($('pasteCancelBtn')) $('pasteCancelBtn').onclick = closePasteModal;
+if ($('pasteModal')) $('pasteModal').onclick = (e) => { if (e.target.id === 'pasteModal') closePasteModal(); };
+if ($('pasteCreateShare')) $('pasteCreateShare').onchange = syncPasteShareOpts;
+if ($('pasteContent')) {
+ $('pasteContent').addEventListener('input', () => {
+  $('pasteMetaStat').textContent = formatCodeStats($('pasteContent').value);
+ });
+ bindCodeTextareaKeys($('pasteContent'), () => { if ($('pasteGoBtn') && !$('pasteGoBtn').disabled) $('pasteGoBtn').click(); });
+}
+if ($('pasteCopyCodeBtn')) $('pasteCopyCodeBtn').onclick = () => {
+ if (pasteResData && pasteResData.share && pasteResData.share.pickupCode) {
+  copyText(pasteResData.share.pickupCode, '取件码已复制：' + pasteResData.share.pickupCode);
+ }
+};
+if ($('pasteCopyUrlBtn')) $('pasteCopyUrlBtn').onclick = () => {
+ if (pasteResData && pasteResData.url) copyText(pasteResData.url, '链接已复制');
+};
+if ($('pasteCopyPackBtn')) $('pasteCopyPackBtn').onclick = () => {
+ if (!pasteResData || !pasteResData.file) return;
+ const lines = ['文本快传：' + pasteResData.file.name];
+ if (pasteResData.url) lines.push('链接：' + pasteResData.url);
+ if (pasteResData.share && pasteResData.share.pickupCode) lines.push('取件码：' + pasteResData.share.pickupCode);
+ if (pasteResData.share && pasteResData.share.code) lines.push('提取码：' + pasteResData.share.code);
+ copyText(lines.join('\n'), '分享文案已复制');
+};
+if ($('pasteGoBtn')) $('pasteGoBtn').onclick = async () => {
+ const btn = $('pasteGoBtn'), msg = $('pasteMsg');
+ const content = $('pasteContent').value;
+ if (!content) { msg.textContent = '请先输入或粘贴文字/代码内容'; msg.className = 'msg err'; $('pasteContent').focus(); return; }
+ const pw = authed ? '' : ($('password') ? $('password').value.trim() : '');
+ if (!authed && !pw) { msg.textContent = '未登录状态请先在主界面填写上传密码'; msg.className = 'msg err'; return; }
+ btn.disabled = true;
+ const oldTxt = btn.textContent;
+ btn.textContent = '正在保存…';
+ msg.textContent = '';
+ msg.className = 'msg';
+ try {
+  const createShare = !!$('pasteCreateShare').checked;
+  const maxDownloads = Math.max(0, parseInt($('pasteMaxDl').value, 10) || 0);
+  const payload = {
+   content,
+   name: $('pasteName').value.trim() || undefined,
+   lang: $('pasteLang').value || 'txt',
+   folderId: (authed && $('pasteFolder') && $('pasteFolder').value) ? $('pasteFolder').value : null,
+   poolId: (authed && $('pastePool') && $('pastePool').value) ? $('pastePool').value : undefined,
+   visibility: ($('pasteVis').value === 'public') ? 'public' : 'private',
+   expires: Number($('pasteExpires').value) || 0,
+   createShare,
+   code: createShare ? $('pasteShareCode').value.trim() : '',
+   maxDownloads: createShare ? maxDownloads : 0,
+   burn: createShare && maxDownloads === 1,
+   password: pw || undefined,
+  };
+  const r = await fetch('/api/paste', {
+   method: 'POST',
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify(payload),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok || !d.file) {
+   msg.textContent = d.error || ('保存失败（HTTP ' + r.status + '）');
+   msg.className = 'msg err';
+   return;
+  }
+  renderPasteResult(d.file, d.share);
+  const pickupTip = d.share && d.share.pickupCode ? ` · 取件码 ${d.share.pickupCode}` : '';
+  msg.textContent = `已保存 ${d.file.name}（${fmtSize(d.file.size)}）${pickupTip}`;
+  msg.className = 'msg ok';
+  if (d.share && d.share.token) {
+   copyText(location.origin + '/s/' + d.share.token, `快传已保存并复制链接${pickupTip}`);
+  } else {
+   showToast(`已保存 ${d.file.name}`, 'ok');
+  }
+  loadList();
+ } catch {
+  msg.textContent = '保存失败：网络错误';
+  msg.className = 'msg err';
+ } finally {
+  btn.disabled = false;
+  btn.textContent = oldTxt;
+ }
+};
+
+// ---- Part B: 文本 / 代码文件在线编辑保存 ----
+let textEditFileId = '';
+let textEditOrig = '';
+let textEditDirtyFlag = false;
+
+function syncTextEditState() {
+ const ta = $('textEditArea');
+ if (!ta) return;
+ $('textEditStat').textContent = formatCodeStats(ta.value);
+ textEditDirtyFlag = (ta.value !== textEditOrig);
+ if ($('textEditDirty')) $('textEditDirty').classList.toggle('show', textEditDirtyFlag);
+}
+
+async function openTextEditModal(id) {
+ if (!authed) return;
+ const f = allFiles.find(x => x.id === id) || (searchResults && searchResults.files.find(x => x.id === id));
+ textEditFileId = id;
+ textEditOrig = '';
+ textEditDirtyFlag = false;
+ $('textEditTitle').textContent = '在线编辑：' + (f ? f.name : id);
+ $('textEditPoolTag').textContent = f ? (f.poolName || (f.storage === 'local' ? '本地磁盘' : '内置 R2')) : '';
+ $('textEditArea').value = '';
+ $('textEditArea').disabled = true;
+ $('textEditArea').placeholder = '正在从存储池加载最新内容…';
+ $('textEditSaveBtn').disabled = true;
+ $('textEditMsg').textContent = '';
+ $('textEditMsg').className = 'msg';
+ if ($('textEditDirty')) $('textEditDirty').classList.remove('show');
+ $('textEditModal').classList.add('open');
+ try {
+  const r = await fetch(`/api/files/${encodeURIComponent(id)}/content`, { cache: 'no-store' });
+  const d = await r.json().catch(() => ({}));
+  if (textEditFileId !== id) return;
+  if (!r.ok || !d.ok) {
+   $('textEditMsg').textContent = d.error || ('加载失败（HTTP ' + r.status + '）');
+   $('textEditMsg').className = 'msg err';
+   $('textEditArea').placeholder = '加载失败';
+   return;
+  }
+  if (d.name) $('textEditTitle').textContent = '在线编辑：' + d.name;
+  if (d.poolName) $('textEditPoolTag').textContent = d.poolName;
+  textEditOrig = typeof d.content === 'string' ? d.content : '';
+  $('textEditArea').value = textEditOrig;
+  $('textEditArea').disabled = false;
+  $('textEditSaveBtn').disabled = false;
+  syncTextEditState();
+  setTimeout(() => { try { $('textEditArea').focus(); } catch {} }, 50);
+ } catch {
+  $('textEditMsg').textContent = '加载失败：网络错误';
+  $('textEditMsg').className = 'msg err';
+ }
+}
+function closeTextEditModal(force) {
+ if (!force && textEditDirtyFlag && !confirm('有未保存的修改，确定放弃并关闭吗？')) return;
+ $('textEditModal').classList.remove('open');
+ textEditFileId = '';
+ textEditOrig = '';
+ textEditDirtyFlag = false;
+}
+async function saveTextEditFile() {
+ if (!textEditFileId || $('textEditSaveBtn').disabled) return;
+ const btn = $('textEditSaveBtn'), msg = $('textEditMsg');
+ const content = $('textEditArea').value;
+ btn.disabled = true;
+ btn.textContent = '正在保存…';
+ msg.textContent = '';
+ msg.className = 'msg';
+ try {
+  const r = await fetch(`/api/files/${encodeURIComponent(textEditFileId)}/content`, {
+   method: 'PUT',
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ content }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+   msg.textContent = d.error || ('保存失败（HTTP ' + r.status + '）');
+   msg.className = 'msg err';
+   return;
+  }
+  textEditOrig = content;
+  syncTextEditState();
+  const newSize = (d.file && typeof d.file.size === 'number') ? d.file.size : utf8ByteLength(content);
+  msg.textContent = `已保存修改（${fmtSize(newSize)}）`;
+  msg.className = 'msg ok';
+  showToast('文件内容已保存', 'ok');
+  loadList();
+ } catch {
+  msg.textContent = '保存失败：网络错误';
+  msg.className = 'msg err';
+ } finally {
+  btn.disabled = false;
+  btn.textContent = '保存修改';
+ }
+}
+
+if ($('textEditClose')) $('textEditClose').onclick = () => closeTextEditModal(false);
+if ($('textEditCancelBtn')) $('textEditCancelBtn').onclick = () => closeTextEditModal(false);
+if ($('textEditModal')) $('textEditModal').onclick = (e) => { if (e.target.id === 'textEditModal') closeTextEditModal(false); };
+if ($('textEditSaveBtn')) $('textEditSaveBtn').onclick = saveTextEditFile;
+if ($('textEditCopyBtn')) $('textEditCopyBtn').onclick = () => copyText($('textEditArea').value, '全文已复制');
+if ($('textEditArea')) {
+ $('textEditArea').addEventListener('input', syncTextEditState);
+ bindCodeTextareaKeys($('textEditArea'), saveTextEditFile);
+}
 
 loadDropView().then(async (isDrop) => {
  if (isDrop) return;
