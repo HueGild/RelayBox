@@ -61,18 +61,20 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // 1) API + file download + thumbnail routes — the shared Hono core.
+    // 1) API + file download + thumbnail + WebDAV routes — the shared Hono core.
     if (
       path.startsWith('/api/') ||
       path.startsWith('/f/') ||
       path.startsWith('/thumb/') ||
+      path === '/dav' ||
+      path.startsWith('/dav/') ||
       path.startsWith('/__')
     ) {
       const app = createApp(buildDeps(env));
       return app.fetch(request, env, ctx);
     }
 
-    // 2) SPA entry points: `/` and share pages `/s/:token` — index.html.
+    // 2) SPA entry points: `/` and share/drop pages — index.html.
     if (path === '/' || path.startsWith('/s/') || path.startsWith('/d/')) {
       return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
     }

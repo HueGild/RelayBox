@@ -23,6 +23,8 @@ import { registerNotify } from './routes/notify.js';
 import { registerRemoteFetch } from './routes/remote-fetch.js';
 import { registerTextTools } from './routes/text-tools.js';
 import { registerTrash } from './routes/trash.js';
+import { registerMigrate } from './routes/migrate.js';
+import { registerWebdav } from './routes/webdav.js';
 
 export function createApp(deps) {
   assertImplements(deps.meta, MetaStoreMethods, 'MetaStore');
@@ -47,6 +49,8 @@ export function createApp(deps) {
   registerRemoteFetch(app);
   registerTextTools(app);
   registerTrash(app);
+  registerMigrate(app);
+  registerWebdav(app);
   registerFiles(app);
   registerFolders(app);
   registerShares(app);
