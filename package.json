@@ -1,1 +1,22 @@
-{"dependencies":{"aws4fetch":"^1.0.17","hono":"^4.6.0"},"description":"RelayBox — self-hosted file sharing with folders, share links, expiry and chunked upload. Deploys to Cloudflare (Workers + R2 + D1).","devDependencies":{"wrangler":"^3.80.0"},"engines":{"node":">=20"},"license":"MIT","name":"relaybox","scripts":{"deploy:cf":"wrangler deploy","test":"node v340-verify.mjs && node test-batch1-d1.js"},"type":"module","version":"3.4.0"}
+{
+  "dependencies": {
+    "aws4fetch": "^1.0.17",
+    "hono": "^4.6.0"
+  },
+  "description": "RelayBox — self-hosted file sharing with folders, share links, expiry and chunked upload. Deploys to Cloudflare (Workers + R2 + D1).",
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "name": "relaybox",
+  "scripts": {
+    "deploy:cf": "wrangler deploy",
+    "test": "node v340-verify.mjs && node test-batch1-d1.js",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy"
+  },
+  "type": "module",
+  "version": "3.4.5"
+}

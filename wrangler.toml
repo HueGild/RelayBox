@@ -24,6 +24,7 @@ bucket_name = "relaybox"
 binding = "DB"
 database_name = "relaybox"
 database_id = "883a23d5-8649-46a2-856d-7a5a200c1e1d"
+migrations_dir = "migrations"
 
 # Upload size cap (bytes). CF default 5GB.
 # R2_BUCKET is the bucket name for presigned URLs (the R2 Binding itself
@@ -32,12 +33,12 @@ database_id = "883a23d5-8649-46a2-856d-7a5a200c1e1d"
 MAX_UPLOAD_SIZE = "5368709120"
 R2_BUCKET = "relaybox"
 
-# Expiry + stale-chunk cleanup every 5 minutes (mirrors the VPS setInterval).
+# Expiry + stale-chunk cleanup every 5 minutes.
 [triggers]
 crons = ["*/5 * * * *"]
 
-# Secrets (set with `wrangler secret put` — never commit):
-#   UPLOAD_PASSWORD        admin password
-#   R2_ACCESS_KEY_ID       R2 S3 API key id (only used to sign presigned URLs via aws4fetch)
-#   R2_SECRET_ACCESS_KEY   R2 S3 API secret (only used to sign presigned URLs via aws4fetch)
-#   R2_ACCOUNT_ID          R2 account id (S3 endpoint host)
+# Secrets (set with `wrangler secret put` or in Cloudflare Dashboard — never commit):
+# UPLOAD_PASSWORD       admin password (required)
+# R2_ACCESS_KEY_ID      R2 S3 API key id (optional; only needed for presigned direct upload)
+# R2_SECRET_ACCESS_KEY  R2 S3 API secret (optional)
+# R2_ACCOUNT_ID         R2 account id (optional)
