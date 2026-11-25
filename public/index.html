@@ -881,6 +881,22 @@
  .ctx-item.danger { color: var(--danger-text); }
  .ctx-item.danger:hover { background: var(--danger-bg); }
  .ctx-item.danger svg { color: var(--danger-text); }
+
+ /* v3.4.1 / r21: 侧边滑出控制台抽屉（做法 B）+ 顶栏精简 */
+ .topbar .desk-only-btn:not(#trashBtn) { display: none !important; }
+ .topbar .top-more-wrap.mob-only-wrap { display: inline-flex !important; position: static; }
+ .nav-drawer-mask { display: none; position: fixed; inset: 0; z-index: 82; background: rgba(15,23,42,.42); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); opacity: 0; transition: opacity .22s ease; }
+ .nav-drawer-mask.open { display: block; opacity: 1; }
+ .top-more-menu.nav-drawer { display: flex !important; flex-direction: column; position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important; left: auto !important; width: min(300px, 84vw) !important; min-width: 0 !important; max-height: none !important; margin: 0 !important; padding: calc(14px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom)) !important; border-radius: 18px 0 0 18px !important; z-index: 85 !important; background: var(--glass-bg-strong); backdrop-filter: blur(24px) saturate(185%); -webkit-backdrop-filter: blur(24px) saturate(185%); border-left: 1px solid var(--glass-border); box-shadow: -12px 0 36px rgba(0,0,0,.22); transform: translateX(104%); visibility: hidden; pointer-events: none; transition: transform .24s cubic-bezier(.22,1,.36,1), visibility .24s ease; overflow-y: auto; gap: 4px; }
+ .top-more-menu.nav-drawer.open { transform: translateX(0); visibility: visible; pointer-events: auto; }
+ .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+ .drawer-title { font-size: 15px; font-weight: 600; color: var(--text); }
+ .drawer-close { width: 30px; height: 30px; border-radius: 999px; border: 0; background: var(--surface-soft); color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+ .drawer-close:hover { background: var(--btn-bg); color: var(--text); }
+ .drawer-sec { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); padding: 10px 10px 4px; }
+ .top-more-menu.nav-drawer > button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 12px; border-radius: 11px; border: 0; background: transparent; color: var(--text); font-size: 13.5px; text-align: left; cursor: pointer; transition: background .14s ease; }
+ .top-more-menu.nav-drawer > button:hover { background: var(--surface-soft); }
+ .top-more-menu.nav-drawer > button svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -913,18 +929,23 @@
  <button class="icon-btn desk-only-btn" id="tokensBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="API 密钥管理" aria-label="API 密钥管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></button>
  <button class="icon-btn desk-only-btn trash-btn-wrap" id="trashBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="回收站（保留 7 天）" aria-label="回收站"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg><span class="trash-badge" id="trashBadge"></span></button>
  <span class="top-more-wrap mob-only-wrap">
-  <button class="icon-btn" id="topMoreBtn" type="button" style="width:30px;height:30px;border-radius:999px" title="更多功能" aria-label="更多功能"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
-  <div class="top-more-menu" id="topMoreMenu">
-   <button type="button" id="mobCopyFmtBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认复制格式</button>
-   <button type="button" id="mobAnnounceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> 设置站点公告</button>
+  <button class="icon-btn" id="topMoreBtn" type="button" style="width:30px;height:30px;border-radius:999px" title="控制台与设置" aria-label="控制台与设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+  <div class="nav-drawer-mask" id="navDrawerMask"></div>
+  <div class="top-more-menu nav-drawer" id="topMoreMenu" role="dialog" aria-label="控制台与设置">
+   <div class="drawer-head"><span class="drawer-title">控制台与设置</span><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div>
+   <div class="drawer-sec" id="drawerSecAdmin" style="display:none">常用管理</div>
    <button type="button" id="mobSharesMgrBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>分享管理中心</button>
    <button type="button" id="mobDropsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> 文件收集箱</button>
-   <button type="button" id="mobPoolsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> 存储池管理</button>
+   <button type="button" id="mobTrashBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 回收站 <span class="mob-trash-badge" id="mobTrashBadge"></span></button>
+   <div class="drawer-sec">外观与偏好</div>
+   <button type="button" id="mobCopyFmtBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> 默认复制格式</button>
    <button type="button" id="mobAppearanceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> 外观与壁纸</button>
+   <button type="button" id="mobAnnounceBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> 设置站点公告</button>
+   <div class="drawer-sec" id="drawerSecSystem" style="display:none">存储与系统</div>
+   <button type="button" id="mobPoolsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> 存储池管理</button>
    <button type="button" id="mobTransferModeBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> R2 传输模式</button>
    <button type="button" id="mobNotifyBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Telegram 推送</button>
    <button type="button" id="mobTokensBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API 密钥管理</button>
-   <button type="button" id="mobTrashBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 回收站 <span class="mob-trash-badge" id="mobTrashBadge"></span></button>
   </div>
  </span>
  <div class="loginbar" id="loginbar"></div>
@@ -2259,10 +2280,31 @@ function handleListVideoThumbErr(img, id) {
  s.innerHTML = ICONS.film;
  if (s.firstElementChild) img.replaceWith(s.firstElementChild);
 }
+function isCanvasFrameValid(ctx, cw, ch) {
+ try {
+  const data = ctx.getImageData(0, 0, cw, ch).data;
+  const cols = 8, rows = 8;
+  let opaque = 0, nonBlack = 0;
+  for (let r = 0; r < rows; r++) {
+   const y = Math.min(ch - 1, Math.floor((r + 0.5) * ch / rows));
+   for (let c = 0; c < cols; c++) {
+    const x = Math.min(cw - 1, Math.floor((c + 0.5) * cw / cols));
+    const idx = (y * cw + x) * 4;
+    const a = data[idx + 3];
+    if (a > 16) {
+     opaque++;
+     if ((data[idx] + data[idx + 1] + data[idx + 2]) > 18) nonBlack++;
+    }
+   }
+  }
+  return { ok: opaque >= 32 && nonBlack >= 4, allBlack: opaque >= 32 && nonBlack < 4, tainted: false };
+ } catch {
+  return { ok: false, allBlack: false, tainted: true };
+ }
+}
 function captureVideoThumbNode(videoEl, id) {
  if (!videoEl || videoEl._rbCaptured) return;
- if (!videoEl.videoWidth || !videoEl.videoHeight) return;
- videoEl._rbCaptured = true;
+ if (!videoEl.videoWidth || !videoEl.videoHeight || videoEl.readyState < 2) return;
  try {
   const max = 400;
   const scale = Math.min(1, max / Math.max(videoEl.videoWidth, videoEl.videoHeight));
@@ -2270,7 +2312,26 @@ function captureVideoThumbNode(videoEl, id) {
   const ch = Math.max(1, Math.round(videoEl.videoHeight * scale));
   const c = document.createElement('canvas');
   c.width = cw; c.height = ch;
-  c.getContext('2d').drawImage(videoEl, 0, 0, cw, ch);
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(videoEl, 0, 0, cw, ch);
+  const chk = isCanvasFrameValid(ctx, cw, ch);
+  if (chk.tainted) {
+   c.width = 0; c.height = 0;
+   videoEl._rbCaptured = true;
+   return;
+  }
+  if (!chk.ok) {
+   c.width = 0; c.height = 0;
+   if (!videoEl._rbSeekRetried) {
+    videoEl._rbSeekRetried = true;
+    const dur = Number(videoEl.duration);
+    const targetT = (Number.isFinite(dur) && dur > 0.3) ? Math.min(1.2, Math.max(0.25, dur * 0.15)) : 0.5;
+    videoEl.addEventListener('seeked', () => captureVideoThumbNode(videoEl, id), { once: true });
+    try { videoEl.currentTime = targetT; } catch {}
+   }
+   return;
+  }
+  videoEl._rbCaptured = true;
   const useWebp = (typeof supportsWebpEncode === 'function' && supportsWebpEncode());
   const mime = useWebp ? 'image/webp' : 'image/jpeg';
   c.toBlob((blob) => {
@@ -2287,7 +2348,6 @@ function captureVideoThumbNode(videoEl, id) {
     im.decoding = 'async';
     videoEl.replaceWith(im);
    }
-   // 管理员登录态后台静默回填封面图与分辨率到 R2，后续跨设备刷新也秒开
    if (authed && !thumbBackfillInflight.has(id)) {
     thumbBackfillInflight.add(id);
     const hdrs = { 'Content-Type': blob.type || mime };
@@ -2313,14 +2373,96 @@ function videoThumbFallback(img, id) {
  }
  const v = document.createElement('video');
  v.src = '/f/' + id + '#t=0.1';
- v.preload = 'metadata';
+ v.preload = 'auto';
  v.muted = true;
  v.playsInline = true;
  v.style.background = '#000';
- v.addEventListener('loadeddata', () => captureVideoThumbNode(v, id), { once: true });
+ const tryCap = () => captureVideoThumbNode(v, id);
+ v.addEventListener('loadeddata', tryCap);
+ v.addEventListener('seeked', tryCap);
+ v.addEventListener('canplay', tryCap);
  v.onmouseenter = function() { this.play().catch(() => {}); };
  v.onmouseleave = function() { this.pause(); this.currentTime = 0; };
  img.replaceWith(v);
+}
+async function recaptureVideoThumb(id) {
+ if (!authed) return;
+ showToast('正在重新截取视频缩略图…', '');
+ return new Promise((resolve) => {
+  const v = document.createElement('video');
+  v.muted = true;
+  v.playsInline = true;
+  v.preload = 'auto';
+  v.style.position = 'fixed';
+  v.style.left = '-9999px';
+  v.style.width = '1px';
+  v.style.height = '1px';
+  document.body.appendChild(v);
+  let finished = false;
+  let attempts = 0;
+  const cleanup = () => {
+   if (finished) return;
+   finished = true;
+   clearTimeout(timer);
+   try { v.pause(); v.removeAttribute('src'); v.load(); v.remove(); } catch {}
+   resolve();
+  };
+  const timer = setTimeout(() => { showToast('截帧超时，请先播放预览确认视频可正常解码', 'err'); cleanup(); }, 18000);
+  const tryGrab = () => {
+   if (finished || !v.videoWidth || !v.videoHeight || v.readyState < 2) return;
+   const max = 400;
+   const scale = Math.min(1, max / Math.max(v.videoWidth, v.videoHeight));
+   const cw = Math.max(1, Math.round(v.videoWidth * scale));
+   const ch = Math.max(1, Math.round(v.videoHeight * scale));
+   const c = document.createElement('canvas');
+   c.width = cw; c.height = ch;
+   const ctx = c.getContext('2d', { willReadFrequently: true });
+   ctx.drawImage(v, 0, 0, cw, ch);
+   const chk = isCanvasFrameValid(ctx, cw, ch);
+   if (chk.tainted) {
+    c.width = 0; c.height = 0;
+    showToast('该视频所在外部存储池未开放跨域，浏览器无法截帧', 'err');
+    cleanup();
+    return;
+   }
+   if (!chk.ok && attempts < 2) {
+    c.width = 0; c.height = 0;
+    attempts++;
+    const dur = Number(v.duration);
+    const nextT = (Number.isFinite(dur) && dur > 0.5) ? Math.min(dur - 0.1, dur * (attempts === 1 ? 0.15 : 0.35)) : (attempts * 0.8);
+    try { v.currentTime = Math.max(0.2, nextT); } catch {}
+    return;
+   }
+   const useWebp = (typeof supportsWebpEncode === 'function' && supportsWebpEncode());
+   const mime = useWebp ? 'image/webp' : 'image/jpeg';
+   c.toBlob(async (blob) => {
+    c.width = 0; c.height = 0;
+    if (!blob || !blob.size) { showToast('生成缩略图失败', 'err'); cleanup(); return; }
+    try {
+     const hdrs = { 'Content-Type': blob.type || mime, 'X-Media-Width': String(v.videoWidth), 'X-Media-Height': String(v.videoHeight) };
+     const r = await fetch('/api/thumbs/' + encodeURIComponent(id), { method: 'POST', headers: hdrs, body: blob });
+     if (!r.ok) { showToast('上传缩略图失败（HTTP ' + r.status + '）', 'err'); cleanup(); return; }
+     const prev = thumbBlobCache.get(id);
+     if (prev) { try { URL.revokeObjectURL(prev); } catch {} }
+     thumbBlobCache.set(id, URL.createObjectURL(blob));
+     missingThumbIds.delete(id);
+     renderList();
+     showToast('视频缩略图已重新截取并更新', 'ok');
+    } catch {
+     showToast('上传缩略图失败：网络错误', 'err');
+    }
+    cleanup();
+   }, mime, 0.8);
+  };
+  v.addEventListener('loadedmetadata', () => {
+   const dur = Number(v.duration);
+   const t = (Number.isFinite(dur) && dur > 0.3) ? Math.min(1.0, Math.max(0.2, dur * 0.1)) : 0.2;
+   try { v.currentTime = t; } catch { tryGrab(); }
+  }, { once: true });
+  v.addEventListener('seeked', tryGrab);
+  v.addEventListener('error', () => { showToast('视频加载失败，无法截帧', 'err'); cleanup(); }, { once: true });
+  v.src = '/f/' + encodeURIComponent(id) + '?_t=' + Date.now();
+ });
 }
 function renderSkeleton() {
  const el = $('list');
@@ -2447,6 +2589,8 @@ function applyDirData(d) {
  if ($('notifyBtn')) $('notifyBtn').style.display = authed ? '' : 'none';
  if ($('mobNotifyBtn')) $('mobNotifyBtn').style.display = authed ? 'flex' : 'none';
  if ($('sharesMgrBtn')) $('sharesMgrBtn').style.display = authed ? '' : 'none';
+ if ($('drawerSecAdmin')) $('drawerSecAdmin').style.display = authed ? '' : 'none';
+ if ($('drawerSecSystem')) $('drawerSecSystem').style.display = authed ? '' : 'none';
  if ($('mobSharesMgrBtn')) $('mobSharesMgrBtn').style.display = authed ? 'flex' : 'none';
  if ($('dropsBtn')) $('dropsBtn').style.display = authed ? '' : 'none';
  if ($('mobDropsBtn')) $('mobDropsBtn').style.display = authed ? 'flex' : 'none';
@@ -3043,6 +3187,7 @@ function openSheet(id, kind) {
  items.push({ icon: ICONS.info, label: '文件详情', fn: () => openDetailModal(f.id) });
  if (isPreviewable(f)) items.push({ icon: ICONS.eye, label: '预览', fn: () => preview(f.id) });
  if (authed && isTextFile(f)) items.push({ icon: ICONS.pencil, label: '在线编辑内容', fn: () => openTextEditModal(f.id) });
+ if (authed && f.kind === 'video') items.push({ icon: ICONS.image, label: '重截视频缩略图', fn: () => recaptureVideoThumb(f.id) });
  items.push({ icon: ICONS.download, label: '下载', fn: () => { location.href = '/f/' + f.id + '?download=1'; } });
  items.push({ icon: ICONS.link, label: '复制链接', fn: () => copyLink(f.id) });
  if (f.kind === 'image' && f.visibility === 'public') {
@@ -3113,6 +3258,7 @@ function openCtxMenu(e, id, kind) {
   const f = obj;
   if (isPreviewable(f)) items.push({ icon: ICONS.eye, label: '预览', fn: () => preview(f.id) });
   if (authed && isTextFile(f)) items.push({ icon: ICONS.pencil, label: '在线编辑', fn: () => openTextEditModal(f.id) });
+  if (authed && f.kind === 'video') items.push({ icon: ICONS.image, label: '重截缩略图', fn: () => recaptureVideoThumb(f.id) });
   items.push({ icon: ICONS.download, label: '下载', fn: () => { location.href = '/f/' + f.id + '?download=1'; } });
   items.push({ icon: ICONS.link, label: '复制链接', fn: () => copyLink(f.id) });
   items.push({ icon: ICONS.info, label: '文件详情', fn: () => openDetailModal(f.id) });
@@ -4459,6 +4605,7 @@ async function openDetailModal(id) {
   <div class="detail-actions">
    ${isPreviewable(f) ? `<button type="button" class="detail-act blue" onclick="closeDetailModal(); preview('${f.id}')">${ICONS.eye} 预览</button>` : ''}
    ${authed && isTextFile(f) ? `<button type="button" class="detail-act blue" onclick="closeDetailModal(); openTextEditModal('${f.id}')">${ICONS.pencil} 在线编辑</button>` : ''}
+   ${authed && f.kind === 'video' ? `<button type="button" class="detail-act" onclick="closeDetailModal(); recaptureVideoThumb('${f.id}')">${ICONS.image} 重截缩略图</button>` : ''}
    <button type="button" class="detail-act green" onclick="location.href='/f/${f.id}?download=1'">${ICONS.download} 下载</button>
    <button type="button" class="detail-act" onclick="showQR('${f.id}')">${ICONS.qr} 二维码</button>
    ${authed ? `<button type="button" class="detail-act" onclick="closeDetailModal(); openShareSettings('${f.id}', 'file')">${ICONS.lock} 分享设置</button>` : ''}
@@ -4545,16 +4692,36 @@ if ($('copyFmtSave')) $('copyFmtSave').onclick = () => {
 };
 
 // ===== r7: 手机端顶栏 ⋮ 磨砂收纳菜单 + 滚动阴影 =====
+function openNavDrawer() {
+ const m = $('topMoreMenu'), mask = $('navDrawerMask');
+ if (m) m.classList.add('open');
+ if (mask) mask.classList.add('open');
+}
+function closeNavDrawer() {
+ const m = $('topMoreMenu'), mask = $('navDrawerMask');
+ if (m) m.classList.remove('open');
+ if (mask) mask.classList.remove('open');
+}
 if ($('topMoreBtn')) {
  $('topMoreBtn').onclick = (e) => {
   e.stopPropagation();
-  $('topMoreMenu').classList.toggle('open');
+  const m = $('topMoreMenu');
+  if (m && m.classList.contains('open')) closeNavDrawer();
+  else openNavDrawer();
  };
 }
+if ($('drawerCloseBtn')) $('drawerCloseBtn').onclick = closeNavDrawer;
+if ($('navDrawerMask')) $('navDrawerMask').onclick = closeNavDrawer;
 document.addEventListener('click', (e) => {
  const m = $('topMoreMenu');
- if (m && m.classList.contains('open') && !e.target.closest('.top-more-wrap')) m.classList.remove('open');
+ if (m && m.classList.contains('open') && !e.target.closest('#topMoreMenu') && !e.target.closest('#topMoreBtn')) closeNavDrawer();
 });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeNavDrawer(); });
+if ($('topMoreMenu')) {
+ $('topMoreMenu').addEventListener('click', (e) => {
+  if (e.target.closest('button') && !e.target.closest('#drawerCloseBtn')) closeNavDrawer();
+ });
+}
 if ($('mobCopyFmtBtn')) $('mobCopyFmtBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openCopyFmtModal(); };
 if ($('mobAnnounceBtn')) $('mobAnnounceBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); editAnnouncement(); };
 if ($('mobTokensBtn')) $('mobTokensBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openTokensModal(); };
