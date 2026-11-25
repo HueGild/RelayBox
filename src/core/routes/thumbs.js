@@ -43,14 +43,19 @@ export function registerThumbs(app) {
     const id = decodeURIComponent(c.req.param('id'));
     const item = await deps.meta.getFile(id);
     if (!item || isExpired(item)) return c.json({ ok: false, error: 'not found' }, 404);
-    if (!(await isAuthed(c, deps)) && item.visibility !== 'public') {
+    const authed = await isAuthed(c, deps);
+    if (item.deletedAt && !authed) return c.json({ ok: false, error: 'not found' }, 404);
+    if (!authed && item.visibility !== 'public') {
       return c.json({ ok: false, error: 'not found' }, 404);
     }
     const buf = await deps.local.getThumb(id);
     if (!buf) return c.json({ ok: false, error: 'not found' }, 404);
     return new Response(buf, {
       status: 200,
-      headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' },
+      headers: {
+        'Content-Type': 'image/jpeg',
+        'Cache-Control': item.deletedAt ? 'private, no-store' : 'public, max-age=86400',
+      },
     });
   });
 }

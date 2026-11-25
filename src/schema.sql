@@ -20,10 +20,12 @@ CREATE TABLE files (
   upload_geo TEXT,
   width INTEGER,
   height INTEGER,
-  pool_id TEXT
+  pool_id TEXT,
+  deleted_at INTEGER
 );
 CREATE INDEX idx_files_folder ON files(folder_id);
 CREATE INDEX idx_files_uploaded ON files(uploaded_at);
+CREATE INDEX idx_files_deleted ON files(deleted_at);
 
 -- Folders (parent_id maintains the logical tree)
 CREATE TABLE folders (

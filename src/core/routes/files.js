@@ -7,6 +7,7 @@ import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
 import { notifyShareConsumed } from '../lib/notify.js';
 import { getTransferModeState } from './settings.js';
 import { hasLocalDisk, buildPoolSummaries, resolveStorageForFile, BUILTIN_R2_ID, BUILTIN_LOCAL_ID } from './pools.js';
+import { moveFileToTrash, purgeFilePermanently } from './trash.js';
 
 function mapFile(f, shareToken, authed, poolNameMap) {
   const poolId = f.poolId || (f.storage === 'r2' ? BUILTIN_R2_ID : BUILTIN_LOCAL_ID);
@@ -93,8 +94,10 @@ export function registerFiles(app) {
     const folders = await deps.meta.listFolders();
     const folderId = c.req.query('folderId') || null;
     const visible = await deps.meta.listFiles(folderId, { authed });
-    const allFiles = await deps.meta.listAllFiles({ authed: true });
-    const poolSummary = await buildPoolSummaries(deps, allFiles, { authed, includeAdminMeta: false });
+    const allFilesWithTrash = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
+    const allFiles = allFilesWithTrash.filter((f) => !f.deletedAt);
+    const trashedFiles = allFilesWithTrash.filter((f) => !!f.deletedAt);
+    const poolSummary = await buildPoolSummaries(deps, allFilesWithTrash, { authed, includeAdminMeta: false });
     const files = [];
     for (const f of visible) {
       const s = authed ? await deps.meta.getShareByFileId(f.id) : null;
@@ -138,6 +141,10 @@ export function registerFiles(app) {
       maxUploadSize: deps.config.maxUploadSize || 0,
       chunkUploadThreshold: effectiveThreshold,
       chunkSize,
+      ...(authed ? {
+        trashCount: trashedFiles.length,
+        trashBytes: trashedFiles.reduce((a, f) => a + (f.size || 0), 0),
+      } : {}),
     });
   });
 
@@ -187,7 +194,7 @@ export function registerFiles(app) {
     const shareToken = c.req.query('share') || '';
     const shareCode = c.req.query('code') || '';
     const item = await deps.meta.getFile(id);
-    if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     if (isExpired(item)) return c.json({ ok: false, error: '文件已过期' }, 404);
     if (shareToken) {
       const share = await deps.meta.getShareByToken(shareToken);
@@ -238,7 +245,7 @@ export function registerFiles(app) {
     const id = decodeURIComponent(c.req.param('id'));
     const { folderId } = await readJsonBody(c);
     const item = await deps.meta.getFile(id);
-    if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     const target = (typeof folderId === 'string' && folderId) ? folderId : null;
     if (target && !(await deps.meta.getFolder(target))) return c.json({ ok: false, error: '目标文件夹不存在' }, 400);
     const updated = await deps.meta.updateFile(id, { folderId: target });
@@ -252,7 +259,7 @@ export function registerFiles(app) {
     const id = decodeURIComponent(c.req.param('id'));
     const { name } = await readJsonBody(c);
     const item = await deps.meta.getFile(id);
-    if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     const clean = safeName(name);
     if (!clean || clean === 'file') return c.json({ ok: false, error: '文件名不对' }, 400);
     if (clean === item.name) return c.json({ ok: true, file: item });
@@ -287,7 +294,7 @@ export function registerFiles(app) {
       return c.json({ ok: false, error: 'visibility 只能是 public 或 private' }, 400);
     }
     const item = await deps.meta.getFile(id);
-    if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     const updated = await deps.meta.updateFile(id, { visibility });
     log('visibility:', item.name, '->', visibility);
     return c.json({ ok: true, file: updated });
@@ -301,13 +308,14 @@ export function registerFiles(app) {
     const { expiresHours } = await readJsonBody(c);
     const hours = parseExpiresHours(expiresHours);
     const item = await deps.meta.getFile(id);
-    if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     const updated = await deps.meta.updateFile(id, { expiresAt: expiresAtOf(hours) });
     log('expiry:', item.name, '->', hours === 0 ? '永久' : hours + 'h');
     return c.json({ ok: true, file: updated });
   });
 
   // 删除文件（管理员，或凭上传密码）。
+  // 带 ?trash=1 或 { trash: true } 时移入 7 天回收站（软删除）；默认保持直接物理删除兼容既有 API。
   app.delete('/api/files/:id', async (c) => {
     const deps = c.get('deps');
     const id = decodeURIComponent(c.req.param('id'));
@@ -316,16 +324,18 @@ export function registerFiles(app) {
     if (auth !== 'ok') return authFail(c, auth);
     const item = await deps.meta.getFile(id);
     if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
-    const resolved = await resolveStorageForFile(deps, item);
-    if (resolved.ok) {
-      try { await resolved.driver.delete(item.storageKey); } catch (e) { log('storage delete failed:', e && e.message); }
-    } else {
-      log('file removed from meta but storage unavailable:', item.storageKey);
+    const toTrash = (c.req.query('trash') === '1' || body.trash === true) && c.req.query('permanent') !== '1';
+    if (toTrash) {
+      const res = await moveFileToTrash(deps, item);
+      return c.json({
+        ok: true,
+        trashed: true,
+        alreadyTrashed: res.alreadyTrashed,
+        file: res.file,
+        purgeAt: res.purgeAt,
+      });
     }
-    try { await deps.local.deleteThumb(item.id); } catch {}
-    await deps.meta.deleteFile(id);
-    const share = await deps.meta.getShareByFileId(id);
-    if (share) await deps.meta.deleteShare(share.token);
+    await purgeFilePermanently(deps, item);
     log('deleted:', item.name);
     return c.json({ ok: true });
   });

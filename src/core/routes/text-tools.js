@@ -338,7 +338,7 @@ export function registerTextTools(app) {
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
     const id = decodeURIComponent(c.req.param('id'));
     const item = await deps.meta.getFile(id);
-    if (!item || isExpired(item)) return c.json({ ok: false, error: '文件不存在或已过期' }, 404);
+    if (!item || item.deletedAt || isExpired(item)) return c.json({ ok: false, error: '文件不存在或已过期' }, 404);
     if (!isEditableTextFile(item)) {
       return c.json({ ok: false, error: '该文件类型暂不支持在线编辑' }, 400);
     }
@@ -375,7 +375,7 @@ export function registerTextTools(app) {
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
     const id = decodeURIComponent(c.req.param('id'));
     const item = await deps.meta.getFile(id);
-    if (!item || isExpired(item)) return c.json({ ok: false, error: '文件不存在或已过期' }, 404);
+    if (!item || item.deletedAt || isExpired(item)) return c.json({ ok: false, error: '文件不存在或已过期' }, 404);
     if (!isEditableTextFile(item)) {
       return c.json({ ok: false, error: '该文件类型暂不支持在线编辑' }, 400);
     }

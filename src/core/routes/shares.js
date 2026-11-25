@@ -57,7 +57,7 @@ export function registerShares(app) {
     const target = isFolder
       ? await deps.meta.getFolder(id)
       : await deps.meta.getFile(id);
-    if (!target) return c.json({ ok: false, error: isFolder ? '文件夹不存在' : '文件不存在' }, 404);
+    if (!target || (!isFolder && target.deletedAt)) return c.json({ ok: false, error: isFolder ? '文件夹不存在' : '文件不存在' }, 404);
     const body = await readJsonBody(c);
     const hasCode = typeof body.code === 'string';
     const code = hasCode ? body.code.trim().slice(0, 32) : '';
@@ -189,7 +189,7 @@ export function registerShares(app) {
       });
     }
     const item = await deps.meta.getFile(share.fileId);
-    if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
     if (isExpired(item)) return c.json({ ok: false, error: '文件已过期' }, 404);
     return c.json({
       ok: true,

@@ -22,6 +22,8 @@
  * @property {string|null} [uploadGeo] uploader geo from CF request.cf (admin-only on read, v3.1.5)
  * @property {number|null} [width]     image/video pixel width (v3.1.5)
  * @property {number|null} [height]    image/video pixel height (v3.1.5)
+ * @property {string|null} [poolId]    custom storage pool id, null = builtin (v3.2)
+ * @property {string|null} [deletedAt] ISO timestamp when soft-deleted into recycle bin, null = active (v3.3.6)
  *
  * @typedef {Object} FolderItem
  * @property {string} id
@@ -64,7 +66,7 @@
  */
 
 export const MetaStoreMethods = [
-  'getFile', 'listFiles', 'listAllFiles', 'searchFiles', 'createFile', 'updateFile', 'deleteFile',
+  'getFile', 'listFiles', 'listAllFiles', 'listTrashedFiles', 'searchFiles', 'createFile', 'updateFile', 'deleteFile',
   'incrementDownloads',
   'listFolders', 'getFolder', 'createFolder', 'updateFolder', 'deleteFolder',
   'getShareByToken', 'getShareByFileId', 'getShareByFolderId', 'getShareByPickupCode',

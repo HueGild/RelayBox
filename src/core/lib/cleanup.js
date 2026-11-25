@@ -1,35 +1,38 @@
-// RelayBox core lib — expiry + stale-chunk cleanup (v3.2 pool-aware).
+// RelayBox core lib — expiry + 7-day trash + stale-chunk cleanup (v3.3.6).
 
 import { isExpired, log, CHUNK_TTL_MS } from './util.js';
-import { resolveStorageForFile, resolveUploadTarget, buildPoolSummaries } from '../routes/pools.js';
+import { resolveUploadTarget, buildPoolSummaries } from '../routes/pools.js';
+import { trashTtlMsOf, isTrashExpired, purgeFilePermanently } from '../routes/trash.js';
 import { maybeSendDailyReport } from './notify.js';
 
 export async function cleanupExpired(deps) {
-  const list = await deps.meta.listAllFiles({ authed: true });
-  const expired = list.filter(isExpired);
-  if (expired.length) {
-    for (const f of expired) {
-      try {
-        const resolved = await resolveStorageForFile(deps, f);
-        if (resolved.ok) {
-          try { await resolved.driver.delete(f.storageKey); } catch (e) { log('expired storage delete failed:', e && e.message); }
-        } else {
-          log('expired file skipped (storage unavailable):', f.storageKey);
-        }
-      } catch (e) { log('expired delete failed:', f.name, e && e.message); }
-      try { await deps.local.deleteThumb(f.id); } catch {}
+  const list = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
+  const ttlMs = trashTtlMsOf(deps);
+  const now = Date.now();
+  const expired = list.filter((f) => !f.deletedAt && isExpired(f));
+  const trashExpired = list.filter((f) => isTrashExpired(f, ttlMs, now));
+
+  for (const f of expired) {
+    try {
+      await purgeFilePermanently(deps, f);
       log('expired file removed:', f.name);
-    }
-    for (const f of expired) {
-      await deps.meta.deleteFile(f.id);
-      const share = await deps.meta.getShareByFileId(f.id);
-      if (share) await deps.meta.deleteShare(share.token);
+    } catch (e) {
+      log('expired delete failed:', f.name, e && e.message);
     }
   }
-  await deps.meta.deleteExpiredSessions(Date.now());
+  for (const f of trashExpired) {
+    try {
+      await purgeFilePermanently(deps, f);
+      log('trash expired file purged:', f.name);
+    } catch (e) {
+      log('trash purge failed:', f.name, e && e.message);
+    }
+  }
+
+  await deps.meta.deleteExpiredSessions(now);
   await cleanupChunks(deps);
   await maybeSendDailyReport(deps, async () => {
-    const remaining = await deps.meta.listAllFiles({ authed: true });
+    const remaining = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
     return buildPoolSummaries(deps, remaining, { authed: true, includeAdminMeta: false });
   });
 }

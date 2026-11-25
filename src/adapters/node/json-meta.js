@@ -58,6 +58,7 @@ export class JsonMetaStore {
     f.width = parseDim(f.width);
     f.height = parseDim(f.height);
     f.poolId = (typeof f.poolId === 'string' && f.poolId) ? f.poolId : null;
+    f.deletedAt = (typeof f.deletedAt === 'string' && f.deletedAt) ? f.deletedAt : null;
     return f;
   }
   _readFiles() {
@@ -74,17 +75,22 @@ export class JsonMetaStore {
   }
   async listFiles(folderId, { authed } = {}) {
     return this._readFiles().filter(
-      (f) => folderIdOf(f) === (folderId || null) && !isExpired(f) && (authed || f.visibility === 'public'),
+      (f) => !f.deletedAt && folderIdOf(f) === (folderId || null) && !isExpired(f) && (authed || f.visibility === 'public'),
     );
   }
-  async listAllFiles({ authed } = {}) {
-    return this._readFiles().filter((f) => authed || f.visibility === 'public');
+  async listAllFiles({ authed, includeTrashed = false } = {}) {
+    return this._readFiles().filter((f) => (includeTrashed || !f.deletedAt) && (authed || f.visibility === 'public'));
+  }
+  async listTrashedFiles() {
+    return this._readFiles()
+      .filter((f) => !!f.deletedAt)
+      .sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
   }
   async searchFiles(q, { authed } = {}) {
     const needle = String(q || '').toLowerCase();
     if (!needle) return [];
     return this._readFiles().filter(
-      (f) => !isExpired(f) && (authed || f.visibility === 'public') && f.name.toLowerCase().includes(needle),
+      (f) => !f.deletedAt && !isExpired(f) && (authed || f.visibility === 'public') && f.name.toLowerCase().includes(needle),
     );
   }
   async createFile(file) {
@@ -173,7 +179,7 @@ export class JsonMetaStore {
       const idx = folders.findIndex((f) => f.id === id);
       if (idx === -1) return false;
       const files = this._readFiles();
-      if (files.some((f) => folderIdOf(f) === id)) return false;
+      if (files.some((f) => !f.deletedAt && folderIdOf(f) === id)) return false;
       if (folders.some((f) => (f.parentId || null) === id)) return false;
       folders.splice(idx, 1);
       this._writeFolders(folders);

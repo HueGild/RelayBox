@@ -198,7 +198,7 @@ export function registerPools(app) {
   app.get('/api/pools', async (c) => {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
-    const allFiles = await deps.meta.listAllFiles({ authed: true });
+    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
     const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
   });
@@ -243,7 +243,7 @@ export function registerPools(app) {
       createdAt: Date.now(),
     });
     log('storage pool created:', created.name, created.bucket);
-    const allFiles = await deps.meta.listAllFiles({ authed: true });
+    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
     const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, id: created.id, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
   });
@@ -272,7 +272,7 @@ export function registerPools(app) {
           if (p.isDefault) await deps.meta.updateStoragePool(p.id, { isDefault: false });
         }
       }
-      const allFiles = await deps.meta.listAllFiles({ authed: true });
+      const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
       const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
       return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
     }
@@ -327,7 +327,7 @@ export function registerPools(app) {
 
     await deps.meta.updateStoragePool(id, patch);
     log('storage pool updated:', id);
-    const allFiles = await deps.meta.listAllFiles({ authed: true });
+    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
     const summary = await buildPoolSummaries(deps, allFiles, { authed: true, includeAdminMeta: true });
     return c.json({ ok: true, pools: summary.pools, defaultPoolId: summary.defaultPoolId });
   });
@@ -341,10 +341,14 @@ export function registerPools(app) {
     }
     const existing = await deps.meta.getStoragePool(id);
     if (!existing) return c.json({ ok: false, error: '存储池不存在' }, 404);
-    const allFiles = await deps.meta.listAllFiles({ authed: true });
-    const count = allFiles.filter((f) => !isExpired(f) && f.poolId === id).length;
-    if (count > 0) {
-      return c.json({ ok: false, error: `该存储池还有 ${count} 个文件，请先删除文件后再移除存储池` }, 400);
+    const allFiles = await deps.meta.listAllFiles({ authed: true, includeTrashed: true });
+    const activeCount = allFiles.filter((f) => !f.deletedAt && !isExpired(f) && f.poolId === id).length;
+    if (activeCount > 0) {
+      return c.json({ ok: false, error: `该存储池还有 ${activeCount} 个文件，请先删除文件后再移除存储池` }, 400);
+    }
+    const trashCount = allFiles.filter((f) => !!f.deletedAt && f.poolId === id).length;
+    if (trashCount > 0) {
+      return c.json({ ok: false, error: `该存储池在回收站中还有 ${trashCount} 个文件，请先清空回收站或还原后再移除存储池` }, 400);
     }
     await deps.meta.deleteStoragePool(id);
     log('storage pool deleted:', id);

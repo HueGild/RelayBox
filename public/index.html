@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r14 (2026-11-24 · v3.3.5 文字/代码快传 Pastebin + 文本/代码在线编辑 + r13/r12) -->
+<!-- RelayBox v3.0 UI r15 (2026-11-24 · v3.3.6 7 天回收站 + 软删除还原清空 + r14/r13/r12) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -680,6 +680,33 @@
  .pv-doc-btn.ghost-doc { background: var(--btn-bg); color: var(--btn-text); }
  .pv-doc-btn.ghost-doc:hover { background: var(--btn-hover); }
  body.has-wallpaper .paste-share-box { background: var(--glass-input-bg); }
+ /* r15: 7 天回收站角标与弹窗样式 */
+ .trash-btn-wrap { position: relative; overflow: visible !important; }
+ .trash-badge { display: none; position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: #EF4444; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; pointer-events: none; box-shadow: 0 1px 4px rgba(0,0,0,.28); }
+ .trash-badge.show { display: inline-block; }
+ .mob-trash-badge { margin-left: auto; display: none; padding: 1px 6px; border-radius: 999px; background: var(--danger-bg); color: var(--danger-text); font-size: 11px; font-weight: 700; }
+ .mob-trash-badge.show { display: inline-block; }
+ .trash-modal-card { max-width: 660px; width: 100%; max-height: 88vh; overflow-y: auto; }
+ .trash-top-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 9px 12px; border-radius: 11px; background: var(--surface-soft); border: 1px solid var(--border); margin-bottom: 12px; font-size: 12.5px; color: var(--muted); }
+ .trash-top-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+ .trash-top-acts button { padding: 5px 11px; font-size: 12px; border-radius: 8px; }
+ .trash-list { display: flex; flex-direction: column; gap: 8px; }
+ .trash-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--border); }
+ .trash-thumb { width: 40px; height: 40px; border-radius: 9px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+ .trash-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+ .trash-thumb svg { width: 20px; height: 20px; color: var(--muted); }
+ .trash-info { flex: 1; min-width: 0; }
+ .trash-name { font-size: 13.5px; font-weight: 600; color: var(--text); word-break: break-all; line-height: 1.35; }
+ .trash-meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+ .trash-rem { color: #D97706; font-weight: 600; }
+ html[data-theme="dark"] .trash-rem { color: #FBBF24; }
+ .trash-acts { display: flex; gap: 6px; flex-shrink: 0; }
+ .trash-acts button { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+ body.has-wallpaper .trash-top-bar, body.has-wallpaper .trash-item { background: var(--glass-input-bg); }
+ @media (max-width: 600px) {
+  .trash-item { flex-wrap: wrap; }
+  .trash-acts { width: 100%; justify-content: flex-end; }
+ }
 
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
@@ -719,6 +746,7 @@
  <button class="icon-btn desk-only-btn" id="transferModeBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="R2 传输模式" aria-label="R2 传输模式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
  <button class="icon-btn desk-only-btn" id="notifyBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="Telegram 推送" aria-label="Telegram 推送"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
  <button class="icon-btn desk-only-btn" id="tokensBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="API 密钥管理" aria-label="API 密钥管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></button>
+ <button class="icon-btn desk-only-btn trash-btn-wrap" id="trashBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="回收站（保留 7 天）" aria-label="回收站"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg><span class="trash-badge" id="trashBadge"></span></button>
  <span class="top-more-wrap mob-only-wrap">
   <button class="icon-btn" id="topMoreBtn" type="button" style="width:30px;height:30px;border-radius:999px" title="更多功能" aria-label="更多功能"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
   <div class="top-more-menu" id="topMoreMenu">
@@ -730,6 +758,7 @@
    <button type="button" id="mobTransferModeBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> R2 传输模式</button>
    <button type="button" id="mobNotifyBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Telegram 推送</button>
    <button type="button" id="mobTokensBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API 密钥管理</button>
+   <button type="button" id="mobTrashBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 回收站 <span class="mob-trash-badge" id="mobTrashBadge"></span></button>
   </div>
  </span>
  <div class="loginbar" id="loginbar"></div>
@@ -912,6 +941,7 @@
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
 <div class="modal" id="tokensModal"><span class="close" id="tokensClose">×</span><div class="card token-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">API 密钥管理</div><div class="meta" style="margin-bottom:12px">用于 curl、ShareX、PicGo、iOS 快捷指令一键直传（单文件 ≤ 32MB，默认公开直链）。</div><div class="row" style="margin-top:0"><input type="text" id="tokenNameInput" placeholder="备注名，如 Mac ShareX / 快捷指令" maxlength="40"><button id="tokenCreateBtn" type="button">生成密钥</button></div><div class="token-created" id="tokenCreatedBox" style="display:none"><div style="font-size:12px;font-weight:600;color:var(--ok-text)">已生成新密钥（明文仅展示这一次，请立即保存）：</div><div class="token-created-val" id="tokenCreatedVal"></div><div class="row" style="margin-top:6px"><button type="button" class="ghost" id="tokenCopyKeyBtn" style="flex:1;padding:7px 10px;font-size:12px">复制密钥</button><button type="button" id="tokenCopyCurlBtn" style="flex:1;padding:7px 10px;font-size:12px">复制 curl 上传命令</button></div></div><div class="token-list" id="tokenList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="token-curl"><div style="font-weight:600;color:var(--text)">极客上传接口示例（POST /api/raw-upload）</div><pre id="tokenCurlExample"></pre></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="tokensDoneBtn" type="button">关闭</button></div></div></div>
 <div class="modal" id="detailModal"><span class="close" id="detailClose">×</span><div class="card detail-card" id="detailCardBody"></div></div>
+<div class="modal" id="trashModal"><span class="close" id="trashClose">×</span><div class="card trash-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">回收站（7 天防误删）</div><div class="meta" style="margin-bottom:12px">删除的文件会暂存在这里保留 7 天，到期后由后台自动彻底清理并释放存储池空间。</div><div class="trash-top-bar"><span id="trashSummaryText">加载中…</span><div class="trash-top-acts"><button type="button" class="ghost" id="trashRestoreAllBtn" style="display:none">全部还原</button><button type="button" class="danger" id="trashEmptyBtn" style="display:none">一键清空</button></div></div><div class="trash-list" id="trashListBox"><div class="empty" style="padding:20px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="trashDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="pasteModal"><span class="close" id="pasteClose">×</span><div class="card code-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">文字 / 代码快传（Pastebin）</div><div class="meta" style="margin-bottom:12px">贴入文字、笔记、配置或代码片段，一键存为文件并生成 5 位短取件码与分享链接（支持阅后即焚 / 提取码，单份 ≤ 1MB）。</div><div class="form-grid2"><div class="form-field"><label>文件名（选填，留空自动按时间命名）</label><input type="text" id="pasteName" placeholder="如 notes.md 或 config.json" maxlength="120" autocomplete="off"></div><div class="form-field"><label>格式 / 扩展名</label><select id="pasteLang"><option value="txt" selected>纯文本 (.txt)</option><option value="md">Markdown (.md)</option><option value="json">JSON (.json)</option><option value="js">JavaScript (.js)</option><option value="ts">TypeScript (.ts)</option><option value="py">Python (.py)</option><option value="html">HTML (.html)</option><option value="css">CSS (.css)</option><option value="sh">Shell (.sh)</option><option value="sql">SQL (.sql)</option><option value="yaml">YAML (.yaml)</option><option value="go">Go (.go)</option><option value="rs">Rust (.rs)</option><option value="java">Java (.java)</option><option value="cpp">C++ (.cpp)</option><option value="ini">配置 (.ini)</option><option value="log">日志 (.log)</option></select></div></div><div class="form-field" style="margin-top:8px"><label>内容 *</label><textarea id="pasteContent" class="code-editor-ta" placeholder="在这里粘贴或输入文字、代码、命令、配置…（支持 Tab 缩进，Ctrl/Cmd+Enter 快速保存）" spellcheck="false"></textarea><div class="code-status-row"><span id="pasteMetaStat">0 行 · 0 字符 · 0 B</span><span>单份上限 1 MB</span></div></div><div class="form-grid2" style="margin-top:8px" id="pasteAdminDestRow"><div class="form-field"><label>目标存储池</label><select id="pastePool"></select></div><div class="form-field"><label>存入目录</label><select id="pasteFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>可见性</label><select id="pasteVis"><option value="private" selected>私密（凭分享链接 / 取件码访问）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="pasteExpires"><option value="0">永久有效</option><option value="24" selected>24 小时</option><option value="168">7 天</option></select></div></div><div class="paste-share-box"><label class="paste-share-toggle"><input type="checkbox" id="pasteCreateShare" checked> 保存后立即生成分享链接与 5 位短取件码</label><div class="paste-share-opts" id="pasteShareOpts"><div class="form-grid2"><div class="form-field"><label>提取码（选填，留空免密）</label><input type="text" id="pasteShareCode" placeholder="如 1234" maxlength="32" autocomplete="off"></div><div class="form-field"><label>下载次数限制</label><select id="pasteMaxDl"><option value="0" selected>不限次数</option><option value="1">1 次（阅后即焚）</option><option value="5">5 次</option><option value="10">10 次</option></select></div></div></div></div><div class="share-res" id="pasteResultBox" style="display:none"><div class="share-res-code"><div><div class="meta" style="margin:0 0 4px">5 位短取件码</div><span class="pickup-badge" id="pasteResPickup">-----</span></div><div class="meta" id="pasteResInfo" style="text-align:right"></div></div><div class="share-res-url" id="pasteResUrl"></div><div class="share-res-btns"><button type="button" class="ghost" id="pasteCopyCodeBtn">复制取件码</button><button type="button" class="ghost" id="pasteCopyUrlBtn">复制链接</button><button type="button" id="pasteCopyPackBtn">复制分享文案</button></div></div><div class="msg" id="pasteMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="pasteCancelBtn">关闭</button><button type="button" id="pasteGoBtn">保存并生成快传</button></div></div></div>
 <div class="modal" id="textEditModal"><span class="close" id="textEditClose">×</span><div class="card code-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:24px;margin-bottom:4px"><div style="font-size:15.5px;font-weight:700;word-break:break-all" id="textEditTitle">在线编辑</div><span class="pool-tag" id="textEditPoolTag"></span></div><div class="meta" style="margin-bottom:10px">支持直接修改并覆盖保存回原存储池（Tab 插入缩进，Ctrl/Cmd+S 快捷保存，单文件 ≤ 1MB）。</div><textarea id="textEditArea" class="code-editor-ta tall" placeholder="正在加载文件内容…" spellcheck="false"></textarea><div class="code-status-row"><span id="textEditStat">0 行 · 0 字符 · 0 B</span><span class="code-dirty-dot" id="textEditDirty">● 有未保存修改</span></div><div class="msg" id="textEditMsg" style="margin-top:6px"></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="textEditCopyBtn">复制全文</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="textEditCancelBtn">取消</button><button type="button" id="textEditSaveBtn">保存修改</button></div></div></div></div>
 <div class="modal" id="remoteFetchModal"><span class="close" id="remoteFetchClose">×</span><div class="card pool-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">URL 远程拉取转存</div><div class="meta" style="margin-bottom:12px">贴入直链，由服务端直接抓取文件并写入所选存储池与目录（支持自动识别文件名、防内网 SSRF，单文件 ≤ 50MB）。</div><div class="form-field"><label>文件直链 URL *</label><input type="text" id="rfUrl" placeholder="https://example.com/path/to/file.png" autocomplete="off" spellcheck="false"></div><div class="form-field" style="margin-top:8px"><label>自定义文件名（选填，留空自动识别）</label><input type="text" id="rfName" placeholder="如 banner.webp 或 资料.pdf" maxlength="120" autocomplete="off"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>目标存储池</label><select id="rfPool"></select></div><div class="form-field"><label>存入目录</label><select id="rfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="rfVis"><option value="private" selected>私密（仅管理员/分享可见）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="rfExpires"><option value="0" selected>永久有效</option><option value="24">24 小时</option><option value="168">7 天</option></select></div></div><div class="msg" id="rfMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="rfCancelBtn">取消</button><button type="button" id="rfGoBtn">开始拉取转存</button></div></div></div>
@@ -1395,14 +1425,14 @@ function bulkVisibilityToggle() {
 }
 async function bulkDelete() {
  if (!selected.size) return;
- if (!confirm('确定删除选中的 ' + selected.size + ' 个文件吗？删了就找不回来了。')) return;
+ if (!confirm('确定将选中的 ' + selected.size + ' 个文件移入回收站吗？（保留 7 天，随时可还原）')) return;
  const n = selected.size;
  for (const id of [...selected]) {
- await fetch('/api/files/' + id, { method: 'DELETE' });
+ await fetch('/api/files/' + id + '?trash=1', { method: 'DELETE' });
  selected.delete(id);
  }
  updateBulkbar();
- setMsg('已删除 ' + n + ' 个文件', 'ok');
+ setMsg('已将 ' + n + ' 个文件移入回收站（7 天内可还原）', 'ok');
  loadList();
 }
 function flashCopied(btn) {
@@ -1766,8 +1796,11 @@ async function loadList(showSkel) {
  $('selectAllBtn').style.display = authed ? '' : 'none';
  $('announceBtn').style.display = authed ? '' : 'none';
  if ($('tokensBtn')) $('tokensBtn').style.display = authed ? '' : 'none';
+ if ($('trashBtn')) $('trashBtn').style.display = authed ? '' : 'none';
  if ($('mobAnnounceBtn')) $('mobAnnounceBtn').style.display = authed ? 'flex' : 'none';
  if ($('mobTokensBtn')) $('mobTokensBtn').style.display = authed ? 'flex' : 'none';
+ if ($('mobTrashBtn')) $('mobTrashBtn').style.display = authed ? 'flex' : 'none';
+ updateTrashBadge(authed ? Number(d.trashCount || 0) : 0);
  if ($('notifyBtn')) $('notifyBtn').style.display = authed ? '' : 'none';
  if ($('mobNotifyBtn')) $('mobNotifyBtn').style.display = authed ? 'flex' : 'none';
  if ($('dropsBtn')) $('dropsBtn').style.display = authed ? '' : 'none';
@@ -2227,6 +2260,7 @@ document.addEventListener('keydown', (e) => {
  if ($('remoteFetchModal') && $('remoteFetchModal').classList.contains('open')) { closeRemoteFetchModal(); return; }
  if ($('pasteModal') && $('pasteModal').classList.contains('open')) { closePasteModal(); return; }
  if ($('textEditModal') && $('textEditModal').classList.contains('open')) { closeTextEditModal(); return; }
+ if ($('trashModal') && $('trashModal').classList.contains('open')) { closeTrashModal(); return; }
  if ($('appearanceModal') && $('appearanceModal').classList.contains('open')) { closeAppearanceModal(false); return; }
 });
 
@@ -2710,13 +2744,13 @@ async function removeFile(id, name) {
  pw = await askInput(`删除「${name}」需要上传密码：`, '', 'password');
  if (pw === null) return;
  }
- const r = await fetch('/api/files/' + id, {
+ const r = await fetch('/api/files/' + id + '?trash=1', {
  method: 'DELETE',
  headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ password: pw }),
+ body: JSON.stringify({ password: pw, trash: true }),
  });
  const d = await r.json();
- if (d.ok) { setMsg('文件已删除', 'ok'); loadList(); } else setMsg('删除失败：' + (d.error || ''), 'err');
+ if (d.ok) { setMsg('已移入回收站（7 天内可还原）', 'ok'); loadList(); } else setMsg('删除失败：' + (d.error || ''), 'err');
 }
 
 const drop = $('drop'), fi = $('fileInput');
@@ -5435,6 +5469,180 @@ if ($('textEditArea')) {
  $('textEditArea').addEventListener('input', syncTextEditState);
  bindCodeTextareaKeys($('textEditArea'), saveTextEditFile);
 }
+
+
+// ===== r15: 7 天回收站管理（查看 / 一键还原 / 彻底删除 / 一键清空） =====
+let trashItems = [];
+let trashRetentionDays = 7;
+
+function updateTrashBadge(count) {
+ const n = Math.max(0, Number(count) || 0);
+ const txt = n > 99 ? '99+' : String(n);
+ const b1 = $('trashBadge');
+ if (b1) { b1.textContent = txt; b1.classList.toggle('show', n > 0); }
+ const b2 = $('mobTrashBadge');
+ if (b2) { b2.textContent = txt; b2.classList.toggle('show', n > 0); }
+}
+
+function fmtTrashRemain(ms) {
+ const n = Math.max(0, Number(ms) || 0);
+ if (n <= 0) return '即将自动清空';
+ const mins = Math.ceil(n / 60000);
+ if (mins < 60) return `剩余 ${mins} 分钟`;
+ const hrs = Math.floor(n / 3600000);
+ if (hrs < 24) return `剩余 ${hrs} 小时`;
+ const days = Math.floor(hrs / 24);
+ const remHrs = hrs % 24;
+ return remHrs > 0 ? `剩余 ${days} 天 ${remHrs} 小时` : `剩余 ${days} 天`;
+}
+
+function openTrashModal() {
+ if (!authed) return;
+ $('trashModal').classList.add('open');
+ loadTrashList();
+}
+function closeTrashModal() { $('trashModal').classList.remove('open'); }
+
+async function loadTrashList() {
+ const box = $('trashListBox');
+ const sum = $('trashSummaryText');
+ if (box) box.innerHTML = '<div class="empty" style="padding:20px 0">加载中…</div>';
+ if (sum) sum.textContent = '加载中…';
+ try {
+  const r = await fetch('/api/trash', { cache: 'no-store' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+   if (box) box.innerHTML = `<div class="empty" style="padding:20px 0">${escapeHtml(d.error || '加载失败')}</div>`;
+   if (sum) sum.textContent = '加载失败';
+   return;
+  }
+  trashItems = Array.isArray(d.files) ? d.files : [];
+  trashRetentionDays = Number(d.retentionDays) || 7;
+  updateTrashBadge(trashItems.length);
+  renderTrashList(Number(d.totalBytes || 0));
+ } catch {
+  if (box) box.innerHTML = '<div class="empty" style="padding:20px 0">网络错误，加载失败</div>';
+  if (sum) sum.textContent = '加载失败';
+ }
+}
+
+function renderTrashList(totalBytes) {
+ const box = $('trashListBox');
+ const sum = $('trashSummaryText');
+ const hasItems = trashItems.length > 0;
+ if ($('trashRestoreAllBtn')) $('trashRestoreAllBtn').style.display = hasItems ? '' : 'none';
+ if ($('trashEmptyBtn')) $('trashEmptyBtn').style.display = hasItems ? '' : 'none';
+ if (sum) {
+  sum.textContent = hasItems
+   ? `共 ${trashItems.length} 个文件 · 占 ${fmtSize(totalBytes)} · 自动保留 ${trashRetentionDays} 天`
+   : `回收站是空的（删除的文件将在此保留 ${trashRetentionDays} 天）`;
+ }
+ if (!hasItems) {
+  if (box) box.innerHTML = '<div class="empty" style="padding:24px 0">回收站里空空如也</div>';
+  return;
+ }
+ box.innerHTML = trashItems.map(f => {
+  const thumbHtml = (f.kind === 'image' || f.kind === 'video')
+   ? `<img src="/thumb/${f.id}" loading="lazy" alt="" onerror="this.parentNode.innerHTML=ICONS.file">`
+   : iconFor(f);
+  const folderTip = f.folderExists
+   ? `原目录：${escapeHtml(f.folderName || '根目录')}`
+   : '原目录已删（将还原至根目录）';
+  return `<div class="trash-item">
+   <div class="trash-thumb">${thumbHtml}</div>
+   <div class="trash-info">
+    <div class="trash-name">${escapeHtml(f.name)}</div>
+    <div class="trash-meta">
+     <span>${fmtSize(f.size)}</span>
+     <span>·</span>
+     <span>${escapeHtml(f.poolName || (f.storage === 'local' ? '本地磁盘' : '内置 R2'))}</span>
+     <span>·</span>
+     <span>${folderTip}</span>
+     <span>·</span>
+     <span class="trash-rem">${fmtTrashRemain(f.remainingMs)}</span>
+    </div>
+   </div>
+   <div class="trash-acts">
+    <button type="button" class="ghost" onclick="restoreTrashItem('${f.id}')">还原</button>
+    <button type="button" class="danger" data-tname="${escapeHtml(f.name)}" onclick="purgeTrashItem('${f.id}', this.dataset.tname)">彻底删除</button>
+   </div>
+  </div>`;
+ }).join('');
+}
+
+async function restoreTrashItem(id) {
+ try {
+  const r = await fetch(`/api/trash/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '还原失败', 'err'); return; }
+  const extra = d.restoredToRoot ? '（原目录已删，已还原至根目录）' : (d.renamed ? `（已自动重命名为 ${d.file.name}）` : '');
+  showToast('已还原文件' + extra, 'ok');
+  await loadTrashList();
+  loadList();
+ } catch {
+  showToast('还原失败：网络错误', 'err');
+ }
+}
+
+async function purgeTrashItem(id, name) {
+ if (!confirm(`确定彻底删除「${name}」吗？删除后将无法恢复，并立即释放存储空间。`)) return;
+ try {
+  const r = await fetch(`/api/trash/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '彻底删除失败', 'err'); return; }
+  showToast('已彻底删除并释放空间', 'ok');
+  await loadTrashList();
+  loadList();
+ } catch {
+  showToast('操作失败：网络错误', 'err');
+ }
+}
+
+async function restoreAllTrash() {
+ if (!trashItems.length) return;
+ if (!confirm(`确定还原回收站中的全部 ${trashItems.length} 个文件吗？`)) return;
+ const btn = $('trashRestoreAllBtn');
+ if (btn) btn.disabled = true;
+ try {
+  const r = await fetch('/api/trash/restore-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '全部还原失败', 'err'); return; }
+  showToast(`已还原 ${d.restored || 0} 个文件`, 'ok');
+  await loadTrashList();
+  loadList();
+ } catch {
+  showToast('操作失败：网络错误', 'err');
+ } finally {
+  if (btn) btn.disabled = false;
+ }
+}
+
+async function emptyTrashAll() {
+ if (!trashItems.length) return;
+ if (!confirm(`确定一键清空回收站的全部 ${trashItems.length} 个文件吗？清空后将无法恢复。`)) return;
+ const btn = $('trashEmptyBtn');
+ if (btn) btn.disabled = true;
+ try {
+  const r = await fetch('/api/trash/empty', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '清空失败', 'err'); return; }
+  showToast(`已清空 ${d.purged || 0} 个文件，释放 ${fmtSize(d.freedBytes || 0)}`, 'ok');
+  await loadTrashList();
+  loadList();
+ } catch {
+  showToast('操作失败：网络错误', 'err');
+ } finally {
+  if (btn) btn.disabled = false;
+ }
+}
+
+if ($('trashBtn')) $('trashBtn').onclick = openTrashModal;
+if ($('mobTrashBtn')) $('mobTrashBtn').onclick = () => { $('topMoreMenu').classList.remove('open'); openTrashModal(); };
+if ($('trashClose')) $('trashClose').onclick = closeTrashModal;
+if ($('trashDoneBtn')) $('trashDoneBtn').onclick = closeTrashModal;
+if ($('trashModal')) $('trashModal').onclick = (e) => { if (e.target.id === 'trashModal') closeTrashModal(); };
+if ($('trashRestoreAllBtn')) $('trashRestoreAllBtn').onclick = restoreAllTrash;
+if ($('trashEmptyBtn')) $('trashEmptyBtn').onclick = emptyTrashAll;
 
 loadDropView().then(async (isDrop) => {
  if (isDrop) return;

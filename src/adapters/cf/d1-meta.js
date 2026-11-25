@@ -46,6 +46,7 @@ export class D1MetaStore {
       width: parseDim(r.width),
       height: parseDim(r.height),
       poolId: (typeof r.pool_id === 'string' && r.pool_id) ? r.pool_id : null,
+      deletedAt: msToIso(r.deleted_at),
     };
   }
   _rowToFolder(r) {
@@ -109,15 +110,23 @@ export class D1MetaStore {
   async listFiles(folderId, { authed } = {}) {
     const now = Date.now();
     const { results } = await this.db.prepare(
-      'SELECT * FROM files WHERE folder_id IS ? AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)',
+      'SELECT * FROM files WHERE folder_id IS ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)',
     ).bind(folderId || null, now, authed ? 1 : 0, 'public').all();
     return (results || []).map((r) => this._rowToFile(r));
   }
 
-  async listAllFiles({ authed } = {}) {
+  async listAllFiles({ authed, includeTrashed = false } = {}) {
+    const sql = includeTrashed
+      ? 'SELECT * FROM files WHERE (? OR visibility = ?)'
+      : 'SELECT * FROM files WHERE deleted_at IS NULL AND (? OR visibility = ?)';
+    const { results } = await this.db.prepare(sql).bind(authed ? 1 : 0, 'public').all();
+    return (results || []).map((r) => this._rowToFile(r));
+  }
+
+  async listTrashedFiles() {
     const { results } = await this.db.prepare(
-      'SELECT * FROM files WHERE (? OR visibility = ?)',
-    ).bind(authed ? 1 : 0, 'public').all();
+      'SELECT * FROM files WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+    ).all();
     return (results || []).map((r) => this._rowToFile(r));
   }
 
@@ -127,7 +136,7 @@ export class D1MetaStore {
     const now = Date.now();
     const esc = needle.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
     const { results } = await this.db.prepare(
-      "SELECT * FROM files WHERE lower(name) LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)",
+      "SELECT * FROM files WHERE deleted_at IS NULL AND lower(name) LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?)",
     ).bind(`%${esc}%`, now, authed ? 1 : 0, 'public').all();
     return (results || []).map((r) => this._rowToFile(r));
   }
@@ -144,13 +153,14 @@ export class D1MetaStore {
       width: parseDim(file.width),
       height: parseDim(file.height),
       pool_id: (typeof file.poolId === 'string' && file.poolId) ? file.poolId : null,
+      deleted_at: isoToMs(file.deletedAt),
     });
     await this.db.prepare(
-      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height, pool_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height, pool_id, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       item.id, item.name, item.size, item.ext, item.kind, item.storage, item.storageKey,
       item.folderId, item.visibility, isoToMs(item.expiresAt), item.downloads, isoToMs(item.uploadedAt),
-      item.uploadIp, item.uploadGeo, item.width, item.height, item.poolId,
+      item.uploadIp, item.uploadGeo, item.width, item.height, item.poolId, isoToMs(item.deletedAt),
     ).run();
     return item;
   }
@@ -170,13 +180,14 @@ export class D1MetaStore {
       width: parseDim(next.width),
       height: parseDim(next.height),
       pool_id: (typeof next.poolId === 'string' && next.poolId) ? next.poolId : null,
+      deleted_at: isoToMs(next.deletedAt),
     };
     await this.db.prepare(
-      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ?, upload_ip = ?, upload_geo = ?, width = ?, height = ?, pool_id = ? WHERE id = ?',
+      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ?, upload_ip = ?, upload_geo = ?, width = ?, height = ?, pool_id = ?, deleted_at = ? WHERE id = ?',
     ).bind(
       row.name, row.size, row.ext, row.kind, row.storage, row.storage_key,
       row.folder_id, row.visibility, row.expires_at, row.downloads, row.uploaded_at,
-      row.upload_ip, row.upload_geo, row.width, row.height, row.pool_id, id,
+      row.upload_ip, row.upload_geo, row.width, row.height, row.pool_id, row.deleted_at, id,
     ).run();
     return this._rowToFile(row);
   }
@@ -225,7 +236,7 @@ export class D1MetaStore {
   async deleteFolder(id) {
     const cur = await this.getFolder(id);
     if (!cur) return false;
-    const hasFiles = await this.db.prepare('SELECT 1 FROM files WHERE folder_id = ? LIMIT 1').bind(id).first();
+    const hasFiles = await this.db.prepare('SELECT 1 FROM files WHERE folder_id = ? AND deleted_at IS NULL LIMIT 1').bind(id).first();
     if (hasFiles) return false;
     const hasSubs = await this.db.prepare('SELECT 1 FROM folders WHERE parent_id = ? LIMIT 1').bind(id).first();
     if (hasSubs) return false;
