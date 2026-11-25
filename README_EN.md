@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📦 RelayBox
+# <img src="public/logo.png" width="32" height="32" align="center"> RelayBox
 
 **A self-hosted file sharing & personal cloud drive running purely on Cloudflare (Workers + D1 + R2 + Static Assets).**
 

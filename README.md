@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📦 RelayBox
+# <img src="public/logo.png" width="32" height="32" align="center"> RelayBox
 
 **一个人人都能零成本一键部署的 Cloudflare 个人网盘与文件传输站**
 
