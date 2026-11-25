@@ -1,18 +1,22 @@
 # RelayBox
 
 Self-hosted file sharing with folders, share links, expiry, chunked upload and an
-announcement bar. One codebase, two native deployments:
+announcement bar. Pure Cloudflare architecture:
 
-- **VPS** — Node.js, local disk + optional R2 (dual storage pools), Docker Compose one-command deploy.
 - **Cloudflare** — Workers + R2 + D1 + Static Assets, `wrangler deploy` one-command deploy.
 
-The frontend (`public/index.html`) is a single page that talks to the same API on both
-targets — no changes needed between deployments.
+> Since v3.4.0 the project is Cloudflare-only. The last dual-end (CF + VPS) version
+> is archived as Git Tag `v3.3.11-dual-final` / branch `archive/dual-v3.3.11` and
+> `RelayBox-v3.3.11-dual-final-backup.zip` in Drive `RelayBox/archives/`. The VPS
+> (Node.js) adapter was removed; development now only maintains the CF target and
+> may use D1 native SQL and Cloudflare edge capabilities directly.
+
+The frontend (`public/index.html`) is a single page that talks to the same API.
 
 ## Features
 
-- Upload to local disk and/or R2 (presigned direct upload, no bytes through the server)
-- Chunked upload with resume (files over 32 MB, up to `MAX_UPLOAD_SIZE`)
+- Upload to R2 (presigned direct upload, no bytes through the server)
+- Chunked upload with resume (files over 100 MB, up to `MAX_UPLOAD_SIZE`)
 - Folders with nesting, move and rename
 - Public / private files, per-file and per-folder share links
 - Extraction codes and burn-after-reading links
@@ -21,10 +25,12 @@ targets — no changes needed between deployments.
 - Download confirmation on share pages
 - Announcement bar (admin-editable, dismissible)
 - Admin login with brute-force protection
+- External storage pools (S3-compatible) with optional public-domain direct-out
+- 7-day recycle bin, batch operations, WebDAV mount, Telegram notifications
 
 ## Deploy
 
-### Cloudflare (primary)
+### Cloudflare
 
 ```sh
 npx wrangler d1 create relaybox          # create the D1 database, paste its id into wrangler.toml
@@ -43,21 +49,12 @@ deploy command `npx wrangler deploy`) — every push to `main` then auto-deploys
 Set the bucket CORS to allow `PUT, GET, HEAD` from your domain and expose the `ETag`
 header (browsers need it to complete multipart uploads).
 
-### VPS (Docker)
-
-```sh
-cp .env.example .env   # set UPLOAD_PASSWORD (and R2_* for the R2 pool)
-docker compose up -d
-```
-
-Or run Node directly: `npm install && npm start` (port 80, data in `./data`, files in `./files`).
-
 ## Configuration
 
-| Variable | Default (CF) | Default (VPS) | Notes |
-|---|---|---|---|
-| `UPLOAD_PASSWORD` | — | — | Admin password (required) |
-| `MAX_UPLOAD_SIZE` | 5 GB | 10 GB | Single-file cap, bytes |
+| Variable | Default | Notes |
+|---|---|---|
+| `UPLOAD_PASSWORD` | — | Admin password (required) |
+| `MAX_UPLOAD_SIZE` | 5 GB | Single-file cap, bytes |
 
 ## Layout
 
@@ -65,10 +62,18 @@ Or run Node directly: `npm install && npm start` (port 80, data in `./data`, fil
 src/
 ├── core/          # Hono routes + business logic (Web-standard APIs only, zero Node deps)
 ├── adapters/
-│   ├── node/      # JsonMetaStore + LocalStorage + R2 (AWS SDK)
 │   └── cf/        # D1MetaStore + R2 (Binding + aws4fetch for presigning)
-├── entry-node.js  # VPS entry (@hono/node-server)
-└── entry-worker.js# Cloudflare entry (fetch + scheduled cleanup)
+├── entry-worker.js# Cloudflare entry (fetch + scheduled cleanup)
+├── schema.sql     # D1 full baseline (fresh deploys; includes migrations 001-005)
+└── migrations/    # Incremental D1 migrations for existing databases
 ```
 
-See `REFACTOR-PLAN.md` for the full architecture, interface contracts and migration plan.
+## Tests
+
+```sh
+npm test            # v340-verify.mjs (full-app, D1 via node:sqlite) + test-batch1-d1.js (D1 SQL)
+```
+
+See `REFACTOR-PLAN.md` for the original dual-end architecture and migration plan
+(historical — the VPS side was removed in v3.4.0). The current collaboration
+spec lives in Drive `RelayBox/AGENTS.md`.
