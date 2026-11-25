@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.0 UI r16 (2026-11-25 · v3.3.7 存储池一键迁移 + WebDAV 挂载 + r15/r14/r13/r12) -->
+<!-- RelayBox v3.0 UI r17 (2026-11-25 · 修复收集箱份数/自定义毛玻璃下拉/有效期菜单层级/移动弹窗内建文件夹) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -419,7 +419,7 @@
  /* 点击光晕与涟漪波纹 */
  .has-ripple { position: relative; overflow: hidden; }
  .ripple-wave { position: absolute; border-radius: 50%; pointer-events: none; transform: scale(0); opacity: .42; background: radial-gradient(circle, rgba(59,130,246,.52) 0%, rgba(59,130,246,.16) 55%, transparent 72%); animation: rippleOut .52s cubic-bezier(.22,1,.36,1) forwards; }
- button:not(.ghost):not(.icon-btn):not(.pill):not(.sheet-item):not(.bulk-btn):not(.move-opt):not(.crumb-drop) > .ripple-wave { background: radial-gradient(circle, rgba(255,255,255,.55) 0%, rgba(255,255,255,.16) 60%, transparent 74%); }
+ button:not(.ghost):not(.icon-btn):not(.pill):not(.sheet-item):not(.bulk-btn):not(.move-opt):not(.crumb-drop):not(.rb-sel-btn):not(.rb-sel-opt) > .ripple-wave { background: radial-gradient(circle, rgba(255,255,255,.55) 0%, rgba(255,255,255,.16) 60%, transparent 74%); }
  @keyframes rippleOut { to { transform: scale(2.6); opacity: 0; } }
  .drop:hover { box-shadow: 0 0 0 4px var(--accent-soft); }
  .icon-btn { transition: background .16s ease, color .16s ease, transform .14s cubic-bezier(.22,1,.36,1), box-shadow .18s ease; }
@@ -723,6 +723,43 @@
  .token-scope-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
  .token-scope-row select { flex: 1; min-width: 180px; padding: 8px 10px; border: 1px solid var(--input-border); border-radius: 10px; font-size: 13px; background: var(--input-bg); color: var(--text); outline: none; }
  body.has-wallpaper .mig-summary-box, body.has-wallpaper .mig-log, body.has-wallpaper .webdav-guide { background: var(--glass-input-bg); }
+ /* r17: 上传区堆叠层级修复 + 全站自定义毛玻璃下拉组件 + 移动弹窗内联新建文件夹 */
+ #uploadCard { position: relative; z-index: 26; }
+ #uploadCard.menu-open-card { z-index: 31; }
+ #expireMenu { z-index: 48; }
+ #expireMenu.flip-up { top: auto !important; bottom: calc(100% + 6px); transform-origin: bottom left; }
+
+ /* 全站统一自定义毛玻璃下拉框（替代浏览器原生默认 select） */
+ .rb-sel-wrap { position: relative; width: 100%; display: block; }
+ .rb-sel-wrap.compact { width: auto; min-width: 86px; flex-shrink: 0; display: inline-block; }
+ .token-scope-row .rb-sel-wrap { flex: 1; min-width: 180px; width: auto; }
+ .rb-sel-native { position: absolute !important; inset: 0; width: 1px !important; height: 1px !important; opacity: 0 !important; pointer-events: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }
+ .rb-sel-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 36px; padding: 8px 11px; border: 1px solid var(--input-border); border-radius: 10px; background: var(--input-bg); color: var(--text); font-size: 13px; font-weight: 500; text-align: left; cursor: pointer; transition: border-color .16s, box-shadow .16s, background .15s; }
+ .rb-sel-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-soft); }
+ .rb-sel-btn.dd-open, .rb-sel-btn:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
+ .rb-sel-btn:disabled { opacity: .55; cursor: not-allowed; }
+ .rb-sel-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .rb-sel-wrap.compact .rb-sel-btn { min-height: 28px; padding: 4px 8px; font-size: 12px; border-radius: 8px; gap: 4px; }
+ body.has-wallpaper .rb-sel-btn { background: var(--glass-input-bg); }
+ .rb-sel-pop { display: none; position: fixed; z-index: 110; background: var(--glass-bg-strong); border: 1px solid var(--glass-border); backdrop-filter: blur(22px) saturate(185%); -webkit-backdrop-filter: blur(22px) saturate(185%); border-radius: 12px; box-shadow: 0 0 0 1px var(--glass-stroke), 0 14px 36px rgba(15,23,42,.22); padding: 5px; overflow-y: auto; max-height: 260px; animation: menuPop .16s cubic-bezier(.22,1,.36,1); }
+ html[data-theme="dark"] .rb-sel-pop { box-shadow: 0 0 0 1px var(--glass-stroke), 0 16px 40px rgba(0,0,0,.52); }
+ .rb-sel-pop.open { display: block; }
+ .rb-sel-pop.flip-up { transform-origin: bottom center; }
+ .rb-sel-opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 9px 11px; border-radius: 8px; background: transparent; color: var(--text); font-size: 13px; font-weight: 500; text-align: left; border: 0; cursor: pointer; transition: background .12s, color .12s; }
+ .rb-sel-opt:hover { background: var(--btn-bg); }
+ .rb-sel-opt.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+ .rb-sel-opt .tick { color: var(--accent); font-weight: 700; flex-shrink: 0; min-width: 14px; text-align: right; }
+
+ /* 移动文件弹窗头与内联新建文件夹面板 */
+ .move-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; padding-right: 18px; }
+ .move-head-title { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+ .move-new-toggle { padding: 5px 10px; font-size: 12px; border-radius: 8px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; }
+ .move-new-box { display: none; padding: 10px 11px; margin-bottom: 10px; border-radius: 11px; background: var(--surface-soft); border: 1px solid var(--border); flex-direction: column; gap: 8px; }
+ .move-new-box.open { display: flex; animation: menuPop .16s cubic-bezier(.22,1,.36,1); }
+ .move-new-acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+ .move-new-acts button { padding: 6px 11px; font-size: 12px; border-radius: 8px; }
+ #moveList { max-height: 50vh; overflow-y: auto; padding-right: 2px; }
+ body.has-wallpaper .move-new-box { background: var(--glass-input-bg); }
 
  @media (max-width: 600px) {
   .desk-only-btn { display: none !important; }
@@ -741,6 +778,7 @@
 <div class="bg-mask" id="bgMask" aria-hidden="true"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="ui-tip" id="uiTip" role="tooltip"></div>
+<div class="rb-sel-pop" id="uiSelectPop" role="listbox" aria-hidden="true"></div>
 <div class="global-drop" id="globalDrop">
  <div class="global-drop-box">
  <div class="drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
@@ -949,10 +987,10 @@
  </div>
 </div>
 
-<div class="modal" id="moveModal"><span class="close" id="moveClose">×</span><div class="card" style="max-width:360px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:10px" id="moveTitle">移动到…</div><div id="moveList"></div></div></div>
+<div class="modal" id="moveModal"><span class="close" id="moveClose">×</span><div class="card" style="max-width:400px;width:100%"><div class="move-head"><div class="move-head-title" id="moveTitle">移动到…</div><button type="button" class="ghost move-new-toggle" id="moveNewFolderBtn" style="display:none">+ 新建文件夹</button></div><div class="move-new-box" id="moveNewFolderBox"><div class="form-field"><label>新文件夹名称 *</label><input type="text" id="moveNewFolderName" placeholder="输入文件夹名字" maxlength="80" autocomplete="off"></div><div class="form-field"><label>创建位置</label><select id="moveNewFolderParent"><option value="">根目录</option></select></div><div class="msg" id="moveNewFolderMsg" style="margin-top:0"></div><div class="move-new-acts"><button type="button" class="ghost" id="moveNewFolderCancel">取消</button><button type="button" class="ghost" id="moveNewFolderOnlyBtn">仅创建</button><button type="button" id="moveNewFolderGoBtn">创建并移入</button></div></div><div id="moveList"></div></div></div>
 <div class="modal" id="inputModal"><span class="close" id="inputClose">×</span><div class="card" style="max-width:360px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:10px" id="inputTitle">输入</div><input type="text" id="inputField" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="inputCancel">取消</button><button id="inputOk">确定</button></div></div></div>
 <div class="modal" id="expireEditModal"><span class="close" id="expireEditClose">×</span><div class="card" style="max-width:360px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:4px">修改有效期</div><div class="meta" id="expireEditName" style="margin-bottom:12px"></div><div id="expireEditOpts"></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="expireEditCancel">取消</button></div></div></div>
-<div class="modal" id="shareSettingsModal"><span class="close" id="shareSettingsClose">×</span><div class="card" style="max-width:400px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:4px">分享设置</div><div class="meta" id="shareSettingsName" style="margin-bottom:12px"></div><label style="display:block;font-size:13px;margin-bottom:4px">提取码（留空 = 不设提取码）</label><input type="text" id="shareCodeInput" placeholder="如 1234" maxlength="32" style="width:100%;margin-bottom:12px"><label style="display:block;font-size:13px;margin-bottom:4px">最大下载次数（0 = 不限，1 = 阅后即焚）</label><input type="number" id="shareMaxDlInput" min="0" max="99999" value="0" style="width:100%;padding:9px 12px;border:1px solid var(--input-border);border-radius:10px;font-size:14px;background:var(--input-bg);color:var(--text)"><div class="preset-row" id="shareMaxDlPresets"><button type="button" class="pill active" data-maxdl="0">不限</button><button type="button" class="pill" data-maxdl="1">1 次（阅后即焚）</button><button type="button" class="pill" data-maxdl="5">5 次</button><button type="button" class="pill" data-maxdl="10">10 次</button></div><label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;color:var(--muted)"><input type="checkbox" id="shareBurnCheck"> 阅后即焚（下载一次后链接作废）</label><div class="share-res" id="shareResultBox" style="display:none"><div class="share-res-code"><div><div class="meta" style="margin:0 0 4px">5 位短取件码</div><span class="pickup-badge" id="shareResPickup">-----</span></div><div class="meta" id="shareResQuota" style="text-align:right"></div></div><div class="share-res-url" id="shareResUrl"></div><div class="share-res-btns"><button type="button" class="ghost" id="shareCopyCodeBtn">复制取件码</button><button type="button" class="ghost" id="shareCopyUrlBtn">复制链接</button><button type="button" id="shareCopyPackBtn">复制分享文案</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="shareSettingsCancel">关闭</button><button id="shareSettingsOk">保存并复制链接</button></div></div></div>
+<div class="modal" id="shareSettingsModal"><span class="close" id="shareSettingsClose">×</span><div class="card" style="max-width:400px;width:100%"><div style="font-size:15px;font-weight:600;margin-bottom:4px">分享设置</div><div class="meta" id="shareSettingsName" style="margin-bottom:12px"></div><label style="display:block;font-size:13px;margin-bottom:4px">提取码（留空 = 不设提取码）</label><input type="text" id="shareCodeInput" placeholder="如 1234" maxlength="32" style="width:100%;margin-bottom:12px"><label style="display:block;font-size:13px;margin-bottom:4px">最大下载次数（0 = 不限，1 = 阅后即焚）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="shareMaxDlInput" value="0" placeholder="0 = 不限" maxlength="6" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--input-border);border-radius:10px;font-size:14px;background:var(--input-bg);color:var(--text)"><div class="preset-row" id="shareMaxDlPresets"><button type="button" class="pill active" data-maxdl="0">不限</button><button type="button" class="pill" data-maxdl="1">1 次（阅后即焚）</button><button type="button" class="pill" data-maxdl="5">5 次</button><button type="button" class="pill" data-maxdl="10">10 次</button></div><label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;color:var(--muted)"><input type="checkbox" id="shareBurnCheck"> 阅后即焚（下载一次后链接作废）</label><div class="share-res" id="shareResultBox" style="display:none"><div class="share-res-code"><div><div class="meta" style="margin:0 0 4px">5 位短取件码</div><span class="pickup-badge" id="shareResPickup">-----</span></div><div class="meta" id="shareResQuota" style="text-align:right"></div></div><div class="share-res-url" id="shareResUrl"></div><div class="share-res-btns"><button type="button" class="ghost" id="shareCopyCodeBtn">复制取件码</button><button type="button" class="ghost" id="shareCopyUrlBtn">复制链接</button><button type="button" id="shareCopyPackBtn">复制分享文案</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="ghost" id="shareSettingsCancel">关闭</button><button id="shareSettingsOk">保存并复制链接</button></div></div></div>
 <div class="modal" id="downloadConfirmModal"><span class="close" id="downloadConfirmClose">×</span><div class="card" style="max-width:360px;width:100%;text-align:center"><div style="font-size:16px;font-weight:600;margin-bottom:10px">是否确认下载？</div><div id="downloadConfirmName" style="font-size:14px;word-break:break-all;margin-bottom:4px"></div><div class="meta" id="downloadConfirmSize" style="margin-bottom:16px"></div><button id="downloadConfirmOk" style="width:100%;padding:11px;font-size:15px">确定下载</button><button class="ghost" id="downloadConfirmCancel" style="width:100%;margin-top:8px">取消</button></div></div>
 <div class="modal" id="modal"><span class="close" id="modalClose">×</span><button class="pnav prev" id="modalPrev" aria-label="上一张">‹</button><button class="pnav next" id="modalNext" aria-label="下一张">›</button><div class="pcount" id="modalCount"></div><div id="modalBody"></div></div>
 <div class="sheet-overlay" id="sheetOverlay"><div class="sheet" id="sheet"><div class="sheet-handle"></div><div class="sheet-title" id="sheetTitle"></div><div class="sheet-items" id="sheetItems"></div></div></div>
@@ -964,8 +1002,8 @@
 <div class="modal" id="textEditModal"><span class="close" id="textEditClose">×</span><div class="card code-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:24px;margin-bottom:4px"><div style="font-size:15.5px;font-weight:700;word-break:break-all" id="textEditTitle">在线编辑</div><span class="pool-tag" id="textEditPoolTag"></span></div><div class="meta" style="margin-bottom:10px">支持直接修改并覆盖保存回原存储池（Tab 插入缩进，Ctrl/Cmd+S 快捷保存，单文件 ≤ 1MB）。</div><textarea id="textEditArea" class="code-editor-ta tall" placeholder="正在加载文件内容…" spellcheck="false"></textarea><div class="code-status-row"><span id="textEditStat">0 行 · 0 字符 · 0 B</span><span class="code-dirty-dot" id="textEditDirty">● 有未保存修改</span></div><div class="msg" id="textEditMsg" style="margin-top:6px"></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="textEditCopyBtn">复制全文</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="textEditCancelBtn">取消</button><button type="button" id="textEditSaveBtn">保存修改</button></div></div></div></div>
 <div class="modal" id="remoteFetchModal"><span class="close" id="remoteFetchClose">×</span><div class="card pool-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">URL 远程拉取转存</div><div class="meta" style="margin-bottom:12px">贴入直链，由服务端直接抓取文件并写入所选存储池与目录（支持自动识别文件名、防内网 SSRF，单文件 ≤ 50MB）。</div><div class="form-field"><label>文件直链 URL *</label><input type="text" id="rfUrl" placeholder="https://example.com/path/to/file.png" autocomplete="off" spellcheck="false"></div><div class="form-field" style="margin-top:8px"><label>自定义文件名（选填，留空自动识别）</label><input type="text" id="rfName" placeholder="如 banner.webp 或 资料.pdf" maxlength="120" autocomplete="off"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>目标存储池</label><select id="rfPool"></select></div><div class="form-field"><label>存入目录</label><select id="rfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="rfVis"><option value="private" selected>私密（仅管理员/分享可见）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="rfExpires"><option value="0" selected>永久有效</option><option value="24">24 小时</option><option value="168">7 天</option></select></div></div><div class="msg" id="rfMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="rfCancelBtn">取消</button><button type="button" id="rfGoBtn">开始拉取转存</button></div></div></div>
 <div class="modal" id="notifyModal"><span class="close" id="notifyClose">×</span><div class="card pool-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
-<div class="modal" id="dropsModal"><span class="close" id="dropsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">文件收集箱</div><button type="button" id="dropAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新建收集箱</button></div><div class="meta" style="margin-bottom:12px">生成反向收件链接发给他人，对方无需登录即可投递文件到指定目录，且彼此不可见已交文件。</div><div class="pool-list" id="dropListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="dropFormBox"><div style="font-size:13.5px;font-weight:600">新建文件收集箱</div><div class="form-grid2"><div class="form-field"><label>收集箱标题 *</label><input type="text" id="dfTitle" placeholder="如 作业提交 / 活动素材收集" maxlength="60"></div><div class="form-field"><label>文件存入目录</label><select id="dfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2"><div class="form-field"><label>提交口令（留空 = 免密）</label><input type="text" id="dfPassword" placeholder="可选，如 2026" maxlength="64" autocomplete="off"></div><div class="form-field"><label>最大收集份数（0 = 不限）</label><input type="number" id="dfMaxFiles" value="0" min="0" max="100000"></div></div><div class="form-grid2"><div class="form-field"><label>单文件上限</label><select id="dfMaxSize"><option value="10485760">10 MB</option><option value="52428800">50 MB</option><option value="104857600" selected>100 MB</option><option value="524288000">500 MB</option><option value="1073741824">1 GB</option></select></div><div class="form-field"><label>链接有效期</label><select id="dfExpires"><option value="24">24 小时</option><option value="72">3 天</option><option value="168" selected>7 天</option><option value="720">30 天</option><option value="0">永久有效</option></select></div></div><div class="form-field"><label>收到的文件默认可见性</label><select id="dfVis"><option value="private" selected>私密（推荐：仅管理员可见）</option><option value="public">公开（任何人可访问）</option></select></div><div class="msg" id="dfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="dfCancelBtn">取消</button><button type="button" id="dfCreateBtn">创建并复制链接</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="dropsDoneBtn">关闭</button></div></div></div>
-<div class="modal" id="poolsModal"><span class="close" id="poolsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储池管理</div><button type="button" id="poolAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新增外部桶</button></div><div class="meta" style="margin-bottom:12px">支持内置 R2 与任意外部 Cloudflare R2 / S3 兼容桶（如亚太桶、B2、MinIO），新增即用无需重新部署。</div><div class="pool-list" id="poolListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="poolFormBox"><div style="font-size:13.5px;font-weight:600" id="poolFormTitle">新增外部存储池</div><input type="hidden" id="pfId"><div class="form-grid2"><div class="form-field"><label>显示名称 *</label><input type="text" id="pfName" placeholder="如 亚太 R2 桶" maxlength="40"></div><div class="form-field"><label>存储桶名 (Bucket) *</label><input type="text" id="pfBucket" placeholder="如 relaybox-apac" maxlength="100"></div></div><div class="form-field"><label>S3 Endpoint *</label><input type="text" id="pfEndpoint" placeholder="https://&lt;AccountID&gt;.r2.cloudflarestorage.com"></div><div class="form-grid2"><div class="form-field"><label>Access Key ID *</label><input type="text" id="pfAk" placeholder="S3 Access Key ID" autocomplete="off"></div><div class="form-field"><label>Secret Access Key <span id="pfSkHint">*</span></label><input type="password" id="pfSk" placeholder="加密存库，绝不回传明文" autocomplete="new-password"></div></div><div class="form-grid2"><div class="form-field"><label>Region（R2 填 auto）</label><input type="text" id="pfRegion" value="auto" placeholder="auto"></div><div class="form-field"><label>显示配额（GB）</label><input type="number" id="pfQuotaGb" value="10" min="1" max="100000"></div></div><div class="form-grid2"><div class="form-field"><label>传输模式</label><select id="pfMode"><option value="proxy">Worker 中转（校园网/图床推荐）</option><option value="presign">预签名直传（大文件模式）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="pfDefault" style="width:auto"> 设为默认上传池</label></div></div><div class="msg" id="pfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="pfCancelBtn">取消</button><button type="button" class="ghost" id="pfTestBtn">测试连接</button><button type="button" id="pfSaveBtn">保存存储池</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="poolsDoneBtn">关闭</button></div></div></div>
+<div class="modal" id="dropsModal"><span class="close" id="dropsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">文件收集箱</div><button type="button" id="dropAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新建收集箱</button></div><div class="meta" style="margin-bottom:12px">生成反向收件链接发给他人，对方无需登录即可投递文件到指定目录，且彼此不可见已交文件。</div><div class="pool-list" id="dropListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="dropFormBox"><div style="font-size:13.5px;font-weight:600">新建文件收集箱</div><div class="form-grid2"><div class="form-field"><label>收集箱标题 *</label><input type="text" id="dfTitle" placeholder="如 作业提交 / 活动素材收集" maxlength="60"></div><div class="form-field"><label>文件存入目录</label><select id="dfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2"><div class="form-field"><label>提交口令（留空 = 免密）</label><input type="text" id="dfPassword" placeholder="可选，如 2026" maxlength="64" autocomplete="off"></div><div class="form-field"><label>最大收集份数（0 = 不限）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="dfMaxFiles" value="" placeholder="留空或 0 表示不限，如 30" maxlength="6" autocomplete="off"><div class="preset-row" id="dfMaxFilesPresets" style="margin:6px 0 0"><button type="button" class="pill active" data-dfmax="0">不限</button><button type="button" class="pill" data-dfmax="1">1 份</button><button type="button" class="pill" data-dfmax="10">10 份</button><button type="button" class="pill" data-dfmax="30">30 份</button><button type="button" class="pill" data-dfmax="50">50 份</button><button type="button" class="pill" data-dfmax="100">100 份</button></div></div></div><div class="form-grid2"><div class="form-field"><label>单文件上限</label><select id="dfMaxSize"><option value="10485760">10 MB</option><option value="52428800">50 MB</option><option value="104857600" selected>100 MB</option><option value="524288000">500 MB</option><option value="1073741824">1 GB</option></select></div><div class="form-field"><label>链接有效期</label><select id="dfExpires"><option value="24">24 小时</option><option value="72">3 天</option><option value="168" selected>7 天</option><option value="720">30 天</option><option value="0">永久有效</option></select></div></div><div class="form-field"><label>收到的文件默认可见性</label><select id="dfVis"><option value="private" selected>私密（推荐：仅管理员可见）</option><option value="public">公开（任何人可访问）</option></select></div><div class="msg" id="dfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="dfCancelBtn">取消</button><button type="button" id="dfCreateBtn">创建并复制链接</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="dropsDoneBtn">关闭</button></div></div></div>
+<div class="modal" id="poolsModal"><span class="close" id="poolsClose">×</span><div class="card pool-modal-card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储池管理</div><button type="button" id="poolAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新增外部桶</button></div><div class="meta" style="margin-bottom:12px">支持内置 R2 与任意外部 Cloudflare R2 / S3 兼容桶（如亚太桶、B2、MinIO），新增即用无需重新部署。</div><div class="pool-list" id="poolListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="poolFormBox"><div style="font-size:13.5px;font-weight:600" id="poolFormTitle">新增外部存储池</div><input type="hidden" id="pfId"><div class="form-grid2"><div class="form-field"><label>显示名称 *</label><input type="text" id="pfName" placeholder="如 亚太 R2 桶" maxlength="40"></div><div class="form-field"><label>存储桶名 (Bucket) *</label><input type="text" id="pfBucket" placeholder="如 relaybox-apac" maxlength="100"></div></div><div class="form-field"><label>S3 Endpoint *</label><input type="text" id="pfEndpoint" placeholder="https://&lt;AccountID&gt;.r2.cloudflarestorage.com"></div><div class="form-grid2"><div class="form-field"><label>Access Key ID *</label><input type="text" id="pfAk" placeholder="S3 Access Key ID" autocomplete="off"></div><div class="form-field"><label>Secret Access Key <span id="pfSkHint">*</span></label><input type="password" id="pfSk" placeholder="加密存库，绝不回传明文" autocomplete="new-password"></div></div><div class="form-grid2"><div class="form-field"><label>Region（R2 填 auto）</label><input type="text" id="pfRegion" value="auto" placeholder="auto"></div><div class="form-field"><label>显示配额（GB）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="pfQuotaGb" value="10" placeholder="如 10" maxlength="6" autocomplete="off"></div></div><div class="form-grid2"><div class="form-field"><label>传输模式</label><select id="pfMode"><option value="proxy">Worker 中转（校园网/图床推荐）</option><option value="presign">预签名直传（大文件模式）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="pfDefault" style="width:auto"> 设为默认上传池</label></div></div><div class="msg" id="pfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="pfCancelBtn">取消</button><button type="button" class="ghost" id="pfTestBtn">测试连接</button><button type="button" id="pfSaveBtn">保存存储池</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="poolsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="appearanceModal"><span class="close" id="appearanceClose">×</span><div class="card appear-modal-card"><div style="font-size:16px;font-weight:600;margin-bottom:4px">外观与壁纸设置</div><div class="meta" style="margin-bottom:12px">支持桌面端与手机端分开设置壁纸，自定义左上角站点头像、标题与网页图标，保存后全站生效。</div><input type="file" id="appearUploadInput" accept="image/*" style="display:none"><div class="appear-field"><label>站点名称 <span>显示在左上角与浏览器标题</span></label><input type="text" id="apTitle" placeholder="RelayBox" maxlength="40" style="width:100%"></div><div class="appear-field"><label>桌面端背景图片 <span>横屏推荐 16:9</span></label><div class="appear-input-row"><input type="text" id="apBgDesktop" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgDesktop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev desk" id="prevBgDesktop"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgDesktop" title="清除">×</button></div></div><div class="appear-field"><label>手机端背景图片 <span>竖屏推荐 9:16，留空则沿用桌面壁纸</span></label><div class="appear-input-row"><input type="text" id="apBgMobile" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgMobile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev mob" id="prevBgMobile"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgMobile" title="清除">×</button></div></div><div class="appear-field"><label>左上角站点头像 / Logo <span>留空使用默认蓝色图标</span></label><div class="appear-input-row"><input type="text" id="apLogo" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev ico" id="prevLogo"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apLogo" title="清除">×</button></div></div><div class="appear-field"><label>网站图标 (Favicon) <span>浏览器标签页小图标</span></label><div class="appear-input-row"><input type="text" id="apFavicon" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apFavicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-prev ico" id="prevFavicon"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apFavicon" title="清除">×</button></div></div><div class="form-grid2"><div class="appear-field"><label>壁纸遮罩暗度 <span id="apOverlayVal">45%</span></label><input type="range" class="appear-range" id="apOverlay" min="0" max="85" value="45"></div><div class="appear-field"><label>卡片毛玻璃模糊 <span id="apBlurVal">14px</span></label><input type="range" class="appear-range" id="apBlur" min="0" max="24" value="14"></div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="apResetBtn">恢复默认</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="apCancelBtn">取消</button><button type="button" id="apSaveBtn">保存外观</button></div></div></div></div>
 <div class="modal" id="transferModeModal"><span class="close" id="transferModeClose">×</span><div class="card" style="max-width:440px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">R2 传输模式</div><div class="meta" style="margin-bottom:8px">根据网络环境与文件大小随时切换，保存后全站即时生效（无需重新部署）。</div><div class="mode-opts" id="transferModeOpts"><button type="button" class="mode-opt" data-mode="proxy"><div class="mode-opt-head"><strong>Worker 绑定中转（图床模式）</strong><span class="mode-opt-tag">校园网推荐</span></div><p>上传下载全程走当前自定义域名，绕开 r2.cloudflarestorage.com 阻断，支持公开文件边缘缓存与视频进度条拖动；零 S3 密钥、零 CORS；超过 20MB 自动分片。</p></button><button type="button" class="mode-opt" data-mode="presign" id="modeOptPresign"><div class="mode-opt-head"><strong>R2 预签名直传（大文件模式）</strong><span class="mode-opt-tag" id="modePresignTag">GB 级大文件</span></div><p>≤100MB 直连 R2 上传，下载 302 走 R2 边缘直出，最省 Worker 额度且大文件下载最稳；需要配置 R2 S3 密钥与桶 CORS。</p></button></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="transferModeCancel">取消</button><button type="button" id="transferModeSave">保存并生效</button></div></div></div>
 <div class="modal" id="copyFmtModal"><span class="close" id="copyFmtClose">×</span><div class="card" style="max-width:400px;width:100%"><div style="font-size:16px;font-weight:600;margin-bottom:4px">默认复制链接格式</div><div class="meta" style="margin-bottom:8px">点击文件上的“复制链接”图标时，自动按所选格式复制（仅保存在本机浏览器）。</div><div class="fmt-opts" id="copyFmtOpts"><button type="button" class="fmt-opt" data-fmt="raw"><strong>原始直链</strong><span>https://.../f/id</span></button><button type="button" class="fmt-opt" data-fmt="md"><strong>Markdown</strong><span>![name](url)</span></button><button type="button" class="fmt-opt" data-fmt="html"><strong>HTML</strong><span>&lt;img src="url"&gt;</span></button><button type="button" class="fmt-opt" data-fmt="bb"><strong>BBCode</strong><span>[img]url[/img]</span></button></div><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">自定义链接前缀（留空 = 使用当前站点域名）</label><input type="text" id="copyPrefixInput" placeholder="例如 https://relaybox.19660716.xyz" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="copyFmtCancel">取消</button><button type="button" id="copyFmtSave">保存设置</button></div></div></div>
@@ -1100,9 +1138,11 @@ function renderPoolSelector() {
     const open = menu.style.display === 'none';
     menu.style.display = open ? 'block' : 'none';
     btn.classList.toggle('dd-open', open);
+    const uc = $('uploadCard');
+    if (uc) uc.classList.toggle('menu-open-card', open || ($('expireMenu') && $('expireMenu').style.display !== 'none'));
    };
    menu.querySelectorAll('button[data-pid]').forEach(b => {
-    b.onclick = () => { menu.style.display = 'none'; btn.classList.remove('dd-open'); selectPool(b.dataset.pid); };
+    b.onclick = () => { menu.style.display = 'none'; btn.classList.remove('dd-open'); const uc = $('uploadCard'); if (uc && (!$('expireMenu') || $('expireMenu').style.display === 'none')) uc.classList.remove('menu-open-card'); selectPool(b.dataset.pid); };
    });
   }
  }
@@ -1303,23 +1343,41 @@ function renderExpireBtn() {
  if (t) t.textContent = Number(b.dataset.exp) === expireHours ? '✓' : '';
  });
 }
+function setExpireMenuOpen(open) {
+ const m = $('expireMenu');
+ const btn = $('expireBtn');
+ const uc = $('uploadCard');
+ if (!m || !btn) return;
+ if (open) {
+  const rect = btn.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom;
+  m.classList.toggle('flip-up', spaceBelow < 155 && rect.top > 155);
+  m.style.display = 'block';
+  btn.classList.add('dd-open');
+  if (uc) uc.classList.add('menu-open-card');
+ } else {
+  m.style.display = 'none';
+  m.classList.remove('flip-up');
+  btn.classList.remove('dd-open');
+  const pm = $('poolDropMenu');
+  if (uc && (!pm || pm.style.display === 'none')) uc.classList.remove('menu-open-card');
+ }
+}
 $('expireBtn').onclick = (e) => {
  e.stopPropagation();
  const m = $('expireMenu');
- const open = m.style.display === 'none';
- m.style.display = open ? 'block' : 'none';
- $('expireBtn').classList.toggle('dd-open', open);
+ setExpireMenuOpen(m.style.display === 'none');
 };
 document.querySelectorAll('#expireMenu button').forEach(b => {
  b.onclick = () => {
  expireHours = Number(b.dataset.exp);
- $('expireMenu').style.display = 'none'; $('expireBtn').classList.remove('dd-open');
+ setExpireMenuOpen(false);
  renderExpireBtn();
  };
 });
 document.addEventListener('click', (e) => {
  const m = $('expireMenu');
- if (m && m.style.display !== 'none' && !e.target.closest('#expireMenu') && !e.target.closest('#expireBtn')) { m.style.display = 'none'; $('expireBtn').classList.remove('dd-open'); }
+ if (m && m.style.display !== 'none' && !e.target.closest('#expireMenu') && !e.target.closest('#expireBtn')) setExpireMenuOpen(false);
 });
 renderExpireBtn();
 
@@ -1557,13 +1615,16 @@ async function renameFile(id, name) {
 
 let moveIds = [];
 let moveKind = 'file';
-function openMoveModal(ids, kind, label) {
- moveIds = [...ids];
- moveKind = kind || 'file';
- $('moveTitle').textContent = moveKind === 'upload-dest' ? '选择上传目标目录' : moveKind === 'folder' ? `移动文件夹「${label || ''}」到…` : `移动 ${moveIds.length} 个文件到…`;
+let moveModalOpts = [];
+function closeMoveNewFolderBox() {
+ const box = $('moveNewFolderBox');
+ if (box) box.classList.remove('open');
+ if ($('moveNewFolderMsg')) { $('moveNewFolderMsg').textContent = ''; $('moveNewFolderMsg').className = 'msg'; }
+ if ($('moveNewFolderName')) $('moveNewFolderName').value = '';
+}
+function loadMoveFolderOptions(preferParentId) {
  $('moveList').innerHTML = '<div class="empty">加载中…</div>';
- $('moveModal').classList.add('open');
- fetch('/api/folders').then(r => r.json()).then(d => {
+ return fetch('/api/folders').then(r => r.json()).then(d => {
  const all = d.folders || [];
  const pathOf = (fd) => {
  const names = [fd.name];
@@ -1588,8 +1649,27 @@ function openMoveModal(ids, kind, label) {
  }
  }
  const opts = [{ id: null, label: '根目录', icon: '' }].concat(all.filter(fd => !blocked.has(fd.id)).map(fd => ({ id: fd.id, label: pathOf(fd), icon: ICONS.folder })));
+ moveModalOpts = opts;
  $('moveList').innerHTML = opts.map(o => `<button class="move-opt" data-label="${escapeHtml(o.label)}" onclick="moveFilesTo(${o.id ? `'${o.id}'` : 'null'}, this.dataset.label)">${o.icon ? o.icon + ' ' : ''}${escapeHtml(o.label)}</button>`).join('');
+ const pSel = $('moveNewFolderParent');
+ if (pSel) {
+  const prevVal = preferParentId !== undefined ? (preferParentId || '') : (pSel.value || '');
+  pSel.innerHTML = opts.map(o => `<option value="${escapeHtml(o.id || '')}">${escapeHtml(o.label)}</option>`).join('');
+  if (opts.some(o => (o.id || '') === prevVal)) pSel.value = prevVal;
+  else pSel.value = '';
+  syncAllCustomSelects($('moveNewFolderBox'));
+ }
  }).catch(() => { $('moveList').innerHTML = '<div class="empty">加载失败</div>'; });
+}
+function openMoveModal(ids, kind, label) {
+ moveIds = [...ids];
+ moveKind = kind || 'file';
+ $('moveTitle').textContent = moveKind === 'upload-dest' ? '选择上传目标目录' : moveKind === 'folder' ? `移动文件夹「${label || ''}」到…` : `移动 ${moveIds.length} 个文件到…`;
+ if ($('moveNewFolderBtn')) $('moveNewFolderBtn').style.display = authed ? '' : 'none';
+ if ($('moveNewFolderGoBtn')) $('moveNewFolderGoBtn').textContent = moveKind === 'upload-dest' ? '创建并设为目录' : '创建并移入';
+ closeMoveNewFolderBox();
+ $('moveModal').classList.add('open');
+ loadMoveFolderOptions(currentFolderId || '');
 }
 let uploadDestOverride = undefined; // undefined = 跟随当前目录
 let uploadDestName = '';
@@ -2263,6 +2343,8 @@ document.addEventListener('keydown', (e) => {
  if (e.key === 'Escape') { closePreviewModal(); return; }
  }
  if (e.key !== 'Escape') return;
+ if ($('uiSelectPop') && $('uiSelectPop').classList.contains('open')) { closeCustomSelectPop(); return; }
+ if ($('expireMenu') && $('expireMenu').style.display !== 'none') { setExpireMenuOpen(false); return; }
  if ($('globalDrop').classList.contains('show')) { dragDepth = 0; $('globalDrop').classList.remove('show'); return; }
  if ($('sheetOverlay').classList.contains('open')) { closeSheet(); return; }
  if ($('inputModal').classList.contains('open')) { closeInputModal(null); return; }
@@ -2559,9 +2641,14 @@ async function revokeShare(id) {
 
 let shareSettingsTarget = null;
 let shareResData = null;
-function syncMaxDlUI(val) {
- const n = Math.max(0, parseInt(val, 10) || 0);
- $('shareMaxDlInput').value = String(n);
+function syncMaxDlUI(val, preserveRaw) {
+ const clean = String(val ?? '').replace(/[^\d]/g, '');
+ const n = clean ? Math.max(0, parseInt(clean, 10) || 0) : 0;
+ if (preserveRaw) {
+  if ($('shareMaxDlInput').value !== clean) $('shareMaxDlInput').value = clean;
+ } else {
+  $('shareMaxDlInput').value = String(n);
+ }
  $('shareBurnCheck').checked = (n === 1);
  document.querySelectorAll('#shareMaxDlPresets button').forEach(b => {
  b.classList.toggle('active', Number(b.dataset.maxdl) === n);
@@ -2584,7 +2671,8 @@ function renderShareResultBox(data) {
 document.querySelectorAll('#shareMaxDlPresets button').forEach(b => {
  b.onclick = () => syncMaxDlUI(b.dataset.maxdl);
 });
-$('shareMaxDlInput').oninput = () => syncMaxDlUI($('shareMaxDlInput').value);
+$('shareMaxDlInput').oninput = () => syncMaxDlUI($('shareMaxDlInput').value, true);
+$('shareMaxDlInput').onblur = () => syncMaxDlUI($('shareMaxDlInput').value, false);
 $('shareBurnCheck').onchange = () => syncMaxDlUI($('shareBurnCheck').checked ? 1 : 0);
 $('shareCopyCodeBtn').onclick = () => { if (shareResData && shareResData.pickupCode) copyText(shareResData.pickupCode, '取件码已复制：' + shareResData.pickupCode); };
 $('shareCopyUrlBtn').onclick = () => { if (shareResData && shareResData.token) copyText(location.origin + '/s/' + shareResData.token, '分享链接已复制'); };
@@ -4320,17 +4408,30 @@ async function openDropsModal(folderId) {
  if (folderId !== undefined) openDropForm(folderId);
 }
 function closeDropsModal() { $('dropsModal').classList.remove('open'); }
+function syncDfMaxFilesUI(val, preserveRaw) {
+ const clean = String(val ?? '').replace(/[^\d]/g, '');
+ const n = clean ? Math.min(100000, Math.max(0, parseInt(clean, 10) || 0)) : 0;
+ if (preserveRaw) {
+  if ($('dfMaxFiles') && $('dfMaxFiles').value !== clean) $('dfMaxFiles').value = clean;
+ } else if ($('dfMaxFiles')) {
+  $('dfMaxFiles').value = n > 0 ? String(n) : '';
+ }
+ document.querySelectorAll('#dfMaxFilesPresets button[data-dfmax]').forEach(b => {
+  b.classList.toggle('active', Number(b.dataset.dfmax) === n);
+ });
+}
 function openDropForm(folderId) {
  $('dfMsg').textContent = '';
  $('dfMsg').className = 'msg';
  $('dfTitle').value = '';
  $('dfPassword').value = '';
- $('dfMaxFiles').value = '0';
+ syncDfMaxFilesUI(0, false);
  $('dfMaxSize').value = '104857600';
  $('dfExpires').value = '168';
  $('dfVis').value = 'private';
  const fid = folderId !== undefined ? (folderId || '') : (preselectDropFolderId || '');
  if ($('dfFolder')) $('dfFolder').value = fid;
+ syncAllCustomSelects($('dropFormBox'));
  $('dropFormBox').classList.add('open');
  $('dropFormBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -4433,7 +4534,7 @@ if ($('dfCreateBtn')) $('dfCreateBtn').onclick = async () => {
    title: $('dfTitle').value.trim() || '文件收集',
    folderId: $('dfFolder').value || null,
    password: $('dfPassword').value.trim(),
-   maxFiles: Math.max(0, parseInt($('dfMaxFiles').value, 10) || 0),
+   maxFiles: Math.min(100000, Math.max(0, parseInt(String($('dfMaxFiles').value || '').replace(/[^\d]/g, ''), 10) || 0)),
    maxFileSize: Number($('dfMaxSize').value) || 104857600,
    expiresHours: Number($('dfExpires').value) || 0,
    visibility: $('dfVis').value === 'public' ? 'public' : 'private',
@@ -5835,6 +5936,227 @@ if ($('migrateModal')) $('migrateModal').onclick = (e) => { if (e.target.id === 
 if ($('migGoBtn')) $('migGoBtn').onclick = runMigrateTasks;
 if ($('migStopBtn')) $('migStopBtn').onclick = () => { migState.stopRequested = true; $('migStopBtn').disabled = true; };
 if ($('webdavCopyUrlBtn')) $('webdavCopyUrlBtn').onclick = () => copyText(location.origin + '/dav', 'WebDAV 地址已复制');
+
+
+// ===== r17: 全站统一毛玻璃下拉框 + 收集箱份数快捷选择 + 移动弹窗内联新建文件夹 =====
+let activeCustomSelect = null;
+
+function closeCustomSelectPop() {
+ const pop = $('uiSelectPop');
+ if (pop) {
+  pop.classList.remove('open', 'flip-up');
+  pop.setAttribute('aria-hidden', 'true');
+  pop.innerHTML = '';
+ }
+ if (activeCustomSelect && activeCustomSelect._rbBtn) {
+  activeCustomSelect._rbBtn.classList.remove('dd-open');
+ }
+ activeCustomSelect = null;
+}
+
+function syncCustomSelect(sel) {
+ if (!sel || !sel._rbBtn) return;
+ const txtEl = sel._rbBtn.querySelector('.rb-sel-txt');
+ if (!txtEl) return;
+ const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : (sel.options && sel.options[0]);
+ txtEl.textContent = opt ? opt.textContent : '请选择';
+ sel._rbBtn.disabled = !!sel.disabled;
+}
+
+function syncAllCustomSelects(root) {
+ const scope = root || document;
+ scope.querySelectorAll('select').forEach(sel => {
+  if (!sel._rbEnhanced) enhanceSelect(sel);
+  syncCustomSelect(sel);
+ });
+}
+
+function openCustomSelectPop(sel) {
+ const pop = $('uiSelectPop');
+ if (!pop || !sel || !sel._rbBtn || sel.disabled) return;
+ if (activeCustomSelect === sel && pop.classList.contains('open')) {
+  closeCustomSelectPop();
+  return;
+ }
+ closeCustomSelectPop();
+ const opts = [...(sel.options || [])];
+ if (!opts.length) return;
+ activeCustomSelect = sel;
+ sel._rbBtn.classList.add('dd-open');
+ pop.innerHTML = opts.map((o, idx) => {
+  const isSel = idx === sel.selectedIndex;
+  return `<button type="button" class="rb-sel-opt${isSel ? ' active' : ''}" role="option" aria-selected="${isSel ? 'true' : 'false'}" data-opt-idx="${idx}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(o.textContent)}</span><span class="tick">${isSel ? '✓' : ''}</span></button>`;
+ }).join('');
+ pop.querySelectorAll('.rb-sel-opt').forEach(b => {
+  b.onclick = (ev) => {
+   ev.stopPropagation();
+   const idx = Number(b.dataset.optIdx);
+   if (Number.isInteger(idx) && idx >= 0 && idx < sel.options.length) {
+    const changed = sel.selectedIndex !== idx;
+    sel.selectedIndex = idx;
+    syncCustomSelect(sel);
+    closeCustomSelectPop();
+    if (changed) sel.dispatchEvent(new Event('change', { bubbles: true }));
+   } else {
+    closeCustomSelectPop();
+   }
+  };
+ });
+
+ const rect = sel._rbBtn.getBoundingClientRect();
+ const vw = window.innerWidth || 360;
+ const vh = window.innerHeight || 640;
+ const width = Math.min(vw - 24, Math.max(rect.width, 132));
+ let left = rect.left;
+ if (left + width > vw - 12) left = Math.max(12, vw - width - 12);
+ pop.style.width = width + 'px';
+ pop.style.left = left + 'px';
+ pop.style.top = '0px';
+ pop.style.bottom = 'auto';
+ pop.classList.add('open');
+ pop.setAttribute('aria-hidden', 'false');
+
+ const spaceBelow = vh - rect.bottom - 12;
+ const spaceAbove = rect.top - 12;
+ const naturalH = Math.min(260, pop.scrollHeight || 200);
+ const openUp = spaceBelow < Math.min(naturalH, 160) && spaceAbove > spaceBelow;
+ const maxH = Math.max(110, Math.min(260, openUp ? spaceAbove : spaceBelow));
+ pop.style.maxHeight = maxH + 'px';
+ if (openUp) {
+  pop.classList.add('flip-up');
+  pop.style.top = 'auto';
+  pop.style.bottom = Math.max(12, vh - rect.top + 6) + 'px';
+ } else {
+  pop.classList.remove('flip-up');
+  pop.style.bottom = 'auto';
+  pop.style.top = Math.max(12, rect.bottom + 6) + 'px';
+ }
+ const activeEl = pop.querySelector('.rb-sel-opt.active');
+ if (activeEl && typeof activeEl.scrollIntoView === 'function') {
+  try { activeEl.scrollIntoView({ block: 'nearest' }); } catch {}
+ }
+}
+
+function enhanceSelect(sel) {
+ if (!sel || sel._rbEnhanced) return;
+ sel._rbEnhanced = true;
+ const wrap = document.createElement('div');
+ wrap.className = 'rb-sel-wrap' + (sel.classList.contains('tg-hour-sel') ? ' compact' : '');
+ const btn = document.createElement('button');
+ btn.type = 'button';
+ btn.className = 'rb-sel-btn';
+ btn.innerHTML = `<span class="rb-sel-txt"></span>${chevHtml()}`;
+ btn.onclick = (e) => {
+  e.stopPropagation();
+  openCustomSelectPop(sel);
+ };
+ sel.parentNode.insertBefore(wrap, sel);
+ wrap.appendChild(sel);
+ wrap.appendChild(btn);
+ sel.classList.add('rb-sel-native');
+ sel.tabIndex = -1;
+ sel._rbBtn = btn;
+
+ try {
+  const protoDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  if (protoDesc && protoDesc.get && protoDesc.set) {
+   Object.defineProperty(sel, 'value', {
+    configurable: true,
+    get() { return protoDesc.get.call(this); },
+    set(v) { protoDesc.set.call(this, v); syncCustomSelect(this); },
+   });
+  }
+ } catch {}
+ sel.addEventListener('change', () => syncCustomSelect(sel));
+ if (typeof MutationObserver !== 'undefined') {
+  const mo = new MutationObserver(() => syncCustomSelect(sel));
+  mo.observe(sel, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'selected'] });
+ }
+ syncCustomSelect(sel);
+}
+
+syncAllCustomSelects(document);
+document.addEventListener('click', (e) => {
+ if (activeCustomSelect && !e.target.closest('#uiSelectPop') && !e.target.closest('.rb-sel-wrap')) {
+  closeCustomSelectPop();
+ }
+});
+window.addEventListener('resize', closeCustomSelectPop, { passive: true });
+document.addEventListener('scroll', (e) => {
+ if (activeCustomSelect && e.target !== $('uiSelectPop')) closeCustomSelectPop();
+}, true);
+
+// 收集箱最大收集份数：预设快捷按钮 + 自由数字输入
+document.querySelectorAll('#dfMaxFilesPresets button[data-dfmax]').forEach(b => {
+ b.onclick = () => syncDfMaxFilesUI(b.dataset.dfmax, false);
+});
+if ($('dfMaxFiles')) {
+ $('dfMaxFiles').addEventListener('input', () => syncDfMaxFilesUI($('dfMaxFiles').value, true));
+ $('dfMaxFiles').addEventListener('blur', () => syncDfMaxFilesUI($('dfMaxFiles').value, false));
+}
+
+// 移动文件弹窗：内联新建文件夹（支持仅创建 / 创建并立即移入）
+async function submitMoveNewFolder(autoMove) {
+ const nameInp = $('moveNewFolderName');
+ const msg = $('moveNewFolderMsg');
+ const onlyBtn = $('moveNewFolderOnlyBtn');
+ const goBtn = $('moveNewFolderGoBtn');
+ const name = nameInp ? nameInp.value.trim() : '';
+ if (!name) {
+  if (msg) { msg.textContent = '请先输入新文件夹名称'; msg.className = 'msg err'; }
+  if (nameInp) nameInp.focus();
+  return;
+ }
+ const parentId = ($('moveNewFolderParent') && $('moveNewFolderParent').value) ? $('moveNewFolderParent').value : null;
+ if (onlyBtn) onlyBtn.disabled = true;
+ if (goBtn) goBtn.disabled = true;
+ if (msg) { msg.textContent = '正在创建文件夹…'; msg.className = 'msg'; }
+ try {
+  const r = await fetch('/api/folders', {
+   method: 'POST',
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({ name, parentId }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok || !d.folder) {
+   if (msg) { msg.textContent = d.error || ('创建失败（HTTP ' + r.status + '）'); msg.className = 'msg err'; }
+   return;
+  }
+  const created = d.folder;
+  const parentOpt = moveModalOpts.find(o => (o.id || null) === parentId);
+  const fullLabel = (parentOpt && parentOpt.id) ? `${parentOpt.label} / ${created.name}` : created.name;
+  closeMoveNewFolderBox();
+  if (autoMove) {
+   await moveFilesTo(created.id, fullLabel);
+   return;
+  }
+  showToast(`已新建文件夹「${created.name}」`, 'ok');
+  await loadMoveFolderOptions(parentId || '');
+  loadList();
+ } catch {
+  if (msg) { msg.textContent = '创建失败：网络错误'; msg.className = 'msg err'; }
+ } finally {
+  if (onlyBtn) onlyBtn.disabled = false;
+  if (goBtn) goBtn.disabled = false;
+ }
+}
+if ($('moveNewFolderBtn')) $('moveNewFolderBtn').onclick = () => {
+ const box = $('moveNewFolderBox');
+ if (!box) return;
+ const open = !box.classList.contains('open');
+ box.classList.toggle('open', open);
+ if (open) {
+  if ($('moveNewFolderMsg')) { $('moveNewFolderMsg').textContent = ''; $('moveNewFolderMsg').className = 'msg'; }
+  syncAllCustomSelects(box);
+  setTimeout(() => { try { $('moveNewFolderName').focus(); } catch {} }, 40);
+ }
+};
+if ($('moveNewFolderCancel')) $('moveNewFolderCancel').onclick = closeMoveNewFolderBox;
+if ($('moveNewFolderOnlyBtn')) $('moveNewFolderOnlyBtn').onclick = () => submitMoveNewFolder(false);
+if ($('moveNewFolderGoBtn')) $('moveNewFolderGoBtn').onclick = () => submitMoveNewFolder(true);
+if ($('moveNewFolderName')) $('moveNewFolderName').addEventListener('keydown', (e) => {
+ if (e.key === 'Enter') submitMoveNewFolder(true);
+});
 
 loadDropView().then(async (isDrop) => {
  if (isDrop) return;
