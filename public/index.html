@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.6.0 UI r29 (2026-11-25 · 站内确认弹窗全替换/图床上传自动复制/Ctrl+K命令面板/PWA主屏清单/文件置顶与备注/分享页相册模式/安全审计日志) -->
+<!-- RelayBox v3.7.0 UI r30 (2026-11-25 · GitHub Release手动解析拉取与定时自动追更订阅/可选自动替换旧版/加密只读Token) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -993,6 +993,22 @@
 .audit-act.warn { background: rgba(217,119,6,.15); color: #D97706; }
 .audit-act.err { background: rgba(220,38,38,.15); color: #DC2626; }
 .audit-meta { font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 12px; }
+
+/* ===== v3.7.0 UI r30: GitHub Release 手动拉取与自动追更 ===== */
+.gh-modal-card { max-width: 660px; width: 100%; }
+.gh-asset-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.gh-asset-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
+.gh-asset-row:hover { background: var(--surface-2, rgba(127,127,127,.07)); }
+.gh-asset-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; }
+.gh-asset-meta { font-size: 11.5px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.gh-watch-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
+.gh-watch-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.gh-watch-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.gh-watch-repo { font-weight: 600; color: var(--text); font-size: 13.5px; }
+.gh-watch-toggles { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.gh-watch-toggles label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; color: var(--text); }
+.gh-watch-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.gh-token-bar { margin-top: 10px; padding: 9px 11px; border: 1px dashed var(--border); border-radius: 10px; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -1017,6 +1033,7 @@
  <button class="icon-btn desk-only-btn" id="copyFmtBtn" style="width:30px;height:30px;border-radius:999px" title="默认复制格式" aria-label="默认复制格式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
  <button class="icon-btn desk-only-btn" id="cmdBtn" style="width:30px;height:30px;border-radius:999px" title="快捷命令面板 (Ctrl+K)" aria-label="快捷命令面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="githubBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="GitHub 软件拉取与自动追更" aria-label="GitHub 软件拉取与自动追更"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></button>
  <button class="icon-btn desk-only-btn" id="auditBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="安全审计日志" aria-label="安全审计日志"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="statsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="存储与访问统计看板" aria-label="存储与访问统计看板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
  <button class="icon-btn desk-only-btn" id="sharesMgrBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="分享管理中心" aria-label="分享管理中心"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
@@ -1073,6 +1090,7 @@
  <div class="upload-extra-row" id="uploadExtraRow">
  <button class="ghost" id="pasteTextBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> 文字 / 代码快传</button>
  <button class="ghost" id="folderBtn" type="button" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 上传文件夹</button>
+ <button class="ghost" id="githubPullBtn" type="button" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg> GitHub 拉取</button>
  <button class="ghost" id="remoteFetchBtn" type="button" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> URL 远程拉取</button>
  </div>
  <input type="file" id="fileInput" style="display:none" multiple>
@@ -1224,6 +1242,7 @@
 <div class="modal" id="notifyModal"><div class="card pool-modal-card"><span class="close" id="notifyClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
 <div class="modal" id="uiConfirmModal" style="z-index:1200"><div class="card" style="max-width:390px;width:100%"><span class="close" id="uiConfirmClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:8px" id="uiConfirmTitle">确认操作</div><div style="font-size:13.5px;color:var(--muted);line-height:1.6;word-break:break-word;margin-bottom:14px" id="uiConfirmMsg"></div><div class="row" style="justify-content:flex-end;margin-top:0"><button type="button" class="ghost" id="uiConfirmCancel">取消</button><button type="button" id="uiConfirmOk">确定</button></div></div></div>
 <div class="modal" id="cmdPaletteModal" style="z-index:1150"><div class="card cmd-modal-card"><span class="close" id="cmdClose">×</span><div style="font-size:13.5px;font-weight:600;margin-bottom:8px">快捷命令面板 <span class="meta" style="margin:0;font-weight:400">· ↑↓ 选择 · Enter 执行 · Esc 关闭</span></div><input type="text" class="cmd-input" id="cmdInput" placeholder="输入关键词搜索命令、目录或当前文件…" autocomplete="off" spellcheck="false"><div class="cmd-list" id="cmdList"></div></div></div>
+<div class="modal" id="githubModal"><div class="card gh-modal-card"><span class="close" id="ghClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">GitHub Release 拉取与自动追更</div><span class="pool-tag" id="ghTokenTag">匿名模式 (60次/h)</span></div><div class="meta" style="margin-bottom:10px">支持手动解析最新版安装包一键转存，或添加自动追更订阅（Cron 定时检测，单文件上限 150 MB）。</div><div class="sm-tabs" id="ghTabs" style="margin-bottom:10px"><button type="button" class="sm-tab active" data-ghtab="manual">手动解析拉取</button><button type="button" class="sm-tab" data-ghtab="watches">自动追更订阅 <span id="ghWatchCnt">0</span></button></div><div id="ghTabManual"><div class="row" style="margin-top:0"><input type="text" id="ghRepoInput" placeholder="输入 owner/repo 或 GitHub 仓库链接，如 HueGild/relaybox" autocomplete="off" spellcheck="false" style="flex:1"><button type="button" id="ghInspectBtn">解析最新版</button></div><div class="msg" id="ghManualMsg" style="margin-top:6px"></div><div id="ghReleaseBox" style="display:none;margin-top:8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div style="font-weight:600;font-size:13.5px" id="ghRelTitle"></div><a id="ghRelLink" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent)">查看 GitHub Release ↗</a></div><div class="meta" id="ghRelMeta" style="margin-top:2px"></div><div class="gh-asset-list" id="ghAssetList"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>存入目录</label><select id="ghManualFolder"><option value="">根目录</option></select></div><div class="form-field"><label>目标存储池</label><select id="ghManualPool"></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="ghManualVis"><option value="public" selected>公开（推荐：方便直链加速下载）</option><option value="private">私密（仅管理员/分享可见）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;gap:6px"><button type="button" class="ghost" id="ghToWatchBtn" style="flex:1">转为自动订阅</button><button type="button" id="ghPullGoBtn" style="flex:1">拉取所选</button></div></div></div></div><div id="ghTabWatches" style="display:none"><div class="gh-watch-list" id="ghWatchList"><div class="empty" style="padding:16px 0">加载中…</div></div><div style="border-top:1px solid var(--border);padding-top:10px"><div style="font-size:13px;font-weight:600;margin-bottom:6px">新增自动追更订阅</div><div class="form-grid2"><div class="form-field"><label>GitHub 仓库 *</label><input type="text" id="ghWRepo" placeholder="如 owner/repo" autocomplete="off" spellcheck="false"></div><div class="form-field"><label>文件名匹配规则（逗号分隔）</label><input type="text" id="ghWPattern" value="*" placeholder="如 *.apk, *win64*.exe（默认 *）" autocomplete="off" spellcheck="false"></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>存入目录</label><select id="ghWFolder"><option value="">根目录</option></select></div><div class="form-field"><label>目标存储池</label><select id="ghWPool"></select></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>文件可见性</label><select id="ghWVis"><option value="public" selected>公开</option><option value="private">私密</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="ghWReplaceOld" style="width:auto"> 新版拉取后自动将旧版移入回收站</label></div></div><div class="msg" id="ghWatchMsg" style="margin-top:4px"></div><div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" id="ghWAddBtn">保存订阅</button></div></div></div><div class="gh-token-bar"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="color:var(--muted)">可选：配置只读 GitHub Token（加密存库，额度 5,000 次/h 并支持私有仓库）</span><div style="display:flex;gap:6px;align-items:center"><input type="password" id="ghTokenInput" placeholder="ghp_... 或 github_pat_..." autocomplete="new-password" style="width:180px;padding:5px 8px;font-size:12px"><button type="button" class="ghost" id="ghTokenSaveBtn" style="padding:5px 10px;font-size:12px">保存</button><button type="button" class="ghost" id="ghTokenClearBtn" style="padding:5px 10px;font-size:12px;display:none">清除</button></div></div></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="ghDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="auditModal"><div class="card audit-modal-card"><span class="close" id="auditClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">安全审计日志</div><button type="button" class="ghost" id="auditRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" style="margin-bottom:8px">自动记录管理员登录、密钥变更、存储池与回收站清理等关键操作（滚动保留 30 天）。</div><div class="sm-tabs" id="auditTabs"><button type="button" class="sm-tab active" data-audit-act="">全部</button><button type="button" class="sm-tab" data-audit-act="login">登录</button><button type="button" class="sm-tab" data-audit-act="token">密钥</button><button type="button" class="sm-tab" data-audit-act="pool">存储池</button><button type="button" class="sm-tab" data-audit-act="trash">回收站</button></div><div class="audit-list" id="auditListBox"><div class="empty" style="padding:20px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="auditDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="statsModal"><div class="card stats-modal-card"><span class="close" id="statsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储与访问统计看板</div><button type="button" class="ghost" id="statsRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" id="statsGenTime" style="margin-bottom:12px">实时聚合统计（D1 原生 SQL）</div><div id="statsBody"><div class="empty" style="padding:24px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="statsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="dupCheckModal"><div class="card" style="max-width:440px;width:100%"><span class="close" id="dupCheckClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:4px">检测到重复文件</div><div class="meta" id="dupCheckSummary" style="margin-bottom:6px"></div><div class="dup-list" id="dupCheckList"></div><div class="row" style="justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:6px"><button type="button" class="ghost" id="dupHashBtn" style="font-size:12px;padding:6px 10px">SHA-256 校验</button><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="dupCancelBtn">取消</button><button type="button" class="ghost" id="dupUploadAllBtn">全部继续上传</button><button type="button" id="dupSkipBtn">跳过重复</button></div></div></div></div>
@@ -1237,6 +1256,7 @@
   <div class="top-more-menu nav-drawer" id="topMoreMenu" role="dialog" aria-label="控制台与设置">
    <div class="drawer-head"><span class="drawer-title">控制台与设置</span><div class="drawer-head-acts"><button type="button" class="drawer-side-btn" id="drawerSideBtn" title="切换左侧/右侧滑出">靠右</button><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div></div>
    <div class="drawer-sec" id="drawerSecAdmin" style="display:none">常用管理</div>
+   <button type="button" id="mobGithubBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg> GitHub 软件拉取</button>
    <button type="button" id="mobAuditBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 安全审计日志</button>
    <button type="button" id="mobStatsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 统计看板</button>
    <button type="button" id="mobSharesMgrBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>分享管理中心</button>
@@ -2776,6 +2796,7 @@ function applyDirData(d) {
  updateR2Hint();
  $('newFolderBtn').style.display = authed ? '' : 'none';
  $('folderBtn').style.display = authed ? '' : 'none';
+ if ($('githubPullBtn')) $('githubPullBtn').style.display = authed ? '' : 'none';
  if ($('remoteFetchBtn')) $('remoteFetchBtn').style.display = authed ? '' : 'none';
  $('selectAllBtn').style.display = authed ? '' : 'none';
  $('announceBtn').style.display = authed ? '' : 'none';
@@ -2787,6 +2808,8 @@ function applyDirData(d) {
  updateTrashBadge(authed ? Number(d.trashCount || 0) : 0);
  if ($('notifyBtn')) $('notifyBtn').style.display = authed ? '' : 'none';
  if ($('mobNotifyBtn')) $('mobNotifyBtn').style.display = authed ? 'flex' : 'none';
+ if ($('githubBtn')) $('githubBtn').style.display = authed ? '' : 'none';
+ if ($('mobGithubBtn')) $('mobGithubBtn').style.display = authed ? 'flex' : 'none';
  if ($('auditBtn')) $('auditBtn').style.display = authed ? '' : 'none';
  if ($('mobAuditBtn')) $('mobAuditBtn').style.display = authed ? 'flex' : 'none';
  if ($('statsBtn')) $('statsBtn').style.display = authed ? '' : 'none';
@@ -3330,6 +3353,7 @@ document.addEventListener('keydown', (e) => {
  if ($('statsModal') && $('statsModal').classList.contains('open')) { closeStatsModal(); return; }
  if ($('uiConfirmModal') && $('uiConfirmModal').classList.contains('open')) { resolveUiConfirm(false); return; }
  if ($('cmdPaletteModal') && $('cmdPaletteModal').classList.contains('open')) { closeCmdPalette(); return; }
+ if ($('githubModal') && $('githubModal').classList.contains('open')) { closeGithubModal(); return; }
  if ($('auditModal') && $('auditModal').classList.contains('open')) { closeAuditModal(); return; }
  if ($('dupCheckModal') && $('dupCheckModal').classList.contains('open')) { closeDupModal(); return; }
  if ($('poolsModal') && $('poolsModal').classList.contains('open')) { closePoolsModal(); return; }
@@ -8219,6 +8243,7 @@ function buildCmdCandidates(q) {
  if (authed) {
   push('打开统计看板', '管理', () => openStatsModal());
   push('打开分享管理中心', '管理', () => openSharesMgrModal());
+  push('打开 GitHub 软件拉取与自动追更', '工具', () => openGithubModal());
   push('打开安全审计日志', '安全', () => openAuditModal());
   push('打开回收站', '管理', () => openTrashModal());
   push('打开文件收集箱', '管理', () => openDropsModal());
@@ -8363,6 +8388,274 @@ if ($('auditTabs')) {
   };
  });
 }
+
+// ===== v3.7.0 UI r30: GitHub Release 手动解析拉取 + 定时自动追更 =====
+let ghLastRelease = null;
+let ghWatchesCache = null;
+let ghHasToken = false;
+
+function fillGhSelects() {
+ const folders = (typeof folderTreeCache !== 'undefined' && Array.isArray(folderTreeCache)) ? folderTreeCache : currentFolders;
+ const fOpts = '<option value="">根目录</option>' + (folders || []).map(fd => `<option value="${escapeHtml(fd.id)}">${escapeHtml(fd.name)}</option>`).join('');
+ ['ghManualFolder', 'ghWFolder'].forEach(id => {
+  const el = $(id);
+  if (el) { const prev = el.value; el.innerHTML = fOpts; if (prev) el.value = prev; else if (currentFolderId) el.value = currentFolderId; }
+ });
+ const pools = (allPools || []).filter(p => p.enabled !== false);
+ const pOpts = pools.length
+  ? pools.map(p => `<option value="${escapeHtml(p.id)}"${p.id === defaultPoolId ? ' selected' : ''}>${escapeHtml(p.name)}</option>`).join('')
+  : '<option value="">默认存储池</option>';
+ ['ghManualPool', 'ghWPool'].forEach(id => {
+  const el = $(id);
+  if (el) { const prev = el.value; el.innerHTML = pOpts; if (prev) el.value = prev; }
+ });
+}
+function updateGhTokenBadge() {
+ const tag = $('ghTokenTag');
+ if (tag) tag.textContent = ghHasToken ? '已配置 Token (5000次/h)' : '匿名模式 (60次/h)';
+ if ($('ghTokenClearBtn')) $('ghTokenClearBtn').style.display = ghHasToken ? '' : 'none';
+}
+function switchGhTab(tab) {
+ const isManual = tab !== 'watches';
+ if ($('ghTabManual')) $('ghTabManual').style.display = isManual ? '' : 'none';
+ if ($('ghTabWatches')) $('ghTabWatches').style.display = isManual ? 'none' : '';
+ document.querySelectorAll('#ghTabs button[data-ghtab]').forEach(b => b.classList.toggle('active', b.dataset.ghtab === (isManual ? 'manual' : 'watches')));
+}
+async function openGithubModal(tab = 'manual') {
+ if (!authed) return;
+ fillGhSelects();
+ switchGhTab(tab);
+ $('githubModal').classList.add('open');
+ loadGithubWatches(!!ghWatchesCache);
+}
+function closeGithubModal() { $('githubModal').classList.remove('open'); }
+function renderGithubWatches() {
+ const box = $('ghWatchList');
+ if (!box) return;
+ const list = Array.isArray(ghWatchesCache) ? ghWatchesCache : [];
+ if ($('ghWatchCnt')) $('ghWatchCnt').textContent = String(list.length);
+ if (!list.length) { box.innerHTML = '<div class="empty" style="padding:16px 0">还没有自动追更订阅，在下方添加一条吧</div>'; return; }
+ const folders = (typeof folderTreeCache !== 'undefined' && Array.isArray(folderTreeCache)) ? folderTreeCache : currentFolders;
+ const fMap = new Map((folders || []).map(x => [x.id, x.name]));
+ box.innerHTML = list.map(w => {
+  const folderName = w.folderId ? (fMap.get(w.folderId) || w.folderId) : '根目录';
+  const lastInfo = w.lastTag ? `已拉取 ${escapeHtml(w.lastTag)}` : '尚未拉取';
+  const chkInfo = w.lastCheckedAt ? ` · 上次检查 ${fmtDate(w.lastCheckedAt)}` : '';
+  return `<div class="gh-watch-item">
+   <div class="gh-watch-top">
+    <span class="gh-watch-repo">${escapeHtml(w.repo)}</span>
+    <span class="sm-badge${w.lastError ? ' err' : (w.lastTag ? ' ok' : '')}">${lastInfo}</span>
+   </div>
+   <div class="meta" style="margin:0">规则：<code>${escapeHtml(w.assetPattern || '*')}</code> · 目录：${escapeHtml(folderName)} · ${w.visibility === 'private' ? '私密' : '公开'}${chkInfo}</div>
+   ${w.lastError ? `<div style="font-size:11.5px;color:#DC2626">${escapeHtml(w.lastError)}</div>` : ''}
+   <div class="gh-watch-top">
+    <div class="gh-watch-toggles">
+     <label><input type="checkbox" ${w.enabled ? 'checked' : ''} onchange="patchGithubWatch('${w.id}', { enabled: this.checked })"> 启用定时追更</label>
+     <label><input type="checkbox" ${w.replaceOld ? 'checked' : ''} onchange="patchGithubWatch('${w.id}', { replaceOld: this.checked })"> 新版替换旧版</label>
+    </div>
+    <div class="gh-watch-acts">
+     <button type="button" class="ghost" style="padding:4px 9px;font-size:12px" onclick="checkGithubWatchNow('${w.id}', this)">立即检查</button>
+     <button type="button" class="ghost danger" style="padding:4px 9px;font-size:12px" onclick="deleteGithubWatchItem('${w.id}', '${escapeHtml(w.repo)}')">删除</button>
+    </div>
+   </div>
+  </div>`;
+ }).join('');
+}
+async function loadGithubWatches(silent) {
+ const box = $('ghWatchList');
+ if (box && !silent && !ghWatchesCache) box.innerHTML = '<div class="empty" style="padding:16px 0">加载中…</div>';
+ try {
+  const r = await fetch('/api/github/watches');
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) return;
+  ghWatchesCache = Array.isArray(d.watches) ? d.watches : [];
+  ghHasToken = !!d.hasToken;
+  updateGhTokenBadge();
+  renderGithubWatches();
+ } catch {}
+}
+async function patchGithubWatch(id, patch) {
+ try {
+  const r = await fetch('/api/github/watches/' + encodeURIComponent(id), {
+   method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '更新失败', 'err'); loadGithubWatches(true); return; }
+  showToast('订阅设置已更新', 'ok');
+  loadGithubWatches(true);
+ } catch { showToast('网络错误', 'err'); }
+}
+async function checkGithubWatchNow(id, btn) {
+ if (btn) { btn.disabled = true; btn.textContent = '检查中…'; }
+ try {
+  const r = await fetch('/api/github/watches/' + encodeURIComponent(id) + '/check', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '检查失败', 'err'); }
+  else if (d.updated) {
+   showToast(`已拉取 ${d.tag}（${d.pulledCount} 个文件${d.replacedCount ? `，旧版 ${d.replacedCount} 个进回收站` : ''}）`, 'ok');
+   loadList();
+  } else {
+   showToast(d.message || `已是最新版本 ${d.tag || ''}`, '');
+  }
+  await loadGithubWatches(true);
+ } catch { showToast('网络错误', 'err'); }
+ finally { if (btn) { btn.disabled = false; btn.textContent = '立即检查'; } }
+}
+async function deleteGithubWatchItem(id, repo) {
+ if (!(await uiConfirm({ title: '删除 GitHub 订阅', message: `确定删除「${repo}」的自动追更订阅吗？（不会删除已拉取的文件）`, okText: '删除', danger: true }))) return;
+ try {
+  const r = await fetch('/api/github/watches/' + encodeURIComponent(id), { method: 'DELETE' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { showToast(d.error || '删除失败', 'err'); return; }
+  showToast('订阅已删除', 'ok');
+  loadGithubWatches(true);
+ } catch { showToast('网络错误', 'err'); }
+}
+if ($('ghInspectBtn')) $('ghInspectBtn').onclick = async () => {
+ const repo = ($('ghRepoInput') ? $('ghRepoInput').value : '').trim();
+ if (!repo) { $('ghManualMsg').textContent = '请先输入 GitHub 仓库地址'; $('ghManualMsg').className = 'msg err'; return; }
+ const btn = $('ghInspectBtn');
+ btn.disabled = true; btn.textContent = '解析中…';
+ $('ghManualMsg').textContent = '';
+ try {
+  const r = await fetch('/api/github/release?repo=' + encodeURIComponent(repo));
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+   $('ghManualMsg').textContent = d.error || '解析失败';
+   $('ghManualMsg').className = 'msg err';
+   $('ghReleaseBox').style.display = 'none';
+   return;
+  }
+  ghLastRelease = d;
+  $('ghRelTitle').textContent = `${d.repo} · ${d.tag}`;
+  $('ghRelLink').href = d.htmlUrl || ('https://github.com/' + d.repo + '/releases');
+  $('ghRelMeta').textContent = `${d.publishedAt ? '发布于 ' + fmtDate(d.publishedAt) + ' · ' : ''}共 ${d.assets.length} 个安装包资产`;
+  const box = $('ghAssetList');
+  if (!d.assets.length) {
+   box.innerHTML = '<div class="empty" style="padding:12px 0">该 Release 没有附带可下载的资产文件</div>';
+  } else {
+   box.innerHTML = d.assets.map((a, idx) => `<label class="gh-asset-row"><input type="checkbox" class="gh-asset-chk" data-idx="${idx}" ${d.assets.length === 1 ? 'checked' : ''}><span class="gh-asset-name" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</span><span class="gh-asset-meta">${fmtSize(a.size)}${a.downloadCount ? ' · ' + a.downloadCount + '次' : ''}</span></label>`).join('');
+  }
+  $('ghReleaseBox').style.display = '';
+ } catch {
+  $('ghManualMsg').textContent = '网络错误，请稍后重试';
+  $('ghManualMsg').className = 'msg err';
+ } finally {
+  btn.disabled = false; btn.textContent = '解析最新版';
+ }
+};
+if ($('ghRepoInput')) $('ghRepoInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('ghInspectBtn').click(); });
+if ($('ghPullGoBtn')) $('ghPullGoBtn').onclick = async () => {
+ if (!ghLastRelease) return;
+ const picked = [];
+ document.querySelectorAll('.gh-asset-chk:checked').forEach(cb => {
+  const a = ghLastRelease.assets[Number(cb.dataset.idx)];
+  if (a) picked.push(a);
+ });
+ if (!picked.length) { showToast('请先勾选至少一个安装包', 'err'); return; }
+ if (picked.length > 5) { showToast('单次最多拉取 5 个文件', 'err'); return; }
+ const btn = $('ghPullGoBtn');
+ btn.disabled = true; btn.textContent = '拉取中…';
+ $('ghManualMsg').textContent = '正在从 GitHub 边缘流式转存，请稍候…';
+ $('ghManualMsg').className = 'msg';
+ try {
+  const r = await fetch('/api/github/pull', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({
+    repo: ghLastRelease.repo,
+    tag: ghLastRelease.tag,
+    assets: picked,
+    folderId: $('ghManualFolder') ? $('ghManualFolder').value : '',
+    poolId: $('ghManualPool') ? $('ghManualPool').value : '',
+    visibility: $('ghManualVis') ? $('ghManualVis').value : 'public',
+   }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+   $('ghManualMsg').textContent = d.error || '拉取失败';
+   $('ghManualMsg').className = 'msg err';
+   return;
+  }
+  $('ghManualMsg').textContent = `已成功拉取 ${d.count} 个文件到网盘` + (d.errors && d.errors.length ? `（部分失败：${d.errors.join('；')}）` : '');
+  $('ghManualMsg').className = 'msg ok';
+  showToast(`已拉取 ${d.count} 个 GitHub 文件`, 'ok');
+  loadList();
+ } catch {
+  $('ghManualMsg').textContent = '拉取失败：网络超时或错误';
+  $('ghManualMsg').className = 'msg err';
+ } finally {
+  btn.disabled = false; btn.textContent = '拉取所选';
+ }
+};
+if ($('ghToWatchBtn')) $('ghToWatchBtn').onclick = () => {
+ if (ghLastRelease && $('ghWRepo')) $('ghWRepo').value = ghLastRelease.repo;
+ switchGhTab('watches');
+ if ($('ghWPattern')) $('ghWPattern').focus();
+};
+if ($('ghWAddBtn')) $('ghWAddBtn').onclick = async () => {
+ const repo = ($('ghWRepo') ? $('ghWRepo').value : '').trim();
+ if (!repo) { $('ghWatchMsg').textContent = '请填写 GitHub 仓库（owner/repo）'; $('ghWatchMsg').className = 'msg err'; return; }
+ const btn = $('ghWAddBtn');
+ btn.disabled = true; btn.textContent = '保存中…';
+ $('ghWatchMsg').textContent = '';
+ try {
+  const r = await fetch('/api/github/watches', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({
+    repo,
+    assetPattern: ($('ghWPattern') ? $('ghWPattern').value : '*').trim() || '*',
+    folderId: $('ghWFolder') ? $('ghWFolder').value : '',
+    poolId: $('ghWPool') ? $('ghWPool').value : '',
+    visibility: $('ghWVis') ? $('ghWVis').value : 'public',
+    replaceOld: !!($('ghWReplaceOld') && $('ghWReplaceOld').checked),
+   }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) {
+   $('ghWatchMsg').textContent = d.error || '保存失败';
+   $('ghWatchMsg').className = 'msg err';
+   return;
+  }
+  if ($('ghWRepo')) $('ghWRepo').value = '';
+  showToast('已添加自动追更订阅', 'ok');
+  await loadGithubWatches(true);
+ } catch {
+  $('ghWatchMsg').textContent = '网络错误';
+  $('ghWatchMsg').className = 'msg err';
+ } finally {
+  btn.disabled = false; btn.textContent = '保存订阅';
+ }
+};
+if ($('ghTokenSaveBtn')) $('ghTokenSaveBtn').onclick = async () => {
+ const tok = ($('ghTokenInput') ? $('ghTokenInput').value : '').trim();
+ if (!tok) { showToast('请输入 GitHub Token', 'err'); return; }
+ const r = await fetch('/api/github/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: tok }) });
+ const d = await r.json().catch(() => ({}));
+ if (!r.ok || !d.ok) { showToast(d.error || '保存失败', 'err'); return; }
+ if ($('ghTokenInput')) $('ghTokenInput').value = '';
+ ghHasToken = true;
+ updateGhTokenBadge();
+ showToast('GitHub Token 已加密保存', 'ok');
+};
+if ($('ghTokenClearBtn')) $('ghTokenClearBtn').onclick = async () => {
+ const r = await fetch('/api/github/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clear: true }) });
+ const d = await r.json().catch(() => ({}));
+ if (!r.ok || !d.ok) { showToast(d.error || '清除失败', 'err'); return; }
+ ghHasToken = false;
+ updateGhTokenBadge();
+ showToast('已清除 GitHub Token', '');
+};
+if ($('ghTabs')) {
+ $('ghTabs').querySelectorAll('button[data-ghtab]').forEach(b => { b.onclick = () => switchGhTab(b.dataset.ghtab); });
+}
+if ($('githubBtn')) $('githubBtn').onclick = () => openGithubModal('manual');
+if ($('githubPullBtn')) $('githubPullBtn').onclick = () => openGithubModal('manual');
+if ($('mobGithubBtn')) $('mobGithubBtn').onclick = () => { if (typeof closeNavDrawer === 'function') closeNavDrawer(); openGithubModal('manual'); };
+if ($('ghClose')) $('ghClose').onclick = closeGithubModal;
+if ($('ghDoneBtn')) $('ghDoneBtn').onclick = closeGithubModal;
+if ($('githubModal')) $('githubModal').onclick = (e) => { if (e.target.id === 'githubModal') closeGithubModal(); };
 </script>
 </body>
 </html>

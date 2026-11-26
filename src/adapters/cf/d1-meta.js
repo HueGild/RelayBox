@@ -563,13 +563,15 @@ export class D1MetaStore {
       height: parseDim(file.height),
       pool_id: (typeof file.poolId === 'string' && file.poolId) ? file.poolId : null,
       deleted_at: isoToMs(file.deletedAt),
+      pinned: file.pinned ? 1 : 0,
+      note: typeof file.note === 'string' ? file.note.slice(0, 200) : '',
     });
     await this.db.prepare(
-      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height, pool_id, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height, pool_id, deleted_at, pinned, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       item.id, item.name, item.size, item.ext, item.kind, item.storage, item.storageKey,
       item.folderId, item.visibility, isoToMs(item.expiresAt), item.downloads, isoToMs(item.uploadedAt),
-      item.uploadIp, item.uploadGeo, item.width, item.height, item.poolId, isoToMs(item.deletedAt),
+      item.uploadIp, item.uploadGeo, item.width, item.height, item.poolId, isoToMs(item.deletedAt), item.pinned ? 1 : 0, item.note || '',
     ).run();
     return item;
   }
@@ -1227,5 +1229,85 @@ export class D1MetaStore {
   async deleteOldAuditLogs(cutoffMs) {
     const out = await this.db.prepare('DELETE FROM audit_logs WHERE created_at < ?').bind(cutoffMs).run();
     return (out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
+  }
+
+  // ---- GitHub Release watches (v3.7.0) ----
+  _rowToGithubWatch(r) {
+    if (!r) return null;
+    let lastFileIds = [];
+    try {
+      const parsed = JSON.parse(r.last_file_ids || '[]');
+      if (Array.isArray(parsed)) lastFileIds = parsed.filter((x) => typeof x === 'string' && x);
+    } catch { lastFileIds = []; }
+    return {
+      id: r.id,
+      repo: r.repo,
+      assetPattern: r.asset_pattern || '*',
+      folderId: (typeof r.folder_id === 'string' && r.folder_id) ? r.folder_id : null,
+      poolId: (typeof r.pool_id === 'string' && r.pool_id) ? r.pool_id : null,
+      visibility: r.visibility === 'private' ? 'private' : 'public',
+      replaceOld: r.replace_old === 1,
+      enabled: r.enabled !== 0,
+      lastTag: r.last_tag || '',
+      lastFileIds,
+      lastCheckedAt: msToIso(r.last_checked_at),
+      lastError: r.last_error || '',
+      createdAt: msToIso(r.created_at),
+    };
+  }
+  async listGithubWatches() {
+    const { results } = await this.db.prepare('SELECT * FROM github_watches ORDER BY created_at DESC').all();
+    return (results || []).map((r) => this._rowToGithubWatch(r));
+  }
+  async getGithubWatch(id) {
+    const r = await this.db.prepare('SELECT * FROM github_watches WHERE id = ?').bind(id).first();
+    return this._rowToGithubWatch(r);
+  }
+  async createGithubWatch(w) {
+    const now = typeof w.createdAt === 'number' ? w.createdAt : Date.now();
+    await this.db.prepare(
+      'INSERT INTO github_watches (id, repo, asset_pattern, folder_id, pool_id, visibility, replace_old, enabled, last_tag, last_file_ids, last_checked_at, last_error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      w.id,
+      w.repo,
+      w.assetPattern || '*',
+      w.folderId || null,
+      w.poolId || null,
+      w.visibility === 'private' ? 'private' : 'public',
+      w.replaceOld ? 1 : 0,
+      w.enabled !== false ? 1 : 0,
+      w.lastTag || '',
+      JSON.stringify(Array.isArray(w.lastFileIds) ? w.lastFileIds : []),
+      null,
+      '',
+      now,
+    ).run();
+    return this.getGithubWatch(w.id);
+  }
+  async updateGithubWatch(id, patch) {
+    if (!patch || typeof patch !== 'object') return this.getGithubWatch(id);
+    const sets = [];
+    const binds = [];
+    const push = (col, val) => { sets.push(`${col} = ?`); binds.push(val); };
+    if (patch.repo !== undefined) push('repo', patch.repo);
+    if (patch.assetPattern !== undefined) push('asset_pattern', patch.assetPattern || '*');
+    if (patch.folderId !== undefined) push('folder_id', patch.folderId || null);
+    if (patch.poolId !== undefined) push('pool_id', patch.poolId || null);
+    if (patch.visibility !== undefined) push('visibility', patch.visibility === 'private' ? 'private' : 'public');
+    if (patch.replaceOld !== undefined) push('replace_old', patch.replaceOld ? 1 : 0);
+    if (patch.enabled !== undefined) push('enabled', patch.enabled ? 1 : 0);
+    if (patch.lastTag !== undefined) push('last_tag', String(patch.lastTag || ''));
+    if (patch.lastFileIds !== undefined) push('last_file_ids', JSON.stringify(Array.isArray(patch.lastFileIds) ? patch.lastFileIds : []));
+    if (patch.lastCheckedAt !== undefined) push('last_checked_at', typeof patch.lastCheckedAt === 'number' ? patch.lastCheckedAt : isoToMs(patch.lastCheckedAt));
+    if (patch.lastError !== undefined) push('last_error', String(patch.lastError || '').slice(0, 240));
+    if (!sets.length) return this.getGithubWatch(id);
+    binds.push(id);
+    const out = await this.db.prepare(`UPDATE github_watches SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run();
+    if (out && out.meta && out.meta.changes === 0) return null;
+    return this.getGithubWatch(id);
+  }
+  async deleteGithubWatch(id) {
+    const out = await this.db.prepare('DELETE FROM github_watches WHERE id = ?').bind(id).run();
+    return (out && out.meta && out.meta.changes > 0) || false;
   }
 }

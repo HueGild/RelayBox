@@ -4,6 +4,7 @@ import { isExpired, log, CHUNK_TTL_MS } from './util.js';
 import { resolveUploadTarget, buildPoolSummaries } from '../routes/pools.js';
 import { trashTtlMsOf, isTrashExpired, purgeFilePermanently } from '../routes/trash.js';
 import { maybeSendDailyReport } from './notify.js';
+import { runScheduledGithubWatches } from '../routes/github.js';
 
 export async function cleanupExpired(deps) {
   const ttlMs = trashTtlMsOf(deps);
@@ -41,6 +42,7 @@ export async function cleanupExpired(deps) {
     await deps.meta.deleteOldAuditLogs(now - 30 * 24 * 3600 * 1000);
   }
   await cleanupChunks(deps);
+  await runScheduledGithubWatches(deps);
   await maybeSendDailyReport(deps, async () => (
     buildPoolSummaries(deps, null, { authed: true, includeAdminMeta: false })
   ));
