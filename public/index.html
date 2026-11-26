@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.7.0 UI r30 (2026-11-25 · GitHub Release手动解析拉取与定时自动追更订阅/可选自动替换旧版/加密只读Token) -->
+<!-- RelayBox v3.7.1 UI r31 (2026-11-25 · 修复移动端GitHub/统计/审计弹窗超高溢出与嵌套滚动/折叠新增订阅与Token栏/优化自动复制栏单行对齐) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -931,7 +931,7 @@
 .load-more-bar { display: none; align-items: center; justify-content: center; gap: 10px; padding: 14px 12px 6px; font-size: 12.5px; color: var(--muted); }
 .load-more-bar.show { display: flex; }
 .load-more-bar button { padding: 6px 14px; font-size: 12.5px; border-radius: 999px; }
-.stats-modal-card { max-width: 620px; width: 100%; }
+.stats-modal-card { max-width: 620px; width: 100%; max-height: 86vh; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .stats-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
 @media (max-width: 560px) { .stats-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .stats-kpi { background: var(--surface-2, rgba(127,127,127,.07)); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
@@ -968,9 +968,10 @@
 /* ===== v3.6.0 UI r29: 站内确认弹窗、Ctrl+K 命令面板、置顶备注、相册网格、安全审计日志 ===== */
 .pin-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: #D97706; background: rgba(217, 119, 6, 0.14); padding: 1px 6px; border-radius: 999px; font-weight: 600; margin-right: 4px; vertical-align: middle; }
 .file-note-line { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
-.auto-copy-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2, rgba(127,127,127,.06)); border: 1px solid var(--border); font-size: 12.5px; color: var(--muted); }
-.auto-copy-bar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); margin: 0; }
-.cmd-modal-card { max-width: 520px; width: 100%; padding: 14px !important; }
+.auto-copy-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 7px 11px; border-radius: 10px; background: var(--surface-2, rgba(127,127,127,.06)); border: 1px solid var(--border); font-size: 12.5px; color: var(--muted); }
+.auto-copy-bar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); margin: 0; white-space: nowrap; flex-shrink: 0; }
+.auto-copy-bar > span { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmd-modal-card { max-width: 520px; width: 100%; max-height: 86vh; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain; padding: 14px !important; }
 .cmd-input { width: 100%; padding: 10px 12px; border: 1px solid var(--input-border); border-radius: 10px; font-size: 14px; background: var(--input-bg); color: var(--text); margin-bottom: 8px; }
 .cmd-list { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .cmd-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 9px; cursor: pointer; font-size: 13px; color: var(--text); border: 1px solid transparent; }
@@ -985,7 +986,7 @@
 .share-gal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .share-gal-foot { padding: 7px 9px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .share-gal-name { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.audit-modal-card { max-width: 660px; width: 100%; }
+.audit-modal-card { max-width: 660px; width: 100%; max-height: 86vh; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .audit-list { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .audit-row { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; }
 .audit-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -995,20 +996,27 @@
 .audit-meta { font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 12px; }
 
 /* ===== v3.7.0 UI r30: GitHub Release 手动拉取与自动追更 ===== */
-.gh-modal-card { max-width: 660px; width: 100%; }
+.gh-modal-card { max-width: 580px; width: 100%; max-height: 86vh; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.gh-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 38px; margin-bottom: 4px; flex-wrap: wrap; }
+.gh-token-pill { padding: 3px 9px; border-radius: 999px; font-size: 11.5px; border: 1px solid var(--border); background: var(--surface-2, rgba(127,127,127,.08)); color: var(--muted); cursor: pointer; white-space: nowrap; }
+.gh-token-pill.ok { color: var(--ok-text, #059669); border-color: rgba(5,150,105,.35); background: rgba(5,150,105,.09); }
+.gh-tabs-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .gh-asset-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
 .gh-asset-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
 .gh-asset-row:hover { background: var(--surface-2, rgba(127,127,127,.07)); }
 .gh-asset-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; }
 .gh-asset-meta { font-size: 11.5px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.gh-watch-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
-.gh-watch-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.gh-watch-list { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
+.gh-watch-item { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; background: var(--surface-2, rgba(127,127,127,.04)); }
 .gh-watch-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.gh-watch-repo { font-weight: 600; color: var(--text); font-size: 13.5px; }
+.gh-watch-repo { font-weight: 600; color: var(--text); font-size: 13.5px; word-break: break-all; }
 .gh-watch-toggles { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
-.gh-watch-toggles label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; color: var(--text); }
+.gh-watch-toggles label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; color: var(--text); white-space: nowrap; }
 .gh-watch-acts { display: flex; gap: 6px; flex-wrap: wrap; }
-.gh-token-bar { margin-top: 10px; padding: 9px 11px; border: 1px dashed var(--border); border-radius: 10px; font-size: 12px; }
+.gh-form-box { display: none; margin-top: 8px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2, rgba(127,127,127,.05)); }
+.gh-form-box.open { display: block; }
+.gh-token-bar { display: none; margin-top: 8px; padding: 9px 11px; border: 1px dashed var(--border); border-radius: 10px; font-size: 12px; }
+.gh-token-bar.open { display: block; }
 </style>
 </head>
 <body>
@@ -1109,7 +1117,7 @@
  <label class="img-comp-toggle"><input type="checkbox" id="imgCompEnable"><span>图片压缩</span><span class="img-comp-summary" id="imgCompSummary">已关闭（上传原图）</span></label>
  <button type="button" class="ghost img-comp-cfg-btn" id="imgCompCfgBtn">参数<span class="dd-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
  </div>
- <div class="auto-copy-bar"><label><input type="checkbox" id="autoCopyUploadChk"> 上传完成后自动复制链接</label><span>按默认复制格式写入剪贴板</span></div>
+ <div class="auto-copy-bar"><label><input type="checkbox" id="autoCopyUploadChk"> 上传后自动复制</label><span>按默认格式复制链接</span></div>
  <div class="img-comp-panel" id="imgCompPanel">
  <div class="img-comp-row">
  <span class="img-comp-label">输出格式</span>
@@ -1242,7 +1250,7 @@
 <div class="modal" id="notifyModal"><div class="card pool-modal-card"><span class="close" id="notifyClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
 <div class="modal" id="uiConfirmModal" style="z-index:1200"><div class="card" style="max-width:390px;width:100%"><span class="close" id="uiConfirmClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:8px" id="uiConfirmTitle">确认操作</div><div style="font-size:13.5px;color:var(--muted);line-height:1.6;word-break:break-word;margin-bottom:14px" id="uiConfirmMsg"></div><div class="row" style="justify-content:flex-end;margin-top:0"><button type="button" class="ghost" id="uiConfirmCancel">取消</button><button type="button" id="uiConfirmOk">确定</button></div></div></div>
 <div class="modal" id="cmdPaletteModal" style="z-index:1150"><div class="card cmd-modal-card"><span class="close" id="cmdClose">×</span><div style="font-size:13.5px;font-weight:600;margin-bottom:8px">快捷命令面板 <span class="meta" style="margin:0;font-weight:400">· ↑↓ 选择 · Enter 执行 · Esc 关闭</span></div><input type="text" class="cmd-input" id="cmdInput" placeholder="输入关键词搜索命令、目录或当前文件…" autocomplete="off" spellcheck="false"><div class="cmd-list" id="cmdList"></div></div></div>
-<div class="modal" id="githubModal"><div class="card gh-modal-card"><span class="close" id="ghClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">GitHub Release 拉取与自动追更</div><span class="pool-tag" id="ghTokenTag">匿名模式 (60次/h)</span></div><div class="meta" style="margin-bottom:10px">支持手动解析最新版安装包一键转存，或添加自动追更订阅（Cron 定时检测，单文件上限 150 MB）。</div><div class="sm-tabs" id="ghTabs" style="margin-bottom:10px"><button type="button" class="sm-tab active" data-ghtab="manual">手动解析拉取</button><button type="button" class="sm-tab" data-ghtab="watches">自动追更订阅 <span id="ghWatchCnt">0</span></button></div><div id="ghTabManual"><div class="row" style="margin-top:0"><input type="text" id="ghRepoInput" placeholder="输入 owner/repo 或 GitHub 仓库链接，如 HueGild/relaybox" autocomplete="off" spellcheck="false" style="flex:1"><button type="button" id="ghInspectBtn">解析最新版</button></div><div class="msg" id="ghManualMsg" style="margin-top:6px"></div><div id="ghReleaseBox" style="display:none;margin-top:8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div style="font-weight:600;font-size:13.5px" id="ghRelTitle"></div><a id="ghRelLink" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent)">查看 GitHub Release ↗</a></div><div class="meta" id="ghRelMeta" style="margin-top:2px"></div><div class="gh-asset-list" id="ghAssetList"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>存入目录</label><select id="ghManualFolder"><option value="">根目录</option></select></div><div class="form-field"><label>目标存储池</label><select id="ghManualPool"></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="ghManualVis"><option value="public" selected>公开（推荐：方便直链加速下载）</option><option value="private">私密（仅管理员/分享可见）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;gap:6px"><button type="button" class="ghost" id="ghToWatchBtn" style="flex:1">转为自动订阅</button><button type="button" id="ghPullGoBtn" style="flex:1">拉取所选</button></div></div></div></div><div id="ghTabWatches" style="display:none"><div class="gh-watch-list" id="ghWatchList"><div class="empty" style="padding:16px 0">加载中…</div></div><div style="border-top:1px solid var(--border);padding-top:10px"><div style="font-size:13px;font-weight:600;margin-bottom:6px">新增自动追更订阅</div><div class="form-grid2"><div class="form-field"><label>GitHub 仓库 *</label><input type="text" id="ghWRepo" placeholder="如 owner/repo" autocomplete="off" spellcheck="false"></div><div class="form-field"><label>文件名匹配规则（逗号分隔）</label><input type="text" id="ghWPattern" value="*" placeholder="如 *.apk, *win64*.exe（默认 *）" autocomplete="off" spellcheck="false"></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>存入目录</label><select id="ghWFolder"><option value="">根目录</option></select></div><div class="form-field"><label>目标存储池</label><select id="ghWPool"></select></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>文件可见性</label><select id="ghWVis"><option value="public" selected>公开</option><option value="private">私密</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="ghWReplaceOld" style="width:auto"> 新版拉取后自动将旧版移入回收站</label></div></div><div class="msg" id="ghWatchMsg" style="margin-top:4px"></div><div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" id="ghWAddBtn">保存订阅</button></div></div></div><div class="gh-token-bar"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span style="color:var(--muted)">可选：配置只读 GitHub Token（加密存库，额度 5,000 次/h 并支持私有仓库）</span><div style="display:flex;gap:6px;align-items:center"><input type="password" id="ghTokenInput" placeholder="ghp_... 或 github_pat_..." autocomplete="new-password" style="width:180px;padding:5px 8px;font-size:12px"><button type="button" class="ghost" id="ghTokenSaveBtn" style="padding:5px 10px;font-size:12px">保存</button><button type="button" class="ghost" id="ghTokenClearBtn" style="padding:5px 10px;font-size:12px;display:none">清除</button></div></div></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="ghDoneBtn">关闭</button></div></div></div>
+<div class="modal" id="githubModal"><div class="card gh-modal-card"><span class="close" id="ghClose">×</span><div class="gh-head-row"><div style="font-size:16px;font-weight:600">GitHub 软件拉取</div><button type="button" class="gh-token-pill" id="ghTokenTag" title="点击展开或收起 GitHub Token 设置">匿名 (60/h) · 配 Token</button></div><div class="gh-token-bar" id="ghTokenPanel"><div style="color:var(--muted);margin-bottom:6px">选填只读 GitHub Token（AES-GCM 加密存库，额度提至 5,000 次/h 并支持私有仓库）：</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input type="password" id="ghTokenInput" placeholder="ghp_... 或 github_pat_..." autocomplete="new-password" style="flex:1;min-width:150px;padding:6px 9px;font-size:12.5px"><button type="button" id="ghTokenSaveBtn" style="padding:6px 11px;font-size:12px">保存</button><button type="button" class="ghost danger" id="ghTokenClearBtn" style="padding:6px 10px;font-size:12px;display:none">清除</button></div></div><div class="gh-tabs-bar"><div class="sm-tabs" id="ghTabs"><button type="button" class="sm-tab active" data-ghtab="manual">手动拉取</button><button type="button" class="sm-tab" data-ghtab="watches">自动追更 <span id="ghWatchCnt">0</span></button></div><button type="button" id="ghWatchAddToggleBtn" style="display:none;padding:5px 11px;font-size:12px">+ 新增订阅</button></div><div id="ghTabManual"><div class="row" style="margin-top:0"><input type="text" id="ghRepoInput" placeholder="输入 owner/repo 或 GitHub 链接" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"><button type="button" id="ghInspectBtn" style="flex-shrink:0">解析最新版</button></div><div class="msg" id="ghManualMsg" style="margin-top:6px"></div><div id="ghReleaseBox" style="display:none;margin-top:8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div style="font-weight:600;font-size:13.5px" id="ghRelTitle"></div><a id="ghRelLink" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent)">查看 Release ↗</a></div><div class="meta" id="ghRelMeta" style="margin-top:2px"></div><div class="gh-asset-list" id="ghAssetList"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>存入目录</label><select id="ghManualFolder"><option value="">根目录</option></select></div><div class="form-field"><label>目标存储池</label><select id="ghManualPool"></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>可见性</label><select id="ghManualVis"><option value="public" selected>公开（方便直链下载）</option><option value="private">私密</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;gap:6px"><button type="button" class="ghost" id="ghToWatchBtn" style="flex:1">转为订阅</button><button type="button" id="ghPullGoBtn" style="flex:1">拉取所选</button></div></div></div></div><div id="ghTabWatches" style="display:none"><div class="gh-form-box" id="ghWatchFormBox"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;font-weight:600">新增自动追更订阅</span><button type="button" class="ghost" id="ghWatchFormCancelBtn" style="padding:3px 9px;font-size:11.5px">收起</button></div><div class="form-grid2"><div class="form-field"><label>GitHub 仓库 *</label><input type="text" id="ghWRepo" placeholder="如 owner/repo" autocomplete="off" spellcheck="false"></div><div class="form-field"><label>匹配规则（逗号分隔）</label><input type="text" id="ghWPattern" value="*" placeholder="*.apk, *win64*.exe" autocomplete="off" spellcheck="false"></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>存入目录</label><select id="ghWFolder"><option value="">根目录</option></select></div><div class="form-field"><label>目标存储池</label><select id="ghWPool"></select></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>可见性</label><select id="ghWVis"><option value="public" selected>公开</option><option value="private">私密</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="ghWReplaceOld" style="width:auto"> 新版自动替换旧版（旧版进回收站）</label></div></div><div class="msg" id="ghWatchMsg" style="margin-top:4px"></div><div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" id="ghWAddBtn">保存订阅</button></div></div><div class="gh-watch-list" id="ghWatchList"><div class="empty" style="padding:16px 0">加载中…</div></div></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="ghDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="auditModal"><div class="card audit-modal-card"><span class="close" id="auditClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">安全审计日志</div><button type="button" class="ghost" id="auditRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" style="margin-bottom:8px">自动记录管理员登录、密钥变更、存储池与回收站清理等关键操作（滚动保留 30 天）。</div><div class="sm-tabs" id="auditTabs"><button type="button" class="sm-tab active" data-audit-act="">全部</button><button type="button" class="sm-tab" data-audit-act="login">登录</button><button type="button" class="sm-tab" data-audit-act="token">密钥</button><button type="button" class="sm-tab" data-audit-act="pool">存储池</button><button type="button" class="sm-tab" data-audit-act="trash">回收站</button></div><div class="audit-list" id="auditListBox"><div class="empty" style="padding:20px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="auditDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="statsModal"><div class="card stats-modal-card"><span class="close" id="statsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储与访问统计看板</div><button type="button" class="ghost" id="statsRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" id="statsGenTime" style="margin-bottom:12px">实时聚合统计（D1 原生 SQL）</div><div id="statsBody"><div class="empty" style="padding:24px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="statsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="dupCheckModal"><div class="card" style="max-width:440px;width:100%"><span class="close" id="dupCheckClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:4px">检测到重复文件</div><div class="meta" id="dupCheckSummary" style="margin-bottom:6px"></div><div class="dup-list" id="dupCheckList"></div><div class="row" style="justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:6px"><button type="button" class="ghost" id="dupHashBtn" style="font-size:12px;padding:6px 10px">SHA-256 校验</button><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="dupCancelBtn">取消</button><button type="button" class="ghost" id="dupUploadAllBtn">全部继续上传</button><button type="button" id="dupSkipBtn">跳过重复</button></div></div></div></div>
@@ -8412,15 +8420,29 @@ function fillGhSelects() {
 }
 function updateGhTokenBadge() {
  const tag = $('ghTokenTag');
- if (tag) tag.textContent = ghHasToken ? '已配置 Token (5000次/h)' : '匿名模式 (60次/h)';
+ if (tag) {
+  tag.textContent = ghHasToken ? '✓ 已配 Token (5000/h)' : '匿名 (60/h) · 配 Token';
+  tag.classList.toggle('ok', ghHasToken);
+ }
  if ($('ghTokenClearBtn')) $('ghTokenClearBtn').style.display = ghHasToken ? '' : 'none';
+}
+function toggleGhWatchForm(forceOpen) {
+ const box = $('ghWatchFormBox');
+ if (!box) return;
+ const open = forceOpen === undefined ? !box.classList.contains('open') : !!forceOpen;
+ box.classList.toggle('open', open);
+ if ($('ghWatchAddToggleBtn')) $('ghWatchAddToggleBtn').textContent = open ? '收起表单' : '+ 新增订阅';
 }
 function switchGhTab(tab) {
  const isManual = tab !== 'watches';
  if ($('ghTabManual')) $('ghTabManual').style.display = isManual ? '' : 'none';
  if ($('ghTabWatches')) $('ghTabWatches').style.display = isManual ? 'none' : '';
+ if ($('ghWatchAddToggleBtn')) $('ghWatchAddToggleBtn').style.display = isManual ? 'none' : '';
  document.querySelectorAll('#ghTabs button[data-ghtab]').forEach(b => b.classList.toggle('active', b.dataset.ghtab === (isManual ? 'manual' : 'watches')));
 }
+if ($('ghTokenTag')) $('ghTokenTag').onclick = () => { if ($('ghTokenPanel')) $('ghTokenPanel').classList.toggle('open'); };
+if ($('ghWatchAddToggleBtn')) $('ghWatchAddToggleBtn').onclick = () => toggleGhWatchForm();
+if ($('ghWatchFormCancelBtn')) $('ghWatchFormCancelBtn').onclick = () => toggleGhWatchForm(false);
 async function openGithubModal(tab = 'manual') {
  if (!authed) return;
  fillGhSelects();
@@ -8592,6 +8614,7 @@ if ($('ghPullGoBtn')) $('ghPullGoBtn').onclick = async () => {
 if ($('ghToWatchBtn')) $('ghToWatchBtn').onclick = () => {
  if (ghLastRelease && $('ghWRepo')) $('ghWRepo').value = ghLastRelease.repo;
  switchGhTab('watches');
+ toggleGhWatchForm(true);
  if ($('ghWPattern')) $('ghWPattern').focus();
 };
 if ($('ghWAddBtn')) $('ghWAddBtn').onclick = async () => {
@@ -8619,6 +8642,7 @@ if ($('ghWAddBtn')) $('ghWAddBtn').onclick = async () => {
    return;
   }
   if ($('ghWRepo')) $('ghWRepo').value = '';
+  toggleGhWatchForm(false);
   showToast('已添加自动追更订阅', 'ok');
   await loadGithubWatches(true);
  } catch {
@@ -8637,6 +8661,7 @@ if ($('ghTokenSaveBtn')) $('ghTokenSaveBtn').onclick = async () => {
  if ($('ghTokenInput')) $('ghTokenInput').value = '';
  ghHasToken = true;
  updateGhTokenBadge();
+ if ($('ghTokenPanel')) $('ghTokenPanel').classList.remove('open');
  showToast('GitHub Token 已加密保存', 'ok');
 };
 if ($('ghTokenClearBtn')) $('ghTokenClearBtn').onclick = async () => {
