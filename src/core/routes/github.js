@@ -75,12 +75,124 @@ async function getGithubToken(deps) {
 
 function githubApiHeaders(token) {
   const h = {
-    'User-Agent': 'RelayBox-GitHubPull/3.7.0',
+    'User-Agent': 'RelayBox-GitHubPull/3.7.2',
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
   };
   if (token) h['Authorization'] = `Bearer ${token}`;
   return h;
+}
+
+/** Parse human-readable size like "68.3 MB" / "512 KB" / "1.2 GB" / "940 Bytes" into bytes. */
+export function parseHumanSize(raw) {
+  const m = String(raw || '').trim().match(/^(\d+(?:\.\d+)?)\s*(B|Bytes|KB|KiB|MB|MiB|GB|GiB)$/i);
+  if (!m) return 0;
+  const val = Number(m[1]);
+  if (!Number.isFinite(val) || val < 0) return 0;
+  const unit = m[2].toLowerCase();
+  if (unit === 'b' || unit === 'bytes') return Math.round(val);
+  if (unit === 'kb' || unit === 'kib') return Math.round(val * 1024);
+  if (unit === 'mb' || unit === 'mib') return Math.round(val * 1024 * 1024);
+  if (unit === 'gb' || unit === 'gib') return Math.round(val * 1024 * 1024 * 1024);
+  return 0;
+}
+
+/** Parse GitHub expanded_assets HTML fragment into release asset entries. */
+export function parseExpandedAssetsHtml(cleanRepo, html) {
+  const assets = [];
+  const seen = new Set();
+  const text = String(html || '');
+  const escapedRepo = cleanRepo.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const dlRe = new RegExp(`href="(\\/${escapedRepo}\\/releases\\/download\\/[^"]+)"`, 'gi');
+  // Prefer per-<li> blocks so we can associate human-readable file size with each asset
+  const liBlocks = text.match(/<li\b[\s\S]*?<\/li>/gi) || [text];
+  for (const block of liBlocks) {
+    dlRe.lastIndex = 0;
+    const m = dlRe.exec(block);
+    if (!m) continue;
+    const relHref = m[1];
+    const downloadUrl = `https://github.com${relHref}`;
+    if (seen.has(downloadUrl)) continue;
+    seen.add(downloadUrl);
+    const segs = relHref.split('/');
+    let name = segs[segs.length - 1] || 'asset';
+    try { name = decodeURIComponent(name); } catch {}
+    const sizeMatch = block.match(/>\s*(\d+(?:\.\d+)?\s*(?:Bytes|KB|KiB|MB|MiB|GB|GiB|B))\s*</i);
+    const size = sizeMatch ? parseHumanSize(sizeMatch[1]) : 0;
+    assets.push({
+      id: 0,
+      name,
+      size,
+      contentType: 'application/octet-stream',
+      downloadUrl,
+      apiUrl: '',
+      downloadCount: 0,
+    });
+  }
+  return assets;
+}
+
+/**
+ * Fallback for public repos when unauthenticated api.github.com hits 403/429 on shared CF egress IPs.
+ * Follows github.com/<owner>/<repo>/releases/latest redirect to discover tag, then parses expanded_assets HTML.
+ */
+export async function fetchLatestReleaseViaHtml(cleanRepo, fetchFn, signal) {
+  const webHeaders = {
+    'User-Agent': 'Mozilla/5.0 (compatible; RelayBox-GitHubPull/3.7.2)',
+    'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+  };
+  const latestRes = await fetchFn(`https://github.com/${cleanRepo}/releases/latest`, {
+    headers: webHeaders,
+    redirect: 'follow',
+    signal,
+  });
+  if (latestRes.status === 404) {
+    return { ok: false, status: 404, error: '未找到该仓库或仓库尚无正式 Release' };
+  }
+  if (!latestRes.ok) {
+    return { ok: false, status: 502, error: `GitHub 网页解析失败（HTTP ${latestRes.status}）` };
+  }
+  const latestHtml = await latestRes.text();
+  let tag = '';
+  const finalUrl = String(latestRes.url || '');
+  const urlTagMatch = finalUrl.match(/\/releases\/tag\/([^/?#]+)/i);
+  if (urlTagMatch) {
+    try { tag = decodeURIComponent(urlTagMatch[1]); } catch { tag = urlTagMatch[1]; }
+  }
+  if (!tag) {
+    const expMatch = latestHtml.match(/\/releases\/expanded_assets\/([^"'?#\s]+)/i);
+    if (expMatch) {
+      try { tag = decodeURIComponent(expMatch[1]); } catch { tag = expMatch[1]; }
+    }
+  }
+  if (!tag) {
+    return { ok: false, status: 404, error: '未找到该仓库或仓库尚无正式 Release' };
+  }
+
+  let publishedAt = null;
+  const timeMatch = latestHtml.match(/<relative-time[^>]+datetime="([^"]+)"/i);
+  if (timeMatch) publishedAt = timeMatch[1];
+
+  const expRes = await fetchFn(
+    `https://github.com/${cleanRepo}/releases/expanded_assets/${encodeURIComponent(tag)}`,
+    { headers: webHeaders, redirect: 'follow', signal },
+  );
+  if (!expRes.ok) {
+    return { ok: false, status: 502, error: `GitHub 资产列表解析失败（HTTP ${expRes.status}）` };
+  }
+  const expHtml = await expRes.text();
+  const assets = parseExpandedAssetsHtml(cleanRepo, expHtml);
+  return {
+    ok: true,
+    repo: cleanRepo,
+    tag,
+    name: tag,
+    publishedAt,
+    htmlUrl: `https://github.com/${cleanRepo}/releases/tag/${encodeURIComponent(tag)}`,
+    body: '',
+    assets,
+    fallback: 'html',
+  };
 }
 
 export async function fetchLatestRelease(deps, repo) {
@@ -99,12 +211,19 @@ export async function fetchLatestRelease(deps, repo) {
       return { ok: false, status: 404, error: '未找到该仓库或仓库尚无正式 Release' };
     }
     if (res.status === 403 || res.status === 429) {
+      // Unauthenticated CF Workers egress IP often hits GitHub API rate limit; fall back to public HTML parsing
+      if (!token) {
+        try {
+          const fb = await fetchLatestReleaseViaHtml(cleanRepo, fetchFn, controller.signal);
+          if (fb && fb.ok) return fb;
+        } catch {}
+      }
       const rem = res.headers.get('x-ratelimit-remaining');
       return {
         ok: false,
         status: 429,
         error: rem === '0'
-          ? 'GitHub API 已触发匿名速率限制，请在下方配置只读 GitHub Token 提升至 5,000 次/小时'
+          ? 'GitHub API 已触发匿名速率限制且网页兜底解析失败，请在下方配置只读 GitHub Token 提升至 5,000 次/小时'
           : `GitHub API 拒绝访问（HTTP ${res.status}）`,
       };
     }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.7.1 UI r31 (2026-11-25 · 修复移动端GitHub/统计/审计弹窗超高溢出与嵌套滚动/折叠新增订阅与Token栏/优化自动复制栏单行对齐) -->
+<!-- RelayBox v3.7.2 UI r32 (2026-11-26 · 优化分享页打包下载按钮样式与移动端单行文件布局 + GitHub Release 无Token网页解析兜底) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -839,8 +839,25 @@
  .sm-badge.code { cursor: pointer; color: var(--accent); background: var(--accent-soft, rgba(59,130,246,.12)); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
  .sm-item-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
  .sm-item-actions button { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
- .share-folder-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+ .share-folder-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: nowrap; margin-bottom: 6px; }
+ .share-folder-bar .share-folder-head { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .share-folder-actions { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+ .share-folder-actions .share-action-btn { height: 32px; padding: 0 11px; font-size: 12.5px; font-weight: 500; border-radius: 9px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 5px; line-height: 1; }
+ #shareZipBtn { height: 32px; padding: 0 12px; font-size: 12.5px; font-weight: 500; border-radius: 9px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 5px; line-height: 1; background: var(--accent-soft, rgba(37, 99, 235, .11)); color: var(--accent); border: 1px solid rgba(37, 99, 235, .24); box-shadow: none; }
+ #shareZipBtn:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
+ #shareZipBtn svg { width: 14px; height: 14px; flex-shrink: 0; }
  .share-zip-status { font-size: 12px; color: var(--muted); margin: 4px 0 8px; min-height: 0; }
+ @media (max-width: 600px) {
+  .share-folder-bar { gap: 8px; }
+  #shareZipBtn, .share-folder-actions .share-action-btn { height: 30px; padding: 0 10px; font-size: 12px; border-radius: 8px; }
+  #shareCard .file { flex-wrap: nowrap; align-items: center; gap: 10px; padding: 11px 2px; }
+  #shareCard .file .icon { width: 32px; height: 32px; flex-shrink: 0; }
+  #shareCard .file .info { min-width: 0; flex: 1; }
+  #shareCard .file .name { font-size: 13.5px; line-height: 1.35; word-break: break-word; overflow-wrap: anywhere; }
+  #shareCard .file .meta { font-size: 11.5px; line-height: 1.45; }
+  #shareCard .file .actions { width: auto; flex-shrink: 0; margin-top: 0; justify-content: flex-end; gap: 4px; }
+  #shareCard .file .actions .icon-btn { width: 34px; height: 34px; border-radius: 9px; }
+ }
 
  /* v3.3.11 / r20: 主题瞬切防抖、底部轻提示、壁纸提示、Markdown 渲染、代码行号、桌面右键菜单 */
  html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after { transition: none !important; animation: none !important; }
@@ -4782,10 +4799,10 @@ function renderShareFolder(d) {
  : `<button onclick="loadShareFolder('${p.id}')">${escapeHtml(p.name)}</button>`);
  }).join('');
  const galBtnHtml = hasMedia
-  ? `<button type="button" class="ghost" style="padding:6px 11px;font-size:12.5px" onclick="toggleShareGalleryMode()">${shareFolderViewMode === 'gallery' ? '列表视图' : '相册模式'}</button>`
+  ? `<button type="button" class="ghost share-action-btn" onclick="toggleShareGalleryMode()">${shareFolderViewMode === 'gallery' ? '列表视图' : '相册模式'}</button>`
   : '';
  const zipBtnHtml = shareFiles.length
-  ? `<button type="button" id="shareZipBtn" style="padding:6px 12px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px" onclick="downloadShareFolderZip()">${ICONS.download} 打包下载本目录（${shareFiles.length}）</button>`
+  ? `<button type="button" id="shareZipBtn" onclick="downloadShareFolderZip()">${ICONS.download}<span>打包下载 (${shareFiles.length})</span></button>`
   : '';
  const shareThumbSrc = (f) => {
   const qs = '?share=' + encodeURIComponent(shareToken) + (shareCode ? '&code=' + encodeURIComponent(shareCode) : '');
@@ -4802,7 +4819,7 @@ function renderShareFolder(d) {
  <div class="icon">${iconFor(f)}</div>
  <div class="info">
  <div class="name">${escapeHtml(f.name)}</div>
- <div class="meta">${fmtSize(f.size)} · ${fmtDate(f.uploadedAt)}${f.downloads ? ' · 下载 ' + f.downloads + ' 次' : ''}</div>
+ <div class="meta">${fmtSize(f.size)} · ${fmtDate(f.uploadedAt)}${f.downloads ? ' · <span style="white-space:nowrap">下载 ' + f.downloads + ' 次</span>' : ''}</div>
  </div>
  <div class="actions">
  ${isPreviewable(f) ? `<button class="icon-btn" title="预览" aria-label="预览" onclick="previewShare('${f.id}')">${ICONS.eye}</button>` : ''}
@@ -4813,7 +4830,7 @@ function renderShareFolder(d) {
  ${shareLimitBarHtml(d.share)}
  <div class="share-folder-bar">
   <div class="share-folder-head" style="font-size:16px;font-weight:600;margin-bottom:0">${ICONS.folderSolid} ${escapeHtml(d.folder.name)}</div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${galBtnHtml}${zipBtnHtml}</div>
+  <div class="share-folder-actions">${galBtnHtml}${zipBtnHtml}</div>
  </div>
  <div class="share-zip-status" id="shareZipStatus"></div>
  <div class="crumbs">${crumbs}</div>
