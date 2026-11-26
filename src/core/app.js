@@ -22,6 +22,7 @@ import { registerPools } from './routes/pools.js';
 import { registerDrops } from './routes/drops.js';
 import { registerNotify } from './routes/notify.js';
 import { registerRemoteFetch } from './routes/remote-fetch.js';
+import { registerMedia } from './routes/media.js';
 import { registerTextTools } from './routes/text-tools.js';
 import { registerTrash } from './routes/trash.js';
 import { registerMigrate } from './routes/migrate.js';
@@ -75,6 +76,7 @@ export function createApp(depsOrFactory) {
   registerDrops(app);
   registerNotify(app);
   registerRemoteFetch(app);
+  registerMedia(app);
   registerTextTools(app);
   registerTrash(app);
   registerMigrate(app);

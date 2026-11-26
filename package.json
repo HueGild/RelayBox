@@ -14,9 +14,9 @@
   "name": "relaybox",
   "scripts": {
     "deploy:cf": "wrangler deploy",
-    "test": "node v340-verify.mjs && node test-batch1-d1.js && node test-v380-users.mjs",
+    "test": "node v340-verify.mjs && node test-batch1-d1.js && node test-v380-users.mjs && node test-v390-media.mjs",
     "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy"
   },
   "type": "module",
-  "version": "3.8.0"
+  "version": "3.9.0"
 }

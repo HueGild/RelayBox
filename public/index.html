@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.8.0 UI r34 (2026-11-26 · 凭据框 120s 自动隐藏、目录拖拽递归深度限制与全局 Promise 异常兜底) -->
+<!-- RelayBox v3.9.0 UI r35 (2026-11-26 · 抖音/短视频分享口令解析转存 + Telegram Bot 自动存视频 Webhook) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -1288,7 +1288,7 @@
 <div class="modal" id="trashModal"><div class="card trash-modal-card"><span class="close" id="trashClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">回收站（7 天防误删）</div><div class="meta" style="margin-bottom:12px">删除的文件会暂存在这里保留 7 天，到期后由后台自动彻底清理并释放存储池空间。</div><div class="trash-top-bar"><span id="trashSummaryText">加载中…</span><div class="trash-top-acts"><button type="button" class="ghost" id="trashRestoreAllBtn" style="display:none">全部还原</button><button type="button" class="danger" id="trashEmptyBtn" style="display:none">一键清空</button></div></div><div class="trash-list" id="trashListBox"><div class="empty" style="padding:20px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="trashDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="pasteModal"><div class="card code-modal-card"><span class="close" id="pasteClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">文字 / 代码快传（Pastebin）</div><div class="meta" style="margin-bottom:12px">贴入文字、笔记、配置或代码片段，一键存为文件并生成 5 位短取件码与分享链接（支持阅后即焚 / 提取码，单份 ≤ 1MB）。</div><div class="form-grid2"><div class="form-field"><label>文件名（选填，留空自动按时间命名）</label><input type="text" id="pasteName" placeholder="如 notes.md 或 config.json" maxlength="120" autocomplete="off"></div><div class="form-field"><label>格式 / 扩展名</label><select id="pasteLang"><option value="txt" selected>纯文本 (.txt)</option><option value="md">Markdown (.md)</option><option value="json">JSON (.json)</option><option value="js">JavaScript (.js)</option><option value="ts">TypeScript (.ts)</option><option value="py">Python (.py)</option><option value="html">HTML (.html)</option><option value="css">CSS (.css)</option><option value="sh">Shell (.sh)</option><option value="sql">SQL (.sql)</option><option value="yaml">YAML (.yaml)</option><option value="go">Go (.go)</option><option value="rs">Rust (.rs)</option><option value="java">Java (.java)</option><option value="cpp">C++ (.cpp)</option><option value="ini">配置 (.ini)</option><option value="log">日志 (.log)</option></select></div></div><div class="form-field" style="margin-top:8px"><label>内容 *</label><textarea id="pasteContent" class="code-editor-ta" placeholder="在这里粘贴或输入文字、代码、命令、配置…（支持 Tab 缩进，Ctrl/Cmd+Enter 快速保存）" spellcheck="false"></textarea><div class="code-status-row"><span id="pasteMetaStat">0 行 · 0 字符 · 0 B</span><span>单份上限 1 MB</span></div></div><div class="form-grid2" style="margin-top:8px" id="pasteAdminDestRow"><div class="form-field"><label>目标存储池</label><select id="pastePool"></select></div><div class="form-field"><label>存入目录</label><select id="pasteFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>可见性</label><select id="pasteVis"><option value="private" selected>私密（凭分享链接 / 取件码访问）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="pasteExpires"><option value="0">永久有效</option><option value="24" selected>24 小时</option><option value="168">7 天</option></select></div></div><div class="paste-share-box"><label class="paste-share-toggle"><input type="checkbox" id="pasteCreateShare" checked> 保存后立即生成分享链接与 5 位短取件码</label><div class="paste-share-opts" id="pasteShareOpts"><div class="form-grid2"><div class="form-field"><label>提取码（选填，留空免密）</label><input type="text" id="pasteShareCode" placeholder="如 1234" maxlength="32" autocomplete="off"></div><div class="form-field"><label>下载次数限制</label><select id="pasteMaxDl"><option value="0" selected>不限次数</option><option value="1">1 次（阅后即焚）</option><option value="5">5 次</option><option value="10">10 次</option></select></div></div></div></div><div class="share-res" id="pasteResultBox" style="display:none"><div class="share-res-code"><div><div class="meta" style="margin:0 0 4px">5 位短取件码</div><span class="pickup-badge" id="pasteResPickup">-----</span></div><div class="meta" id="pasteResInfo" style="text-align:right"></div></div><div class="share-res-url" id="pasteResUrl"></div><div class="share-res-btns"><button type="button" class="ghost" id="pasteCopyCodeBtn">复制取件码</button><button type="button" class="ghost" id="pasteCopyUrlBtn">复制链接</button><button type="button" id="pasteCopyPackBtn">复制分享文案</button></div></div><div class="msg" id="pasteMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="pasteCancelBtn">关闭</button><button type="button" id="pasteGoBtn">保存并生成快传</button></div></div></div>
 <div class="modal" id="textEditModal"><div class="card code-modal-card"><span class="close" id="textEditClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:24px;margin-bottom:4px"><div style="font-size:15.5px;font-weight:700;word-break:break-all" id="textEditTitle">在线编辑</div><span class="pool-tag" id="textEditPoolTag"></span></div><div class="meta" style="margin-bottom:10px">支持直接修改并覆盖保存回原存储池（Tab 插入缩进，Ctrl/Cmd+S 快捷保存，单文件 ≤ 1MB）。</div><textarea id="textEditArea" class="code-editor-ta tall" placeholder="正在加载文件内容…" spellcheck="false"></textarea><div class="code-status-row"><span id="textEditStat">0 行 · 0 字符 · 0 B</span><span class="code-dirty-dot" id="textEditDirty">● 有未保存修改</span></div><div class="msg" id="textEditMsg" style="margin-top:6px"></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="textEditCopyBtn">复制全文</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="textEditCancelBtn">取消</button><button type="button" id="textEditSaveBtn">保存修改</button></div></div></div></div>
-<div class="modal" id="remoteFetchModal"><div class="card pool-modal-card"><span class="close" id="remoteFetchClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">URL 远程拉取转存</div><div class="meta" style="margin-bottom:12px">贴入直链，由服务端直接抓取文件并写入所选存储池与目录（支持自动识别文件名、防内网 SSRF，单文件 ≤ 50MB）。</div><div class="form-field"><label>文件直链 URL *</label><input type="text" id="rfUrl" placeholder="https://example.com/path/to/file.png" autocomplete="off" spellcheck="false"></div><div class="form-field" style="margin-top:8px"><label>自定义文件名（选填，留空自动识别）</label><input type="text" id="rfName" placeholder="如 banner.webp 或 资料.pdf" maxlength="120" autocomplete="off"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>目标存储池</label><select id="rfPool"></select></div><div class="form-field"><label>存入目录</label><select id="rfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="rfVis"><option value="private" selected>私密（仅管理员/分享可见）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="rfExpires"><option value="0" selected>永久有效</option><option value="24">24 小时</option><option value="168">7 天</option></select></div></div><div class="msg" id="rfMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="rfCancelBtn">取消</button><button type="button" id="rfGoBtn">开始拉取转存</button></div></div></div>
+<div class="modal" id="remoteFetchModal"><div class="card pool-modal-card"><span class="close" id="remoteFetchClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:28px;margin-bottom:4px"><div style="font-size:16px;font-weight:600">URL 远程拉取 / 抖音转存</div><button type="button" class="ghost" id="rfMediaCfgToggle" style="padding:4px 9px;font-size:11.5px">解析与 TG 自动存</button></div><div class="meta" style="margin-bottom:10px">贴入文件直链或整段抖音分享口令，由服务端自动解析无水印视频/抓取文件并写入存储池（防 SSRF）。</div><div class="users-form-box" id="rfMediaCfgBox" style="margin-bottom:10px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;font-weight:600">解析引擎 & Telegram Bot 自动存视频</span><button type="button" class="ghost" id="rfMediaCfgClose" style="padding:2px 8px;font-size:11.5px">收起</button></div><div class="form-field"><label>自定义外部解析 API（选填，留空走内置抖音直连；支持 Cobalt POST 或含 {url} 的 GET 模板）</label><input type="text" id="mcApiUrl" placeholder="如 https://api.example.com/parse?url={url}" autocomplete="off" spellcheck="false"></div><div class="form-field" style="margin-top:6px"><label>解析 API Key（选填，加密存库）</label><input type="password" id="mcApiKey" placeholder="留空表示不修改或无需密钥" autocomplete="new-password"></div><div class="tg-switch-row" style="margin-top:8px"><label><input type="checkbox" id="mcTgEnabled"> 开启 Telegram Bot 发链接自动存视频</label></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>允许的 Chat ID 白名单（逗号分隔，留空沿用推送 Chat ID）</label><input type="text" id="mcTgChats" placeholder="如 123456789,-100987654321" autocomplete="off"></div><div class="form-field"><label>TG 转存默认目录</label><select id="mcTgFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>TG 转存默认存储池</label><select id="mcTgPool"></select></div><div class="form-field"><label>TG 转存可见性</label><select id="mcTgVis"><option value="private" selected>私密</option><option value="public">公开</option></select></div></div><div class="msg" id="mcMsg" style="margin-top:6px"></div><div class="row" style="justify-content:flex-end;gap:6px;margin-top:8px;flex-wrap:wrap"><button type="button" class="ghost" id="mcRegWebhookBtn" style="font-size:12px">一键注册 TG Webhook</button><button type="button" id="mcSaveBtn" style="font-size:12px">保存解析设置</button></div></div><div class="form-field"><label>文件直链 URL 或抖音分享口令 *</label><input type="text" id="rfUrl" placeholder="贴入直链，或整段抖音分享口令（自动提取无水印视频）" autocomplete="off" spellcheck="false"></div><label style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--muted);cursor:pointer"><input type="checkbox" id="rfMediaMode" checked style="width:auto"> 自动识别短视频分享口令（抖音 / B站 / 小红书 / TikTok）</label><div class="form-field" style="margin-top:8px"><label>自定义文件名（选填，留空自动识别）</label><input type="text" id="rfName" placeholder="如 banner.webp 或 资料.pdf" maxlength="120" autocomplete="off"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>目标存储池</label><select id="rfPool"></select></div><div class="form-field"><label>存入目录</label><select id="rfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>文件可见性</label><select id="rfVis"><option value="private" selected>私密（仅管理员/分享可见）</option><option value="public">公开（任何人可直链访问）</option></select></div><div class="form-field"><label>有效期</label><select id="rfExpires"><option value="0" selected>永久有效</option><option value="24">24 小时</option><option value="168">7 天</option></select></div></div><div class="msg" id="rfMsg" style="margin-top:8px"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="rfCancelBtn">取消</button><button type="button" id="rfGoBtn">开始拉取转存</button></div></div></div>
 <div class="modal" id="notifyModal"><div class="card pool-modal-card"><span class="close" id="notifyClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
 <div class="modal" id="uiConfirmModal" style="z-index:1200"><div class="card" style="max-width:390px;width:100%"><span class="close" id="uiConfirmClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:8px" id="uiConfirmTitle">确认操作</div><div style="font-size:13.5px;color:var(--muted);line-height:1.6;word-break:break-word;margin-bottom:14px" id="uiConfirmMsg"></div><div class="row" style="justify-content:flex-end;margin-top:0"><button type="button" class="ghost" id="uiConfirmCancel">取消</button><button type="button" id="uiConfirmOk">确定</button></div></div></div>
 <div class="modal" id="cmdPaletteModal" style="z-index:1150"><div class="card cmd-modal-card"><span class="close" id="cmdClose">×</span><div style="font-size:13.5px;font-weight:600;margin-bottom:8px">快捷命令面板 <span class="meta" style="margin:0;font-weight:400">· ↑↓ 选择 · Enter 执行 · Esc 关闭</span></div><input type="text" class="cmd-input" id="cmdInput" placeholder="输入关键词搜索命令、目录或当前文件…" autocomplete="off" spellcheck="false"><div class="cmd-list" id="cmdList"></div></div></div>
@@ -6626,25 +6626,99 @@ if ($('rfCancelBtn')) $('rfCancelBtn').onclick = closeRemoteFetchModal;
 if ($('remoteFetchModal')) $('remoteFetchModal').onclick = (e) => { if (e.target.id === 'remoteFetchModal') closeRemoteFetchModal(); };
 if ($('rfUrl')) $('rfUrl').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('rfGoBtn').click(); });
 
+function isShortVideoShareText(raw) {
+ const s = String(raw || '').trim();
+ if (!s) return false;
+ if (!/^https?:\/\/\S+$/i.test(s) && /https?:\/\//i.test(s)) return true;
+ return /(?:v\.douyin\.com|douyin\.com|iesdouyin\.com|tiktok\.com|b23\.tv|bilibili\.com|xhslink\.com|xiaohongshu\.com)/i.test(s);
+}
+async function loadMediaParserConfigUI() {
+ try {
+  const r = await fetch('/api/media/config');
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok || !d.config) return;
+  const c = d.config;
+  if ($('mcApiUrl')) $('mcApiUrl').value = c.apiUrl || '';
+  if ($('mcApiKey')) { $('mcApiKey').value = ''; $('mcApiKey').placeholder = c.hasApiKey ? `已配置（${c.apiKeyPreview || '***'}），留空保持不变` : '留空表示无需密钥'; }
+  if ($('mcTgEnabled')) $('mcTgEnabled').checked = !!c.tgWebhookEnabled;
+  if ($('mcTgChats')) $('mcTgChats').value = c.tgAllowedChats || '';
+  if ($('mcTgVis')) $('mcTgVis').value = c.tgVisibility === 'public' ? 'public' : 'private';
+  if ($('mcTgFolder') && $('rfFolder')) { $('mcTgFolder').innerHTML = $('rfFolder').innerHTML; $('mcTgFolder').value = c.tgFolderId || ''; }
+  if ($('mcTgPool') && $('rfPool')) { $('mcTgPool').innerHTML = $('rfPool').innerHTML; $('mcTgPool').value = c.tgPoolId || ''; }
+ } catch {}
+}
+if ($('rfMediaCfgToggle')) $('rfMediaCfgToggle').onclick = async () => {
+ const box = $('rfMediaCfgBox');
+ if (!box) return;
+ const opening = !box.classList.contains('open');
+ box.classList.toggle('open', opening);
+ if (opening) await loadMediaParserConfigUI();
+};
+if ($('rfMediaCfgClose')) $('rfMediaCfgClose').onclick = () => { if ($('rfMediaCfgBox')) $('rfMediaCfgBox').classList.remove('open'); };
+if ($('mcSaveBtn')) $('mcSaveBtn').onclick = async () => {
+ const msg = $('mcMsg');
+ msg.textContent = '正在保存…'; msg.className = 'msg';
+ try {
+  const r = await fetch('/api/media/config', {
+   method: 'PUT', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({
+    apiUrl: $('mcApiUrl').value.trim(),
+    apiKey: $('mcApiKey').value.trim() || undefined,
+    tgWebhookEnabled: $('mcTgEnabled').checked,
+    tgAllowedChats: $('mcTgChats').value.trim(),
+    tgFolderId: $('mcTgFolder').value || '',
+    tgPoolId: $('mcTgPool').value || '',
+    tgVisibility: $('mcTgVis').value === 'public' ? 'public' : 'private',
+   }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { msg.textContent = d.error || '保存失败'; msg.className = 'msg err'; return; }
+  msg.textContent = '解析与 TG 自动存配置已保存'; msg.className = 'msg ok';
+ } catch { msg.textContent = '保存失败：网络错误'; msg.className = 'msg err'; }
+};
+if ($('mcRegWebhookBtn')) $('mcRegWebhookBtn').onclick = async () => {
+ const msg = $('mcMsg');
+ msg.textContent = '正在向 Telegram 注册 Webhook…'; msg.className = 'msg';
+ try {
+  await fetch('/api/media/config', {
+   method: 'PUT', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({
+    apiUrl: $('mcApiUrl').value.trim(),
+    apiKey: $('mcApiKey').value.trim() || undefined,
+    tgWebhookEnabled: true,
+    tgAllowedChats: $('mcTgChats').value.trim(),
+    tgFolderId: $('mcTgFolder').value || '',
+    tgPoolId: $('mcTgPool').value || '',
+    tgVisibility: $('mcTgVis').value === 'public' ? 'public' : 'private',
+   }),
+  });
+  const r = await fetch('/api/media/tg-webhook/register', { method: 'POST' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { msg.textContent = d.error || '注册失败'; msg.className = 'msg err'; return; }
+  if ($('mcTgEnabled')) $('mcTgEnabled').checked = true;
+  msg.textContent = `Telegram Webhook 注册成功！直接发抖音链接给 Bot 即可自动存视频`; msg.className = 'msg ok';
+ } catch { msg.textContent = '注册失败：网络错误'; msg.className = 'msg err'; }
+};
 if ($('rfGoBtn')) $('rfGoBtn').onclick = async () => {
  const btn = $('rfGoBtn'), msg = $('rfMsg');
- const url = $('rfUrl').value.trim();
- if (!url) { msg.textContent = '请先粘贴要拉取的文件直链'; msg.className = 'msg err'; $('rfUrl').focus(); return; }
+ const rawInput = $('rfUrl').value.trim();
+ if (!rawInput) { msg.textContent = '请先粘贴文件直链或抖音分享口令'; msg.className = 'msg err'; $('rfUrl').focus(); return; }
+ const useMediaParser = !!($('rfMediaMode') && $('rfMediaMode').checked && isShortVideoShareText(rawInput));
  btn.disabled = true;
- btn.textContent = '正在拉取转存…';
- msg.textContent = '正在从远程服务器拉取并写入存储池，请稍候…';
+ btn.textContent = useMediaParser ? '正在解析并转存视频…' : '正在拉取转存…';
+ msg.textContent = useMediaParser ? '正在解析无水印视频并写入存储池，请稍候…' : '正在从远程服务器拉取并写入存储池，请稍候…';
  msg.className = 'msg';
  try {
   const poolId = $('rfPool') ? $('rfPool').value : '';
   const payload = {
-   url,
+   ...(useMediaParser ? { text: rawInput } : { url: rawInput }),
    name: $('rfName').value.trim() || undefined,
    folderId: ($('rfFolder') && $('rfFolder').value) ? $('rfFolder').value : null,
    poolId: poolId || undefined,
    visibility: ($('rfVis') && $('rfVis').value === 'public') ? 'public' : 'private',
    expires: Number($('rfExpires') ? $('rfExpires').value : 0) || 0,
   };
-  const r = await fetch('/api/remote-fetch', {
+  const r = await fetch(useMediaParser ? '/api/media/parse-save' : '/api/remote-fetch', {
    method: 'POST',
    headers: { 'Content-Type': 'application/json' },
    body: JSON.stringify(payload),
@@ -6657,7 +6731,7 @@ if ($('rfGoBtn')) $('rfGoBtn').onclick = async () => {
   }
   const f = d.file;
   closeRemoteFetchModal();
-  showToast(`已转存 ${f.name}（${fmtSize(f.size)}）到 ${f.poolName || '目标存储池'}`, 'ok');
+  setMsg(`已转存 ${f.name}（${fmtSize(f.size)}）`, 'ok');
   loadList();
  } catch {
   msg.textContent = '拉取失败：网络错误或超时';
