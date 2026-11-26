@@ -1,8 +1,9 @@
 // RelayBox core routes — chunked upload (chunk / chunk-status / chunk-complete).
-// Supports built-in R2, built-in local disk (VPS), and dynamic S3/R2 storage pools (v3.2).
+// Supports built-in R2, built-in local disk (VPS), dynamic S3/R2 pools (v3.2), and sub-accounts (v3.8.0).
 
 import { readJsonBody, kindOf, extOf, keyOf, safeName, parseDim, parseExpiresHours, expiresAtOf, newId, CHUNK_SIZE, MIN_FREE_BYTES, MIME, log } from '../lib/util.js';
-import { authOrPassword, authFail, clientMeta } from '../lib/auth.js';
+import { getAuthContext, assertFolderInSubtree, checkUserQuota, auditUserPrefix, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
+import { recordAudit } from '../lib/audit.js';
 import { resolveUploadTarget } from './pools.js';
 
 export function registerChunks(app) {
@@ -12,8 +13,13 @@ export function registerChunks(app) {
     if (deps.local.freeBytes() < MIN_FREE_BYTES) {
       return c.json({ ok: false, error: '磁盘空间不足' }, 507);
     }
-    const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
-    if (auth !== 'ok') return authFail(c, auth);
+    const authCtx = await getAuthContext(c, deps);
+    if (authCtx.user) {
+      if (!authCtx.user.canUpload) return c.json({ ok: false, error: '当前账号没有上传权限' }, 403);
+    } else if (!authCtx.isAdmin) {
+      const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
+      if (auth !== 'ok') return authFail(c, auth);
+    }
     const q = c.req.query();
     const uploadId = (q.uploadId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
     const index = Number(q.index);
@@ -22,6 +28,17 @@ export function registerChunks(app) {
     const size = Number(q.size);
     if (!uploadId || !Number.isInteger(index) || index < 0 || !Number.isInteger(total) || total < 1 || index >= total || !name || !Number.isFinite(size) || size <= 0 || size > deps.config.maxUploadSize) {
       return c.json({ ok: false, error: '参数不对' }, 400);
+    }
+    let reqFolderId = (typeof q.folderId === 'string' && q.folderId) ? q.folderId : null;
+    if (authCtx.user) {
+      if (!reqFolderId) reqFolderId = authCtx.user.rootFolderId;
+      if (!(await assertFolderInSubtree(deps, reqFolderId, authCtx.user.rootFolderId))) {
+        return c.json({ ok: false, error: '无权上传到该目录' }, 403);
+      }
+      const qCheck = await checkUserQuota(deps, authCtx.user, size);
+      if (!qCheck.ok) {
+        return c.json({ ok: false, error: '已超出账号空间配额' }, 413);
+      }
     }
     const chunks = [];
     let len = 0;
@@ -69,7 +86,7 @@ export function registerChunks(app) {
         expiresHours: parseExpiresHours(q.expires || '0'),
         storage: targetStorage,
         poolId,
-        folderId: q.folderId || null,
+        folderId: reqFolderId,
         createdAt: Date.now(), received: [],
       };
       await deps.meta.createChunkUpload(meta);
@@ -81,6 +98,9 @@ export function registerChunks(app) {
       targetDriver = deps.r2;
     }
 
+    if (authCtx.user && !(await assertFolderInSubtree(deps, meta.folderId, authCtx.user.rootFolderId))) {
+      return c.json({ ok: false, error: '无权操作该上传任务' }, 403);
+    }
     if (meta.name !== name || meta.size !== size || meta.total !== total) {
       return c.json({ ok: false, error: '分片信息和首次不一致' }, 400);
     }
@@ -90,11 +110,19 @@ export function registerChunks(app) {
 
   app.get('/api/upload/chunk-status', async (c) => {
     const deps = c.get('deps');
-    const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
-    if (auth !== 'ok') return authFail(c, auth);
+    const authCtx = await getAuthContext(c, deps);
+    if (authCtx.user) {
+      if (!authCtx.user.canUpload) return c.json({ ok: false, error: '当前账号没有上传权限' }, 403);
+    } else if (!authCtx.isAdmin) {
+      const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
+      if (auth !== 'ok') return authFail(c, auth);
+    }
     const uploadId = (c.req.query('uploadId') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
     const meta = uploadId ? await deps.meta.getChunkUpload(uploadId) : null;
     if (!meta) return c.json({ ok: true, received: [], meta: null });
+    if (authCtx.user && !(await assertFolderInSubtree(deps, meta.folderId, authCtx.user.rootFolderId))) {
+      return c.json({ ok: false, error: '无权查看该上传任务' }, 403);
+    }
     return c.json({
       ok: true,
       received: meta.received.map((r) => r.partNumber),
@@ -106,10 +134,24 @@ export function registerChunks(app) {
     const deps = c.get('deps');
     const body = await readJsonBody(c);
     const cleanId = String(body.uploadId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
-    const auth = await authOrPassword(c, deps, body.password || '');
-    if (auth !== 'ok') return authFail(c, auth);
+    const authCtx = await getAuthContext(c, deps);
+    if (authCtx.user) {
+      if (!authCtx.user.canUpload) return c.json({ ok: false, error: '当前账号没有上传权限' }, 403);
+    } else if (!authCtx.isAdmin) {
+      const auth = await authOrPassword(c, deps, body.password || '');
+      if (auth !== 'ok') return authFail(c, auth);
+    }
     const meta = cleanId ? await deps.meta.getChunkUpload(cleanId) : null;
     if (!meta) return c.json({ ok: false, error: '上传任务不存在或已过期' }, 404);
+    if (authCtx.user) {
+      if (!(await assertFolderInSubtree(deps, meta.folderId, authCtx.user.rootFolderId))) {
+        return c.json({ ok: false, error: '无权完成该目录外的上传任务' }, 403);
+      }
+      const qCheck = await checkUserQuota(deps, authCtx.user, meta.size);
+      if (!qCheck.ok) {
+        return c.json({ ok: false, error: '已超出账号空间配额' }, 413);
+      }
+    }
     for (let i = 0; i < meta.total; i++) {
       if (!meta.received.some((r) => r.partNumber === i) || !(await deps.meta.chunkPartExists(cleanId, i))) {
         return c.json({ ok: false, error: `还缺第 ${i + 1} 片` }, 400);
@@ -178,7 +220,9 @@ export function registerChunks(app) {
     }
     try { await deps.meta.deleteChunkUpload(cleanId, poolDriver || deps.r2); } catch {}
     const folders = await deps.meta.listFolders();
-    const folderId = (typeof meta.folderId === 'string' && meta.folderId && folders.some((fd) => fd.id === meta.folderId)) ? meta.folderId : null;
+    const folderId = (typeof meta.folderId === 'string' && meta.folderId && folders.some((fd) => fd.id === meta.folderId))
+      ? meta.folderId
+      : (authCtx.user ? authCtx.user.rootFolderId : null);
     const { uploadIp, uploadGeo } = clientMeta(c, deps);
     const item = {
       id, name: meta.name, size: meta.size, ext, kind: kindOf(ext),
@@ -190,12 +234,16 @@ export function registerChunks(app) {
       width: parseDim(body.width),
       height: parseDim(body.height),
       poolId: meta.poolId || null,
+      ownerId: authCtx.user ? authCtx.user.id : null,
     };
     try {
       await deps.meta.createFile(item);
     } catch (e) {
       log('meta save failed:', e && e.message);
       return c.json({ ok: false, error: '保存失败' }, 500);
+    }
+    if (authCtx.user) {
+      await recordAudit(deps, c, 'file_upload', meta.name, `${auditUserPrefix(authCtx)}${meta.size} bytes (chunked)`);
     }
     log('uploaded (chunked):', meta.name, (meta.size / 1024 / 1024).toFixed(2) + 'MB', meta.poolId || meta.storage);
     return c.json({ ok: true, file: item });

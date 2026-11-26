@@ -1,11 +1,11 @@
 // RelayBox core routes — shares (file/folder share links + public share info).
-// Mirrors v2.8.4's handleCreateShare / handleGetShare / handleRevokeShare /
-// handleCreateFolderShare / handleRevokeFolderShare / handleShareInfo exactly.
+// v3.8.0: supports sub-account subtree sandboxing, canShare permission, and audit logging.
 
 import { readJsonBody, folderIdOf, folderPath, isExpired, newToken, newPickupCode, log } from '../lib/util.js';
-import { isAuthed, isBlocked, clientIp, recordFailureWithAlert } from '../lib/auth.js';
+import { isAuthed, getAuthContext, assertFolderInSubtree, auditUserPrefix, isBlocked, clientIp, recordFailureWithAlert } from '../lib/auth.js';
+import { recordAudit } from '../lib/audit.js';
 
-/** 分享对象（管理员接口用）：新旧字段并存，旧前端只读它认识的字段。 */
+/** 分享对象（管理员/子账号接口用）：新旧字段并存，旧前端只读它认识的字段。 */
 function shareView(share) {
   return {
     token: share.token, code: share.code || null, burn: !!share.burn,
@@ -59,10 +59,19 @@ async function generateUniquePickupCode(deps) {
 }
 
 export function registerShares(app) {
-  // 读分享设置（管理员）：返回当前分享的 token、提取码、阅后即焚；没有分享时 share 为 null。
+  // 读分享设置：主管理员不限；子账号校验目标在子树内。
   async function handleGetShare(c, id, isFolder) {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
+    if (!authCtx.isAdmin) {
+      const target = isFolder ? await deps.meta.getFolder(id) : await deps.meta.getFile(id);
+      if (!target || (!isFolder && target.deletedAt)) return c.json({ ok: false, error: isFolder ? '文件夹不存在' : '文件不存在' }, 404);
+      const checkFid = isFolder ? target.id : folderIdOf(target);
+      if (!(await assertFolderInSubtree(deps, checkFid, authCtx.user.rootFolderId))) {
+        return c.json({ ok: false, error: '无权访问该对象的分享设置' }, 403);
+      }
+    }
     const share = isFolder
       ? await deps.meta.getShareByFolderId(id)
       : await deps.meta.getShareByFileId(id);
@@ -70,14 +79,24 @@ export function registerShares(app) {
     return c.json({ ok: true, share: shareView(share) });
   }
 
-  // 生成（或返回已有的）分享链接（管理员）。一个文件/文件夹同时只有一个有效分享链接。
+  // 生成（或返回已有的）分享链接：子账号需 canShare 且目标在子树内。
   async function handleCreateShare(c, id, isFolder) {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
+    if (!authCtx.isAdmin && !authCtx.user.canShare) {
+      return c.json({ ok: false, error: '当前账号没有分享权限' }, 403);
+    }
     const target = isFolder
       ? await deps.meta.getFolder(id)
       : await deps.meta.getFile(id);
     if (!target || (!isFolder && target.deletedAt)) return c.json({ ok: false, error: isFolder ? '文件夹不存在' : '文件不存在' }, 404);
+    if (!authCtx.isAdmin) {
+      const checkFid = isFolder ? target.id : folderIdOf(target);
+      if (!(await assertFolderInSubtree(deps, checkFid, authCtx.user.rootFolderId))) {
+        return c.json({ ok: false, error: '无权分享该目录外的内容' }, 403);
+      }
+    }
     const body = await readJsonBody(c);
     const hasCode = typeof body.code === 'string';
     const code = hasCode ? body.code.trim().slice(0, 32) : '';
@@ -138,18 +157,35 @@ export function registerShares(app) {
     if (hasCode || hasBurn || hasMaxDownloads || expiryInput.provided || patch.pickupCode) {
       share = await deps.meta.updateShare(share.token, patch);
     }
+    if (!authCtx.isAdmin) {
+      await recordAudit(deps, c, 'share_create', target.name, `${auditUserPrefix(authCtx)}${isFolder ? 'folder' : 'file'} token=${share.token}`);
+    }
     log(isFolder ? 'folder share created:' : 'share created:', target.name, share.token, share.code ? '(有提取码)' : '', share.burn ? '(阅后即焚)' : '', share.maxDownloads ? `(限 ${share.maxDownloads} 次)` : '');
     return c.json({ ok: true, ...shareView(share) });
   }
 
-  // 取消分享（管理员）。
+  // 取消分享：子账号需 canShare 且目标在子树内。
   async function handleRevokeShare(c, id, isFolder) {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
+    if (!authCtx.isAdmin) {
+      if (!authCtx.user.canShare) return c.json({ ok: false, error: '当前账号没有分享权限' }, 403);
+      const target = isFolder ? await deps.meta.getFolder(id) : await deps.meta.getFile(id);
+      if (target) {
+        const checkFid = isFolder ? target.id : folderIdOf(target);
+        if (!(await assertFolderInSubtree(deps, checkFid, authCtx.user.rootFolderId))) {
+          return c.json({ ok: false, error: '无权取消该目录外的分享' }, 403);
+        }
+      }
+    }
     const share = isFolder
       ? await deps.meta.getShareByFolderId(id)
       : await deps.meta.getShareByFileId(id);
     if (share) await deps.meta.deleteShare(share.token);
+    if (!authCtx.isAdmin) {
+      await recordAudit(deps, c, 'share_revoke', id, `${auditUserPrefix(authCtx)}${isFolder ? 'folder' : 'file'}`);
+    }
     log(isFolder ? 'folder share revoked:' : 'share revoked for file:', id);
     return c.json({ ok: true });
   }
@@ -161,7 +197,7 @@ export function registerShares(app) {
   app.post('/api/folders/:id/share', (c) => handleCreateShare(c, decodeURIComponent(c.req.param('id')), true));
   app.delete('/api/folders/:id/share', (c) => handleRevokeShare(c, decodeURIComponent(c.req.param('id')), true));
 
-  // 全站分享管理汇总接口（管理员，v3.3.10）：一屏列出所有文件/文件夹分享、剩余次数、取件码与状态。
+  // 全站分享管理汇总接口（仅主管理员，v3.3.10）：一屏列出所有文件/文件夹分享、剩余次数、取件码与状态。
   app.get('/api/shares', async (c) => {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
@@ -217,7 +253,7 @@ export function registerShares(app) {
     return c.json({ ok: true, shares: list, counts });
   });
 
-  // 按 token 直接吊销分享（管理员，v3.3.10，兼容目标文件/文件夹已删除的孤立分享清理）。
+  // 按 token 直接吊销分享（仅主管理员，v3.3.10，兼容目标文件/文件夹已删除的孤立分享清理）。
   app.delete('/api/shares/:token', async (c) => {
     const deps = c.get('deps');
     if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
@@ -314,4 +350,3 @@ export function registerShares(app) {
     return c.json({ ok: true, token: share.token, needCode: !!share.code });
   });
 }
-

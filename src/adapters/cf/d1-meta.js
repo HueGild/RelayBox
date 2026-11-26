@@ -52,6 +52,7 @@ export class D1MetaStore {
       deletedAt: msToIso(r.deleted_at),
       pinned: r.pinned === 1,
       note: typeof r.note === 'string' ? r.note : '',
+      ownerId: (typeof r.owner_id === 'string' && r.owner_id) ? r.owner_id : null,
     };
   }
   _rowToFolder(r) {
@@ -539,11 +540,26 @@ export class D1MetaStore {
     return (results || []).map((r) => this._rowToFile(r));
   }
 
-  async searchFiles(q, { authed } = {}) {
+  async searchFiles(q, { authed, folderIds = null } = {}) {
     const needle = String(q || '').toLowerCase();
     if (!needle) return [];
     const now = Date.now();
     const esc = needle.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+    if (Array.isArray(folderIds)) {
+      const uniq = [...new Set(folderIds.filter((x) => typeof x === 'string' && x))];
+      if (!uniq.length) return [];
+      const out = [];
+      for (let i = 0; i < uniq.length; i += BATCH_SIZE_IDS) {
+        const slice = uniq.slice(i, i + BATCH_SIZE_IDS);
+        const ph = slice.map(() => '?').join(', ');
+        const { results } = await this.db.prepare(
+          `SELECT * FROM files WHERE deleted_at IS NULL AND folder_id IN (${ph}) AND (lower(name) LIKE ? ESCAPE '\\' OR lower(note) LIKE ? ESCAPE '\\') AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) ORDER BY pinned DESC, uploaded_at DESC`,
+        ).bind(...slice, `%${esc}%`, `%${esc}%`, now, authed ? 1 : 0, 'public').all();
+        for (const r of (results || [])) out.push(this._rowToFile(r));
+      }
+      out.sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (new Date(b.uploadedAt || 0).getTime() - new Date(a.uploadedAt || 0).getTime()));
+      return out;
+    }
     const { results } = await this.db.prepare(
       "SELECT * FROM files WHERE deleted_at IS NULL AND (lower(name) LIKE ? ESCAPE '\\' OR lower(note) LIKE ? ESCAPE '\\') AND (expires_at IS NULL OR expires_at > ?) AND (? OR visibility = ?) ORDER BY pinned DESC, uploaded_at DESC",
     ).bind(`%${esc}%`, `%${esc}%`, now, authed ? 1 : 0, 'public').all();
@@ -565,13 +581,14 @@ export class D1MetaStore {
       deleted_at: isoToMs(file.deletedAt),
       pinned: file.pinned ? 1 : 0,
       note: typeof file.note === 'string' ? file.note.slice(0, 200) : '',
+      owner_id: (typeof file.ownerId === 'string' && file.ownerId) ? file.ownerId : null,
     });
     await this.db.prepare(
-      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height, pool_id, deleted_at, pinned, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO files (id, name, size, ext, kind, storage, storage_key, folder_id, visibility, expires_at, downloads, uploaded_at, upload_ip, upload_geo, width, height, pool_id, deleted_at, pinned, note, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       item.id, item.name, item.size, item.ext, item.kind, item.storage, item.storageKey,
       item.folderId, item.visibility, isoToMs(item.expiresAt), item.downloads, isoToMs(item.uploadedAt),
-      item.uploadIp, item.uploadGeo, item.width, item.height, item.poolId, isoToMs(item.deletedAt), item.pinned ? 1 : 0, item.note || '',
+      item.uploadIp, item.uploadGeo, item.width, item.height, item.poolId, isoToMs(item.deletedAt), item.pinned ? 1 : 0, item.note || '', item.ownerId,
     ).run();
     return item;
   }
@@ -600,6 +617,7 @@ export class D1MetaStore {
     if (patch.deletedAt !== undefined) push('deleted_at', isoToMs(patch.deletedAt));
     if (patch.pinned !== undefined) push('pinned', patch.pinned ? 1 : 0);
     if (patch.note !== undefined) push('note', typeof patch.note === 'string' ? patch.note.slice(0, 200) : '');
+    if (patch.ownerId !== undefined) push('owner_id', (typeof patch.ownerId === 'string' && patch.ownerId) ? patch.ownerId : null);
     if (!sets.length) return this.getFile(id);
     binds.push(id);
     const out = await this.db.prepare(`UPDATE files SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run();
@@ -749,6 +767,14 @@ export class D1MetaStore {
     return (out.meta && out.meta.changes > 0) || false;
   }
 
+  async getFolderSubtreeIds(rootFolderId) {
+    if (!rootFolderId) return [];
+    const { results } = await this.db.prepare(
+      'WITH RECURSIVE subtree(id, depth) AS (SELECT id, 0 FROM folders WHERE id = ? UNION ALL SELECT f.id, s.depth + 1 FROM folders f JOIN subtree s ON f.parent_id = s.id WHERE s.depth < 16) SELECT id FROM subtree',
+    ).bind(rootFolderId).all();
+    return (results || []).map((r) => r.id).filter(Boolean);
+  }
+
   // ---- shares ----
   async listShares() {
     const { results } = await this.db.prepare('SELECT * FROM shares').all();
@@ -865,15 +891,27 @@ export class D1MetaStore {
     const r = await this.db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > ?')
       .bind(token, Date.now()).first();
     if (!r) return null;
-    return { token, username: 'admin', expiresAt: r.expires_at };
+    const userId = (typeof r.user_id === 'string' && r.user_id) ? r.user_id : null;
+    return { token, username: userId ? '' : 'admin', userId, expiresAt: r.expires_at };
   }
-  async createSession(token, expiresAt) {
+  async createSession(token, expiresAt, userId = null) {
     await this.db.prepare(
-      'INSERT OR REPLACE INTO sessions (token, expires_at) VALUES (?, ?)',
-    ).bind(token, expiresAt).run();
+      'INSERT OR REPLACE INTO sessions (token, expires_at, user_id) VALUES (?, ?, ?)',
+    ).bind(token, expiresAt, userId || null).run();
   }
   async deleteSession(token) {
     await this.db.prepare('DELETE FROM sessions WHERE token = ?').bind(token).run();
+  }
+  async deleteUserSessions(userId) {
+    if (!userId) return 0;
+    const out = await this.db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+    return (out && out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
+  }
+  async deleteExpiredUserSessions(now = Date.now()) {
+    const out = await this.db.prepare(
+      'DELETE FROM sessions WHERE user_id IS NOT NULL AND (user_id IN (SELECT id FROM users WHERE enabled = 0 OR (expires_at IS NOT NULL AND expires_at <= ?)) OR user_id NOT IN (SELECT id FROM users))',
+    ).bind(now).run();
+    return (out && out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
   }
   async deleteExpiredSessions(now) {
     await this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
@@ -1309,5 +1347,121 @@ export class D1MetaStore {
   async deleteGithubWatch(id) {
     const out = await this.db.prepare('DELETE FROM github_watches WHERE id = ?').bind(id).run();
     return (out && out.meta && out.meta.changes > 0) || false;
+  }
+
+  // ---- Sub-accounts & temporary test accounts (v3.8.0) ----
+  _rowToUser(r) {
+    if (!r) return null;
+    return {
+      id: r.id,
+      username: r.username,
+      displayName: typeof r.display_name === 'string' ? r.display_name : '',
+      passwordHash: r.password_hash,
+      role: r.role === 'guest' ? 'guest' : 'user',
+      rootFolderId: r.root_folder_id,
+      quotaBytes: typeof r.quota_bytes === 'number' && r.quota_bytes > 0 ? r.quota_bytes : 0,
+      canUpload: r.can_upload === 1,
+      canDelete: r.can_delete === 1,
+      canShare: r.can_share === 1,
+      enabled: r.enabled !== 0,
+      expiresAt: typeof r.expires_at === 'number' ? r.expires_at : null,
+      note: typeof r.note === 'string' ? r.note : '',
+      createdAt: typeof r.created_at === 'number' ? r.created_at : 0,
+      lastLoginAt: typeof r.last_login_at === 'number' ? r.last_login_at : null,
+    };
+  }
+  async listUsers() {
+    const { results } = await this.db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
+    return (results || []).map((r) => this._rowToUser(r));
+  }
+  async getUser(id) {
+    if (!id) return null;
+    const r = await this.db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
+    return this._rowToUser(r);
+  }
+  async getUserByUsername(username) {
+    if (!username) return null;
+    const r = await this.db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').bind(String(username).trim()).first();
+    return this._rowToUser(r);
+  }
+  async createUser(u) {
+    const now = typeof u.createdAt === 'number' ? u.createdAt : Date.now();
+    await this.db.prepare(
+      'INSERT INTO users (id, username, display_name, password_hash, role, root_folder_id, quota_bytes, can_upload, can_delete, can_share, enabled, expires_at, note, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(
+      u.id,
+      u.username,
+      u.displayName || '',
+      u.passwordHash,
+      u.role === 'guest' ? 'guest' : 'user',
+      u.rootFolderId,
+      Number(u.quotaBytes) > 0 ? Math.floor(Number(u.quotaBytes)) : 0,
+      u.canUpload !== false ? 1 : 0,
+      u.canDelete !== false ? 1 : 0,
+      u.canShare !== false ? 1 : 0,
+      u.enabled !== false ? 1 : 0,
+      typeof u.expiresAt === 'number' && u.expiresAt > 0 ? Math.floor(u.expiresAt) : null,
+      u.note || '',
+      now,
+      null,
+    ).run();
+    return this.getUser(u.id);
+  }
+  async updateUser(id, patch) {
+    if (!patch || typeof patch !== 'object') return this.getUser(id);
+    const sets = [];
+    const binds = [];
+    const push = (col, val) => { sets.push(`${col} = ?`); binds.push(val); };
+    if (patch.displayName !== undefined) push('display_name', String(patch.displayName || '').slice(0, 64));
+    if (patch.passwordHash !== undefined) push('password_hash', String(patch.passwordHash || ''));
+    if (patch.role !== undefined) push('role', patch.role === 'guest' ? 'guest' : 'user');
+    if (patch.rootFolderId !== undefined) push('root_folder_id', String(patch.rootFolderId || ''));
+    if (patch.quotaBytes !== undefined) push('quota_bytes', Number(patch.quotaBytes) > 0 ? Math.floor(Number(patch.quotaBytes)) : 0);
+    if (patch.canUpload !== undefined) push('can_upload', patch.canUpload ? 1 : 0);
+    if (patch.canDelete !== undefined) push('can_delete', patch.canDelete ? 1 : 0);
+    if (patch.canShare !== undefined) push('can_share', patch.canShare ? 1 : 0);
+    if (patch.enabled !== undefined) push('enabled', patch.enabled ? 1 : 0);
+    if (patch.expiresAt !== undefined) push('expires_at', (typeof patch.expiresAt === 'number' && patch.expiresAt > 0) ? Math.floor(patch.expiresAt) : null);
+    if (patch.note !== undefined) push('note', String(patch.note || '').slice(0, 200));
+    if (patch.lastLoginAt !== undefined) push('last_login_at', (typeof patch.lastLoginAt === 'number' && patch.lastLoginAt > 0) ? Math.floor(patch.lastLoginAt) : null);
+    if (!sets.length) return this.getUser(id);
+    binds.push(id);
+    const out = await this.db.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run();
+    if (out && out.meta && out.meta.changes === 0) return null;
+    return this.getUser(id);
+  }
+  async deleteUser(id) {
+    const out = await this.db.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+    return (out && out.meta && out.meta.changes > 0) || false;
+  }
+  async touchUserLogin(id, at = Date.now()) {
+    await this.db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').bind(at, id).run();
+  }
+  async getUserUsageMap() {
+    const { results } = await this.db.prepare(
+      'SELECT owner_id, COALESCE(SUM(size), 0) AS used FROM files WHERE deleted_at IS NULL AND owner_id IS NOT NULL GROUP BY owner_id',
+    ).all();
+    const map = new Map();
+    for (const r of (results || [])) {
+      if (r && r.owner_id) map.set(r.owner_id, Number(r.used || 0));
+    }
+    return map;
+  }
+  async getUserUsedBytes(userId) {
+    if (!userId) return 0;
+    const r = await this.db.prepare(
+      'SELECT COALESCE(SUM(size), 0) AS used FROM files WHERE deleted_at IS NULL AND owner_id = ?',
+    ).bind(userId).first();
+    return Number((r && r.used) || 0);
+  }
+  async trashFilesByOwner(userId, deletedAt = Date.now()) {
+    if (!userId) return 0;
+    const out = await this.db.prepare(
+      'UPDATE files SET deleted_at = ? WHERE owner_id = ? AND deleted_at IS NULL',
+    ).bind(deletedAt, userId).run();
+    await this.db.prepare(
+      'DELETE FROM shares WHERE file_id IN (SELECT id FROM files WHERE owner_id = ?)',
+    ).bind(userId).run();
+    return (out && out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
   }
 }

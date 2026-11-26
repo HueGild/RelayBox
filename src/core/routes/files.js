@@ -1,10 +1,9 @@
 // RelayBox core routes — files (list / search / download / move / rename /
-// visibility / expiry / delete). Supports v3.1.5 file details, v3.1.6 dual mode,
-// and v3.2 multi-storage pools.
+// visibility / expiry / delete). v3.8.0: sub-account subtree sandboxing & permissions.
 
 import { readJsonBody, folderIdOf, folderPath, folderVisibleByCountMap, isExpired, kindOf, safeName, extOf, keyOf, parseExpiresHours, expiresAtOf, parseRange, MIME, R2_FREE_BYTES, log } from '../lib/util.js';
 import { originOf, mediaCacheKey, matchEdgeCache, putEdgeCache, purgeEdgeCacheForFile, purgeEdgeCacheForFiles, withCacheHeader, computePublicEdgeTtl } from '../lib/edge-cache.js';
-import { isAuthed, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
+import { getAuthContext, assertFolderInSubtree, auditUserPrefix, authOrPassword, authFail, clientMeta } from '../lib/auth.js';
 import { notifyShareConsumed } from '../lib/notify.js';
 import { recordAudit } from '../lib/audit.js';
 import { getTransferModeState } from './settings.js';
@@ -14,7 +13,7 @@ import { moveFileToTrash, purgeFilePermanently } from './trash.js';
 const MAX_PAGE_LIMIT = 500;
 const MAX_BATCH_IDS = 500;
 
-function mapFile(f, shareToken, authed, poolNameMap) {
+function mapFile(f, shareToken, isAdmin, poolNameMap) {
   const poolId = f.poolId || (f.storage === 'r2' ? BUILTIN_R2_ID : BUILTIN_LOCAL_ID);
   const out = {
     id: f.id, name: f.name, size: f.size, ext: f.ext, kind: f.kind,
@@ -29,8 +28,8 @@ function mapFile(f, shareToken, authed, poolNameMap) {
     out.width = f.width;
     out.height = f.height;
   }
-  // 上传者 IP 与归属地严格仅管理员可见，绝不向未登录访客暴露。
-  if (authed) {
+  // 上传者 IP 与归属地严格仅主管理员可见，绝不向未登录访客或子账号暴露。
+  if (isAdmin) {
     if (f.uploadIp) out.uploadIp = f.uploadIp;
     if (f.uploadGeo) out.uploadGeo = f.uploadGeo;
   }
@@ -120,11 +119,20 @@ async function buildShareMaps(deps, visibleFiles, visibleFolders, authed) {
   return { fileShares, folderShares };
 }
 
+/** Slice breadcrumb path so sub-accounts never see ancestor folders above rootFolderId. */
+function sliceSubtreePath(folders, targetFolderId, rootFolderId) {
+  const full = folderPath(folders, targetFolderId);
+  const idx = full.findIndex((x) => x.id === rootFolderId);
+  if (idx >= 0) return full.slice(idx);
+  const root = folders.find((f) => f.id === rootFolderId);
+  return root ? [{ id: root.id, name: root.name }] : [];
+}
+
 export function registerFiles(app) {
-  // 列表：未登录只看公开文件；支持可选 limit/offset 分页；全部由 D1 原生 WHERE + GROUP BY 完成，零全表扫描。
+  // 列表：未登录只看公开文件；子账号锁死在 rootFolderId 子树内；全部由 D1 原生 WHERE + GROUP BY 完成，零全表扫描。
   app.get('/api/files', async (c) => {
     const deps = c.get('deps');
-    const folderId = c.req.query('folderId') || null;
+    const requestedFolderId = c.req.query('folderId') || null;
     const rawLimit = Number(c.req.query('limit'));
     const rawOffset = Number(c.req.query('offset'));
     const limit = (Number.isFinite(rawLimit) && rawLimit > 0) ? Math.min(MAX_PAGE_LIMIT, Math.floor(rawLimit)) : 0;
@@ -132,7 +140,21 @@ export function registerFiles(app) {
     const rawSort = (c.req.query('sort') || 'time-desc').trim();
     const sort = ['time-desc', 'time-asc', 'name-asc', 'name-desc', 'size-desc', 'size-asc'].includes(rawSort) ? rawSort : 'time-desc';
 
-    const authed = await isAuthed(c, deps);
+    const authCtx = await getAuthContext(c, deps);
+    const authed = authCtx.authed;
+    const isAdmin = authCtx.isAdmin;
+    const subUser = authCtx.user;
+
+    let folderId = requestedFolderId;
+    if (subUser) {
+      if (!folderId) {
+        folderId = subUser.rootFolderId;
+      } else {
+        const ok = await assertFolderInSubtree(deps, folderId, subUser.rootFolderId);
+        if (!ok) return c.json({ ok: false, error: '无权访问该目录' }, 403);
+      }
+    }
+
     let folders, visible, folderStats, fileCountByFolder, trashStats, poolUsageMap = null;
     const transferPromise = getTransferModeState(deps);
     if (typeof deps.meta.getDirListingBundle === 'function') {
@@ -149,18 +171,21 @@ export function registerFiles(app) {
         deps.meta.getFolderFileStats(folderId, { authed }),
         deps.meta.getFolderFileCounts({ authed }),
         transferPromise,
-        authed ? deps.meta.getTrashStats() : Promise.resolve({ count: 0, totalBytes: 0 }),
+        isAdmin ? deps.meta.getTrashStats() : Promise.resolve({ count: 0, totalBytes: 0 }),
       ]);
       folders = flds; visible = vis; folderStats = fStats; fileCountByFolder = fCounts; var transfer = tr; trashStats = tStats;
     }
     const visibleFolders = folders
       .filter((fd) => (fd.parentId || null) === folderId)
       .filter((fd) => authed || folderVisibleByCountMap(folders, fileCountByFolder, fd.id));
-    const [poolSummary, shareMaps] = await Promise.all([
-      buildPoolSummaries(deps, poolUsageMap, { authed, includeAdminMeta: false, transfer }),
+    const [poolSummary, shareMaps, userUsedBytes] = await Promise.all([
+      buildPoolSummaries(deps, poolUsageMap, { authed: isAdmin, includeAdminMeta: false, transfer }),
       buildShareMaps(deps, visible, visibleFolders, authed),
+      (subUser && typeof deps.meta.getUserUsedBytes === 'function')
+        ? deps.meta.getUserUsedBytes(subUser.id)
+        : Promise.resolve(0),
     ]);
-    const files = visible.map((f) => mapFile(f, shareMaps.fileShares.get(f.id) || null, authed, poolSummary.poolNameMap));
+    const files = visible.map((f) => mapFile(f, shareMaps.fileShares.get(f.id) || null, isAdmin, poolSummary.poolNameMap));
     const folderCountByParent = new Map();
     for (const x of folders) {
       const pid = x.parentId || null;
@@ -179,6 +204,43 @@ export function registerFiles(app) {
       if (st) out.shareToken = st;
       return out;
     });
+
+    // Sub-account: restrict allFolders to its subtree & slice breadcrumb to rootFolderId.
+    let allFoldersList = null;
+    let outPath = folderPath(folders, folderId);
+    let userPayload = null;
+    if (isAdmin) {
+      allFoldersList = folders.map((fd) => ({ id: fd.id, name: fd.name, parentId: fd.parentId || null }));
+    } else if (subUser) {
+      outPath = sliceSubtreePath(folders, folderId, subUser.rootFolderId);
+      const folderMap = new Map(folders.map((fd) => [fd.id, fd]));
+      allFoldersList = [];
+      for (const fd of folders) {
+        if (await assertFolderInSubtree(deps, fd.id, subUser.rootFolderId, folderMap)) {
+          allFoldersList.push({
+            id: fd.id,
+            name: fd.name,
+            parentId: fd.id === subUser.rootFolderId ? null : (fd.parentId || null),
+          });
+        }
+      }
+      const rootFolder = folderMap.get(subUser.rootFolderId);
+      userPayload = {
+        id: subUser.id,
+        username: subUser.username,
+        displayName: subUser.displayName || '',
+        role: subUser.role === 'guest' ? 'guest' : 'user',
+        rootFolderId: subUser.rootFolderId,
+        rootFolderName: rootFolder ? rootFolder.name : '',
+        quotaBytes: Number(subUser.quotaBytes) > 0 ? Number(subUser.quotaBytes) : 0,
+        usedBytes: Number(userUsedBytes) || 0,
+        canUpload: !!subUser.canUpload,
+        canDelete: !!subUser.canDelete,
+        canShare: !!subUser.canShare,
+        expiresAt: subUser.expiresAt || null,
+      };
+    }
+
     const total = folderStats.totalBytes;
     const r2Used = folderStats.r2Bytes;
     const localUsed = folderStats.localBytes;
@@ -189,14 +251,14 @@ export function registerFiles(app) {
     const proxyThreshold = deps.config.proxyChunkUploadThreshold || Math.min(presignThreshold, chunkSize);
     const effectiveThreshold = transfer.mode === 'proxy' ? proxyThreshold : presignThreshold;
     return c.json({
-      ok: true, files, folders: subfolders, path: folderPath(folders, folderId), folderId, total,
+      ok: true, files, folders: subfolders, path: outPath, folderId, total,
       totalFiles,
       limit: limit || null,
       offset,
       hasMore,
       free: deps.local.freeBytes(), diskTotal: deps.local.totalBytes(),
       hasLocal: hasLocalDisk(deps),
-      r2Used, localUsed, r2Total: R2_FREE_BYTES, authed, r2: deps.r2.enabled,
+      r2Used, localUsed, r2Total: R2_FREE_BYTES, authed, isAdmin, user: userPayload, r2: deps.r2.enabled,
       r2TransferMode: transfer.mode,
       r2PresignAvailable: transfer.presignAvailable,
       r2ProxyAvailable: transfer.proxyAvailable,
@@ -205,40 +267,64 @@ export function registerFiles(app) {
       maxUploadSize: deps.config.maxUploadSize || 0,
       chunkUploadThreshold: effectiveThreshold,
       chunkSize,
-      ...(authed ? {
+      ...(isAdmin ? {
         trashCount: trashStats.count,
         trashBytes: trashStats.totalBytes,
-        allFolders: folders.map((fd) => ({ id: fd.id, name: fd.name, parentId: fd.parentId || null })),
-      } : {}),
+        allFolders: allFoldersList,
+      } : (subUser ? {
+        allFolders: allFoldersList,
+      } : {})),
     });
   });
 
-  // 全局搜索：跨所有文件夹按文件名搜（不区分大小写）；访客只搜得到公开文件。
+  // 全局搜索：主管理员全站搜；访客只搜公开文件；子账号仅搜 rootFolderId 子树内文件（D1 递归 CTE，零 listAllFiles）。
   app.get('/api/search', async (c) => {
     const deps = c.get('deps');
     const q = (c.req.query('q') || '').trim().toLowerCase();
     if (!q) return c.json({ ok: true, files: [], folders: [], total: 0 });
-    const authed = await isAuthed(c, deps);
+    const authCtx = await getAuthContext(c, deps);
+    const authed = authCtx.authed;
+    const isAdmin = authCtx.isAdmin;
+    const subUser = authCtx.user;
+
+    let subtreeIds = null;
+    let subtreeSet = null;
+    if (subUser) {
+      if (typeof deps.meta.getFolderSubtreeIds === 'function') {
+        subtreeIds = await deps.meta.getFolderSubtreeIds(subUser.rootFolderId);
+      } else {
+        const allF = await deps.meta.listFolders();
+        const fMap = new Map(allF.map((f) => [f.id, f]));
+        subtreeIds = [];
+        for (const f of allF) {
+          if (await assertFolderInSubtree(deps, f.id, subUser.rootFolderId, fMap)) subtreeIds.push(f.id);
+        }
+      }
+      subtreeSet = new Set(subtreeIds);
+    }
+
     const [folders, fileCountByFolder, matched] = await Promise.all([
       deps.meta.listFolders(),
       deps.meta.getFolderFileCounts({ authed }),
-      deps.meta.searchFiles(q, { authed }),
+      deps.meta.searchFiles(q, { authed, ...(subtreeIds ? { folderIds: subtreeIds } : {}) }),
     ]);
-    const matchedRawFolders = folders.filter((fd) => (
-      fd.name.toLowerCase().includes(q) && (authed || folderVisibleByCountMap(folders, fileCountByFolder, fd.id))
-    ));
+    const matchedRawFolders = folders.filter((fd) => {
+      if (!fd.name.toLowerCase().includes(q)) return false;
+      if (subUser) return subtreeSet.has(fd.id) && fd.id !== subUser.rootFolderId;
+      return authed || folderVisibleByCountMap(folders, fileCountByFolder, fd.id);
+    });
     const [poolSummary, shareMaps] = await Promise.all([
-      buildPoolSummaries(deps, null, { authed, includeAdminMeta: false }),
+      buildPoolSummaries(deps, null, { authed: isAdmin, includeAdminMeta: false }),
       buildShareMaps(deps, matched, matchedRawFolders, authed),
     ]);
     const files = matched.map((f) => {
-      const out = mapFile(f, shareMaps.fileShares.get(f.id) || null, authed, poolSummary.poolNameMap);
-      const p = folderPath(folders, folderIdOf(f));
+      const out = mapFile(f, shareMaps.fileShares.get(f.id) || null, isAdmin, poolSummary.poolNameMap);
+      const p = subUser ? sliceSubtreePath(folders, folderIdOf(f), subUser.rootFolderId) : folderPath(folders, folderIdOf(f));
       out.folderPath = p.length > 1 ? p.slice(1).map((x) => x.name).join(' / ') : '';
       return out;
     });
     const matchedFolders = matchedRawFolders.map((fd) => {
-      const p = folderPath(folders, fd.parentId || null);
+      const p = subUser ? sliceSubtreePath(folders, fd.parentId || null, subUser.rootFolderId) : folderPath(folders, fd.parentId || null);
       const out = {
         id: fd.id, name: fd.name, parentId: fd.parentId || null, createdAt: fd.createdAt,
         path: p.length > 1 ? p.slice(1).map((x) => x.name).join(' / ') : '',
@@ -287,9 +373,16 @@ export function registerFiles(app) {
         return c.json({ ok: false, error: '提取码不正确' }, 403);
       }
     }
-    if (item.visibility === 'private' && !(await isAuthed(c, deps))) {
-      const ok = shareToken && (await canAccessViaShare(deps, item, shareToken));
-      if (!ok) return c.json({ ok: false, error: '这是私密文件，需要分享链接才能访问' }, 403);
+    if (item.visibility === 'private') {
+      const authCtx = await getAuthContext(c, deps);
+      let allowed = authCtx.isAdmin;
+      if (!allowed && authCtx.user) {
+        allowed = await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId);
+      }
+      if (!allowed) {
+        const ok = shareToken && (await canAccessViaShare(deps, item, shareToken));
+        if (!ok) return c.json({ ok: false, error: '这是私密文件，需要分享链接才能访问' }, 403);
+      }
     }
     const mime = MIME[item.ext] || 'application/octet-stream';
     const disposition = (forceDownload ? 'attachment' : 'inline') +
@@ -363,22 +456,37 @@ export function registerFiles(app) {
     }
   });
 
-  // 上传前全目录判重接口（v3.5.1）：支持大目录与多目录批量检测同名同大小文件。
+  // 上传前全目录判重接口（v3.5.1 + v3.8.0 子账号支持）。
   app.post('/api/files/check-dup', async (c) => {
     const deps = c.get('deps');
-    const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
-    if (auth !== 'ok') return authFail(c, auth);
+    const authCtx = await getAuthContext(c, deps);
+    if (authCtx.user) {
+      if (!authCtx.user.canUpload) return c.json({ ok: false, error: '当前账号没有上传权限' }, 403);
+    } else if (!authCtx.isAdmin) {
+      const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
+      if (auth !== 'ok') return authFail(c, auth);
+    }
     const body = await readJsonBody(c);
-    const defaultFolderId = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;
+    const defaultFolderId = (typeof body.folderId === 'string' && body.folderId)
+      ? body.folderId
+      : (authCtx.user ? authCtx.user.rootFolderId : null);
     const rawItems = Array.isArray(body.items) ? body.items.slice(0, MAX_BATCH_IDS) : [];
     const normalized = rawItems
       .filter((x) => x && typeof x.name === 'string' && x.name.trim())
       .map((x, idx) => ({
         idx,
-        folderId: (x.folderId !== undefined ? (x.folderId || null) : defaultFolderId),
+        folderId: (x.folderId !== undefined ? (x.folderId || (authCtx.user ? authCtx.user.rootFolderId : null)) : defaultFolderId),
         name: safeName(x.name),
         size: Math.max(0, Math.floor(Number(x.size) || 0)),
       }));
+    if (authCtx.user) {
+      const uniqFolders = [...new Set(normalized.map((it) => it.folderId))];
+      for (const fid of uniqFolders) {
+        if (!(await assertFolderInSubtree(deps, fid, authCtx.user.rootFolderId))) {
+          return c.json({ ok: false, error: '无权检测该目录外的重复文件' }, 403);
+        }
+      }
+    }
     if (!normalized.length) return c.json({ ok: true, duplicateIndexes: [] });
     const matched = await deps.meta.findDuplicatesInFolders(normalized);
     const duplicateIndexes = [];
@@ -389,10 +497,11 @@ export function registerFiles(app) {
     return c.json({ ok: true, duplicateIndexes });
   });
 
-  // 批量操作聚合接口（管理员，v3.3.10）：一次请求完成 move / visibility / trash。
+  // 批量操作聚合接口（v3.3.10 + v3.8.0 子账号支持）。
   app.post('/api/files/batch', async (c) => {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
     const body = await readJsonBody(c);
     const action = typeof body.action === 'string' ? body.action.trim() : '';
     const rawIds = Array.isArray(body.ids) ? body.ids : [];
@@ -400,8 +509,34 @@ export function registerFiles(app) {
     if (!ids.length) return c.json({ ok: false, error: '请至少选择一个文件' }, 400);
     if (ids.length > MAX_BATCH_IDS) return c.json({ ok: false, error: `单次批量操作最多支持 ${MAX_BATCH_IDS} 个文件` }, 400);
 
+    // Sub-account permission & subtree validation
+    if (authCtx.user) {
+      if (action === 'trash' && !authCtx.user.canDelete) {
+        return c.json({ ok: false, error: '当前账号没有删除权限' }, 403);
+      }
+      if ((action === 'move' || action === 'visibility') && !authCtx.user.canUpload && !authCtx.user.canDelete) {
+        return c.json({ ok: false, error: '当前账号为只读权限' }, 403);
+      }
+      const [items, folders] = await Promise.all([
+        deps.meta.getFilesByIds(ids, { includeTrashed: true }),
+        deps.meta.listFolders(),
+      ]);
+      const folderMap = new Map(folders.map((f) => [f.id, f]));
+      for (const it of items) {
+        if (!(await assertFolderInSubtree(deps, folderIdOf(it), authCtx.user.rootFolderId, folderMap))) {
+          return c.json({ ok: false, error: '包含无权操作的目录外文件' }, 403);
+        }
+      }
+    }
+
     if (action === 'move') {
-      const target = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;
+      let target = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;
+      if (authCtx.user) {
+        if (!target) target = authCtx.user.rootFolderId;
+        if (!(await assertFolderInSubtree(deps, target, authCtx.user.rootFolderId))) {
+          return c.json({ ok: false, error: '无权移动到目标目录' }, 403);
+        }
+      }
       if (target && !(await deps.meta.getFolder(target))) {
         return c.json({ ok: false, error: '目标文件夹不存在' }, 400);
       }
@@ -466,6 +601,9 @@ export function registerFiles(app) {
         out = { trashedIds, alreadyTrashedIds, notFoundIds };
       }
       await purgeEdgeCacheForFiles(deps, c, out.trashedIds);
+      if (authCtx.user && out.trashedIds.length) {
+        await recordAudit(deps, c, 'file_delete', `${out.trashedIds.length} files`, `${auditUserPrefix(authCtx)}批量移入回收站`);
+      }
       log('batch trash:', out.trashedIds.length, 'files');
       return c.json({ ok: true, action, count: out.trashedIds.length, ...out });
     }
@@ -473,28 +611,46 @@ export function registerFiles(app) {
     return c.json({ ok: false, error: '不支持的批量操作类型（仅支持 move / visibility / trash）' }, 400);
   });
 
-  // 移动文件到另一个文件夹（管理员）。folderId 为空表示移回根目录。
+  // 移动文件到另一个文件夹：子账号需写权限且源与目标均在子树内。
   app.post('/api/files/:id/move', async (c) => {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
+    if (authCtx.user && !authCtx.user.canUpload && !authCtx.user.canDelete) {
+      return c.json({ ok: false, error: '当前账号为只读权限' }, 403);
+    }
     const id = decodeURIComponent(c.req.param('id'));
     const { folderId } = await readJsonBody(c);
     const item = await deps.meta.getFile(id);
     if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
-    const target = (typeof folderId === 'string' && folderId) ? folderId : null;
+    let target = (typeof folderId === 'string' && folderId) ? folderId : null;
+    if (authCtx.user) {
+      if (!target) target = authCtx.user.rootFolderId;
+      if (!(await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId)) ||
+          !(await assertFolderInSubtree(deps, target, authCtx.user.rootFolderId))) {
+        return c.json({ ok: false, error: '无权移动该文件' }, 403);
+      }
+    }
     if (target && !(await deps.meta.getFolder(target))) return c.json({ ok: false, error: '目标文件夹不存在' }, 400);
     const updated = await deps.meta.updateFile(id, { folderId: target });
     return c.json({ ok: true, file: updated });
   });
 
-  // 文件改名（管理员）。
+  // 文件改名：子账号需写权限且文件在子树内。
   app.post('/api/files/:id/rename', async (c) => {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
+    if (authCtx.user && !authCtx.user.canUpload && !authCtx.user.canDelete) {
+      return c.json({ ok: false, error: '当前账号为只读权限' }, 403);
+    }
     const id = decodeURIComponent(c.req.param('id'));
     const { name } = await readJsonBody(c);
     const item = await deps.meta.getFile(id);
     if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (authCtx.user && !(await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId))) {
+      return c.json({ ok: false, error: '无权操作该目录外的文件' }, 403);
+    }
     const clean = safeName(name);
     if (!clean || clean === 'file') return c.json({ ok: false, error: '文件名不对' }, 400);
     if (clean === item.name) return c.json({ ok: true, file: item });
@@ -519,10 +675,14 @@ export function registerFiles(app) {
     return c.json({ ok: true, file: updated });
   });
 
-  // 切换文件公开/私密（管理员）。
+  // 切换文件公开/私密：子账号需写权限且文件在子树内。
   app.post('/api/files/:id/visibility', async (c) => {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
+    if (authCtx.user && !authCtx.user.canUpload && !authCtx.user.canDelete) {
+      return c.json({ ok: false, error: '当前账号为只读权限' }, 403);
+    }
     const id = decodeURIComponent(c.req.param('id'));
     const { visibility } = await readJsonBody(c);
     if (visibility !== 'public' && visibility !== 'private') {
@@ -530,57 +690,87 @@ export function registerFiles(app) {
     }
     const item = await deps.meta.getFile(id);
     if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (authCtx.user && !(await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId))) {
+      return c.json({ ok: false, error: '无权操作该目录外的文件' }, 403);
+    }
     const updated = await deps.meta.updateFile(id, { visibility });
     await purgeEdgeCacheForFile(deps, c, id);
     log('visibility:', item.name, '->', visibility);
     return c.json({ ok: true, file: updated });
   });
 
-  // 置顶 / 备注更新（管理员，v3.6.0）。
+  // 置顶 / 备注更新（v3.6.0 + v3.8.0 子账号支持）。
   app.post('/api/files/:id/meta', async (c) => {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
+    if (authCtx.user && !authCtx.user.canUpload && !authCtx.user.canDelete) {
+      return c.json({ ok: false, error: '当前账号为只读权限' }, 403);
+    }
     const id = decodeURIComponent(c.req.param('id'));
     const body = await readJsonBody(c);
     const item = await deps.meta.getFile(id);
     if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (authCtx.user && !(await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId))) {
+      return c.json({ ok: false, error: '无权操作该目录外的文件' }, 403);
+    }
     const patch = {};
     if (typeof body.pinned === 'boolean') patch.pinned = body.pinned;
     if (typeof body.note === 'string') patch.note = body.note.trim().slice(0, 200);
     if (!Object.keys(patch).length) return c.json({ ok: true, file: item });
     const updated = await deps.meta.updateFile(id, patch);
-    await recordAudit(deps, c, 'file_meta', item.name, Object.keys(patch).join(','));
+    await recordAudit(deps, c, 'file_meta', item.name, `${auditUserPrefix(authCtx)}${Object.keys(patch).join(',')}`);
     return c.json({ ok: true, file: updated });
   });
 
   // 改已有文件的有效期（只认 0/24/168 三档，0 为永久）。
   app.post('/api/files/:id/expiry', async (c) => {
     const deps = c.get('deps');
-    if (!(await isAuthed(c, deps))) return c.json({ ok: false, error: '请先登录' }, 401);
+    const authCtx = await getAuthContext(c, deps);
+    if (!authCtx.authed) return c.json({ ok: false, error: '请先登录' }, 401);
+    if (authCtx.user && !authCtx.user.canUpload && !authCtx.user.canDelete) {
+      return c.json({ ok: false, error: '当前账号为只读权限' }, 403);
+    }
     const id = decodeURIComponent(c.req.param('id'));
     const { expiresHours } = await readJsonBody(c);
     const hours = parseExpiresHours(expiresHours);
     const item = await deps.meta.getFile(id);
     if (!item || item.deletedAt) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (authCtx.user && !(await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId))) {
+      return c.json({ ok: false, error: '无权操作该目录外的文件' }, 403);
+    }
     const updated = await deps.meta.updateFile(id, { expiresAt: expiresAtOf(hours) });
     await purgeEdgeCacheForFile(deps, c, id);
     log('expiry:', item.name, '->', hours === 0 ? '永久' : hours + 'h');
     return c.json({ ok: true, file: updated });
   });
 
-  // 删除文件（管理员，或凭上传密码）。
+  // 删除文件（主管理员、有 canDelete 且在子树内的子账号，或凭上传密码）。
   // 带 ?trash=1 或 { trash: true } 时移入 7 天回收站（软删除）；默认保持直接物理删除兼容既有 API。
   app.delete('/api/files/:id', async (c) => {
     const deps = c.get('deps');
     const id = decodeURIComponent(c.req.param('id'));
     const body = await readJsonBody(c);
-    const auth = await authOrPassword(c, deps, body.password || '');
-    if (auth !== 'ok') return authFail(c, auth);
+    const authCtx = await getAuthContext(c, deps);
+    if (authCtx.user) {
+      if (!authCtx.user.canDelete) {
+        return c.json({ ok: false, error: '当前账号没有删除权限' }, 403);
+      }
+    } else if (!authCtx.isAdmin) {
+      const auth = await authOrPassword(c, deps, body.password || '');
+      if (auth !== 'ok') return authFail(c, auth);
+    }
     const item = await deps.meta.getFile(id);
     if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (authCtx.user && !(await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId))) {
+      return c.json({ ok: false, error: '无权删除该目录外的文件' }, 403);
+    }
     const toTrash = (c.req.query('trash') === '1' || body.trash === true) && c.req.query('permanent') !== '1';
     if (toTrash) {
       const res = await moveFileToTrash(deps, item, c);
+      if (authCtx.user) {
+        await recordAudit(deps, c, 'file_delete', item.name, `${auditUserPrefix(authCtx)}移入回收站`);
+      }
       return c.json({
         ok: true,
         trashed: true,
@@ -590,8 +780,10 @@ export function registerFiles(app) {
       });
     }
     await purgeFilePermanently(deps, item, c);
+    if (authCtx.user) {
+      await recordAudit(deps, c, 'file_delete', item.name, `${auditUserPrefix(authCtx)}彻底删除`);
+    }
     log('deleted:', item.name);
     return c.json({ ok: true });
   });
 }
-

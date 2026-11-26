@@ -1,9 +1,8 @@
 // RelayBox core routes — thumbnails (upload / view).
-// Supports both image and video thumbnails (v3.1.5) and optionally backfills
-// media width/height from X-Media-Width / X-Media-Height headers.
+// v3.8.0: supports sub-account subtree access for thumbnail upload & private preview.
 
-import { isExpired, parseDim } from '../lib/util.js';
-import { isAuthed, authOrPassword, authFail } from '../lib/auth.js';
+import { isExpired, parseDim, folderIdOf } from '../lib/util.js';
+import { getAuthContext, assertFolderInSubtree, authOrPassword, authFail } from '../lib/auth.js';
 import { originOf, thumbCacheKey, matchEdgeCache, putEdgeCache, purgeEdgeCacheForFile, withCacheHeader, computePublicEdgeTtl } from '../lib/edge-cache.js';
 
 function detectThumbMime(buf) {
@@ -25,10 +24,18 @@ export function registerThumbs(app) {
   app.post('/api/thumbs/:id', async (c) => {
     const deps = c.get('deps');
     const id = decodeURIComponent(c.req.param('id'));
-    const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
-    if (auth !== 'ok') return authFail(c, auth);
+    const authCtx = await getAuthContext(c, deps);
+    if (authCtx.user) {
+      if (!authCtx.user.canUpload) return c.json({ ok: false, error: '当前账号没有上传权限' }, 403);
+    } else if (!authCtx.isAdmin) {
+      const auth = await authOrPassword(c, deps, c.req.header('X-Upload-Password') || '');
+      if (auth !== 'ok') return authFail(c, auth);
+    }
     const item = await deps.meta.getFile(id);
     if (!item) return c.json({ ok: false, error: '文件不存在' }, 404);
+    if (authCtx.user && !(await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId))) {
+      return c.json({ ok: false, error: '无权操作该目录外的文件' }, 403);
+    }
     if (item.kind !== 'image' && item.kind !== 'video') {
       return c.json({ ok: false, error: '仅支持图片或视频缩略图' }, 400);
     }
@@ -77,10 +84,14 @@ export function registerThumbs(app) {
 
     const item = await deps.meta.getFile(id);
     if (!item || isExpired(item)) return c.json({ ok: false, error: 'not found' }, 404);
-    const authed = await isAuthed(c, deps);
-    if (item.deletedAt && !authed) return c.json({ ok: false, error: 'not found' }, 404);
-    if (!authed && item.visibility !== 'public') {
-      return c.json({ ok: false, error: 'not found' }, 404);
+    const authCtx = await getAuthContext(c, deps);
+    if (item.deletedAt && !authCtx.isAdmin) return c.json({ ok: false, error: 'not found' }, 404);
+    if (item.visibility !== 'public') {
+      let allowed = authCtx.isAdmin;
+      if (!allowed && authCtx.user) {
+        allowed = await assertFolderInSubtree(deps, folderIdOf(item), authCtx.user.rootFolderId);
+      }
+      if (!allowed) return c.json({ ok: false, error: 'not found' }, 404);
     }
     const buf = await deps.local.getThumb(id);
     if (!buf) return c.json({ ok: false, error: 'not found' }, 404);

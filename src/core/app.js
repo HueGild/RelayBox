@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { assertImplements, MetaStoreMethods, StorageStoreMethods } from './contracts.js';
 import { log } from './lib/util.js';
 import { registerAuth } from './routes/auth.js';
+import { registerUsers } from './routes/users.js';
 import { registerAnnounce } from './routes/announce.js';
 import { registerFiles } from './routes/files.js';
 import { registerFolders } from './routes/folders.js';
@@ -67,6 +68,7 @@ export function createApp(depsOrFactory) {
   });
 
   registerAuth(app);
+  registerUsers(app);
   registerAnnounce(app);
   registerSettings(app);
   registerPools(app);

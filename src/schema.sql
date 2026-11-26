@@ -23,7 +23,8 @@ CREATE TABLE files (
   pool_id TEXT,
   deleted_at INTEGER,
   pinned INTEGER NOT NULL DEFAULT 0,
-  note TEXT NOT NULL DEFAULT ''
+  note TEXT NOT NULL DEFAULT '',
+  owner_id TEXT DEFAULT NULL
 );
 CREATE INDEX idx_files_folder ON files(folder_id);
 CREATE INDEX idx_files_uploaded ON files(uploaded_at);
@@ -33,6 +34,7 @@ CREATE INDEX idx_files_pinned ON files(folder_id, deleted_at, pinned DESC, uploa
 CREATE INDEX idx_files_pool_del ON files(pool_id, deleted_at);
 CREATE INDEX idx_files_expires ON files(expires_at);
 CREATE INDEX idx_files_downloads ON files(deleted_at, downloads DESC);
+CREATE INDEX idx_files_owner ON files(owner_id, deleted_at);
 
 -- Folders (parent_id maintains the logical tree)
 CREATE TABLE folders (
@@ -89,11 +91,13 @@ CREATE TABLE drop_links (
 );
 CREATE INDEX idx_drop_links_expires ON drop_links(expires_at);
 
--- Admin sessions (replaces sessions.json)
+-- Admin & sub-account sessions (user_id NULL = main admin; v3.8.0)
 CREATE TABLE sessions (
   token TEXT PRIMARY KEY,
-  expires_at INTEGER NOT NULL
+  expires_at INTEGER NOT NULL,
+  user_id TEXT DEFAULT NULL
 );
+CREATE INDEX idx_sessions_user ON sessions(user_id);
 
 -- Announcement (single-row table)
 CREATE TABLE announcement (
@@ -183,3 +187,23 @@ CREATE TABLE github_watches (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX idx_gh_watches_enabled ON github_watches(enabled, last_checked_at);
+
+-- Sub-accounts & temporary test accounts (v3.8.0)
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  display_name TEXT NOT NULL DEFAULT '',
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'user',
+  root_folder_id TEXT NOT NULL,
+  quota_bytes INTEGER NOT NULL DEFAULT 0,
+  can_upload INTEGER NOT NULL DEFAULT 1,
+  can_delete INTEGER NOT NULL DEFAULT 1,
+  can_share INTEGER NOT NULL DEFAULT 1,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  expires_at INTEGER,
+  note TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  last_login_at INTEGER
+);
+CREATE INDEX idx_users_role_enabled ON users(role, enabled);

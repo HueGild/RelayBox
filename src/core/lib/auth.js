@@ -1,5 +1,6 @@
 // RelayBox core lib — auth helpers (pure Hono/Web APIs; no Node deps).
-// Mirrors v2.8.4's isAuthed / passwordBlocked / recordPasswordResult / chunkAuthed.
+// v3.8.0: unified getAuthContext(c, deps), subtree sandbox guard, and user quota check.
+// Backward compatibility: isAuthed(c, deps) strictly returns true ONLY for main admin.
 
 import { parseCookies, newSessionToken, SESSION_TTL, FAIL_LIMIT, FAIL_WINDOW_MS } from './util.js';
 import { notifyAuthBlocked } from './notify.js';
@@ -46,18 +47,117 @@ export function clientMeta(c, deps) {
   return { uploadIp, uploadGeo };
 }
 
-/** Admin session check: fs_admin cookie -> MetaStore session (expiry enforced). */
-export async function isAuthed(c, deps) {
+/**
+ * Unified auth context (v3.8.0):
+ * - No valid session -> { authed: false, isAdmin: false, user: null }
+ * - session.userId is null -> { authed: true, isAdmin: true, user: null }
+ * - session.userId is set -> loads user and verifies enabled && !expired in real time.
+ *   Disabled or expired users have their session revoked and cookie cleared immediately.
+ */
+export async function getAuthContext(c, deps) {
+  try {
+    const cached = c.get && c.get('_authCtx');
+    if (cached) return cached;
+  } catch {}
   const token = parseCookies(c.req.header('Cookie')).fs_admin;
-  if (!token) return false;
+  if (!token) {
+    const out = { authed: false, isAdmin: false, user: null };
+    try { if (c.set) c.set('_authCtx', out); } catch {}
+    return out;
+  }
   const s = await deps.meta.getSession(token);
-  return !!s;
+  if (!s) {
+    const out = { authed: false, isAdmin: false, user: null };
+    try { if (c.set) c.set('_authCtx', out); } catch {}
+    return out;
+  }
+  if (!s.userId) {
+    const out = { authed: true, isAdmin: true, user: null };
+    try { if (c.set) c.set('_authCtx', out); } catch {}
+    return out;
+  }
+  if (typeof deps.meta.getUser !== 'function') {
+    const out = { authed: false, isAdmin: false, user: null };
+    try { if (c.set) c.set('_authCtx', out); } catch {}
+    return out;
+  }
+  const user = await deps.meta.getUser(s.userId);
+  const now = Date.now();
+  if (!user || !user.enabled || (user.expiresAt && user.expiresAt <= now)) {
+    try { await deps.meta.deleteSession(token); } catch {}
+    try { clearSessionCookie(c); } catch {}
+    const out = { authed: false, isAdmin: false, user: null };
+    try { if (c.set) c.set('_authCtx', out); } catch {}
+    return out;
+  }
+  const out = { authed: true, isAdmin: false, user };
+  try { if (c.set) c.set('_authCtx', out); } catch {}
+  return out;
 }
 
-/** Create a session and return its token (7-day TTL, same as v2.8.4). */
-export async function newSession(deps) {
+/**
+ * Main admin session check (strictly main admin only, v3.8.0):
+ * Keeps all admin-only routes safe from accidental sub-account exposure.
+ */
+export async function isAuthed(c, deps) {
+  const ctx = await getAuthContext(c, deps);
+  return !!(ctx.authed && ctx.isAdmin);
+}
+
+/**
+ * Verify that `folderId` equals `rootFolderId` or is a descendant of `rootFolderId`.
+ * Walks up parent_id up to 16 levels with cycle protection.
+ */
+export async function assertFolderInSubtree(deps, folderId, rootFolderId, foldersCache = null) {
+  if (!folderId || !rootFolderId) return false;
+  if (folderId === rootFolderId) return true;
+  let folderMap = null;
+  if (foldersCache instanceof Map) {
+    folderMap = foldersCache;
+  } else if (Array.isArray(foldersCache)) {
+    folderMap = new Map(foldersCache.map((f) => [f.id, f]));
+  }
+  let curId = folderId;
+  const seen = new Set();
+  for (let depth = 0; depth < 16 && curId; depth++) {
+    if (curId === rootFolderId) return true;
+    if (seen.has(curId)) return false;
+    seen.add(curId);
+    const fd = folderMap ? folderMap.get(curId) : await deps.meta.getFolder(curId);
+    if (!fd) return false;
+    curId = fd.parentId || null;
+  }
+  return curId === rootFolderId;
+}
+
+/** Check whether a sub-account has enough remaining quota for `incomingSize` bytes. */
+export async function checkUserQuota(deps, user, incomingSize = 0) {
+  if (!user) return { ok: true, usedBytes: 0, quotaBytes: 0 };
+  const quotaBytes = Number(user.quotaBytes) > 0 ? Number(user.quotaBytes) : 0;
+  const usedBytes = (typeof deps.meta.getUserUsedBytes === 'function')
+    ? await deps.meta.getUserUsedBytes(user.id)
+    : 0;
+  if (quotaBytes > 0 && usedBytes + Math.max(0, Number(incomingSize) || 0) > quotaBytes) {
+    return { ok: false, usedBytes, quotaBytes };
+  }
+  return { ok: true, usedBytes, quotaBytes };
+}
+
+/** Prefix helper for audit_logs detail so main admin can trace sub-account actions. */
+export function auditUserPrefix(authCtx) {
+  return (authCtx && authCtx.user && authCtx.user.username)
+    ? `[user:${authCtx.user.username}] `
+    : '';
+}
+
+/** Create a session and return its token (7-day TTL, capped by user.expiresAt if earlier). */
+export async function newSession(deps, userId = null, maxExpiresAt = null) {
   const token = newSessionToken();
-  await deps.meta.createSession(token, Date.now() + SESSION_TTL);
+  let exp = Date.now() + SESSION_TTL;
+  if (typeof maxExpiresAt === 'number' && Number.isFinite(maxExpiresAt) && maxExpiresAt > 0 && maxExpiresAt < exp) {
+    exp = maxExpiresAt;
+  }
+  await deps.meta.createSession(token, exp, userId || null);
   return token;
 }
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.7.2 UI r32 (2026-11-26 · 优化分享页打包下载按钮样式与移动端单行文件布局 + GitHub Release 无Token网页解析兜底) -->
+<!-- RelayBox v3.8.0 UI r33 (2026-11-26 · 子账号与临时测试号系统：账号管理弹窗、预设模板、凭据一键复制、目录沙盒与权限位动态显隐) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -1014,6 +1014,30 @@
 
 /* ===== v3.7.0 UI r30: GitHub Release 手动拉取与自动追更 ===== */
 .gh-modal-card { max-width: 580px; width: 100%; max-height: 86vh; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.users-modal-card { max-width: 620px; width: 100%; max-height: 86vh; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.users-form-box { display: none; background: var(--bg2, rgba(127,127,127,.07)); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.users-form-box.open { display: block; }
+.user-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.user-preset-btn { padding: 4px 10px; font-size: 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
+.user-preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+.user-card { border: 1px solid var(--border); border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; background: var(--card); }
+.user-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.user-card-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 600; font-size: 13.5px; }
+.user-badge { font-size: 11px; padding: 2px 7px; border-radius: 999px; font-weight: 500; background: rgba(59,130,246,.12); color: var(--accent); }
+.user-badge.guest { background: rgba(245,158,11,.15); color: #d97706; }
+.user-badge.ro { background: rgba(107,114,128,.15); color: var(--muted); }
+.user-badge.off { background: rgba(239,68,68,.14); color: #ef4444; }
+.user-card-meta { font-size: 12px; color: var(--muted); margin-top: 5px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.user-qbar { height: 5px; border-radius: 999px; background: rgba(127,127,127,.18); overflow: hidden; margin-top: 6px; }
+.user-qbar > div { height: 100%; background: var(--accent); border-radius: 999px; transition: width .2s; }
+.user-card-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.user-card-acts button { padding: 4px 9px; font-size: 11.5px; }
+.user-cred-box { display: none; border: 1px solid rgba(16,185,129,.45); background: rgba(16,185,129,.08); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; }
+.user-cred-box.open { display: block; }
+.user-cred-pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 6px 0; line-height: 1.55; }
+.user-perm-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 12.5px; }
+.user-perm-row label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.user-chip.sub-chip { max-width: 60vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .gh-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 38px; margin-bottom: 4px; flex-wrap: wrap; }
 .gh-token-pill { padding: 3px 9px; border-radius: 999px; font-size: 11.5px; border: 1px solid var(--border); background: var(--surface-2, rgba(127,127,127,.08)); color: var(--muted); cursor: pointer; white-space: nowrap; }
 .gh-token-pill.ok { color: var(--ok-text, #059669); border-color: rgba(5,150,105,.35); background: rgba(5,150,105,.09); }
@@ -1058,6 +1082,7 @@
  <button class="icon-btn desk-only-btn" id="copyFmtBtn" style="width:30px;height:30px;border-radius:999px" title="默认复制格式" aria-label="默认复制格式"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="announceBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="设置公告" aria-label="设置公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></button>
  <button class="icon-btn desk-only-btn" id="cmdBtn" style="width:30px;height:30px;border-radius:999px" title="快捷命令面板 (Ctrl+K)" aria-label="快捷命令面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+ <button class="icon-btn desk-only-btn" id="usersBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="子账号与测试号管理" aria-label="子账号与测试号管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
  <button class="icon-btn desk-only-btn" id="githubBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="GitHub 软件拉取与自动追更" aria-label="GitHub 软件拉取与自动追更"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></button>
  <button class="icon-btn desk-only-btn" id="auditBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="安全审计日志" aria-label="安全审计日志"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
  <button class="icon-btn desk-only-btn" id="statsBtn" style="display:none;width:30px;height:30px;border-radius:999px" title="存储与访问统计看板" aria-label="存储与访问统计看板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
@@ -1078,8 +1103,8 @@
  <div id="announceBar" class="announce-bar" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg><span class="announce-text" id="announceText"></span><button class="announce-x" id="announceClose" title="不再显示" aria-label="关闭公告">×</button></div>
  <div class="card loginform" id="loginCard">
  <div class="row" style="margin-top:0">
- <input type="text" id="loginUser" placeholder="管理员账号" value="admin" autocomplete="username">
- <input type="password" id="loginPass" placeholder="管理员密码" autocomplete="current-password">
+ <input type="text" id="loginUser" placeholder="账号（管理员留空）" value="" autocomplete="username">
+ <input type="password" id="loginPass" placeholder="密码" autocomplete="current-password">
  <button id="loginBtn">登录</button>
  <button class="ghost" id="loginCancel">取消</button>
  </div>
@@ -1267,6 +1292,7 @@
 <div class="modal" id="notifyModal"><div class="card pool-modal-card"><span class="close" id="notifyClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">Telegram 实时推送</div><div class="meta" style="margin-bottom:12px">通过 Telegram Bot 接收收集箱来件、阅后即焚、密码试错封禁与每日存储池用量汇总（密钥加密存库，绝不回传明文）。</div><div class="tg-switch-row"><label><input type="checkbox" id="tgEnabled"> 启用 Telegram 推送通知</label><span class="pool-tag" id="tgStatusTag">未开启</span></div><div class="form-grid2"><div class="form-field"><label>Bot Token <span id="tgTokenHint">*</span></label><input type="password" id="tgBotToken" placeholder="如 123456:ABC-DEF..." autocomplete="new-password"></div><div class="form-field"><label>Chat ID *</label><input type="text" id="tgChatId" placeholder="个人/群组/频道 ID（如 123456789）" autocomplete="off"></div></div><div class="form-field" style="margin-top:8px"><label>Telegram API 地址（选填，留空默认官方）</label><input type="text" id="tgApiBase" placeholder="https://api.telegram.org"></div><div class="tg-events-box"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:2px">推送事件开关</div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDrop" checked> 收集箱收到新文件投递</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvShare" checked> 分享链接阅后即焚或下载次数耗尽</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvAuth" checked> 密码 / 口令连续试错触发 IP 封禁告警</label></div><div class="tg-event-row"><label><input type="checkbox" id="tgEvDaily" checked> 每日定时汇报各存储池用量</label><select id="tgDailyHour" class="tg-hour-sel" title="北京时间触发小时"><option value="0">00:00</option><option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8" selected>08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option></select></div></div><div class="meta" id="tgLastDaily" style="margin-bottom:6px"></div><div class="msg" id="tgMsg" style="margin-top:0"></div><div class="row" style="justify-content:space-between;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="ghost" id="tgTestBtn">发送测试</button><button type="button" class="ghost" id="tgReportNowBtn">立即推汇总</button></div><div style="display:flex;gap:6px"><button type="button" class="ghost" id="tgCancelBtn">取消</button><button type="button" id="tgSaveBtn">保存设置</button></div></div></div></div>
 <div class="modal" id="uiConfirmModal" style="z-index:1200"><div class="card" style="max-width:390px;width:100%"><span class="close" id="uiConfirmClose">×</span><div style="font-size:15.5px;font-weight:600;margin-bottom:8px" id="uiConfirmTitle">确认操作</div><div style="font-size:13.5px;color:var(--muted);line-height:1.6;word-break:break-word;margin-bottom:14px" id="uiConfirmMsg"></div><div class="row" style="justify-content:flex-end;margin-top:0"><button type="button" class="ghost" id="uiConfirmCancel">取消</button><button type="button" id="uiConfirmOk">确定</button></div></div></div>
 <div class="modal" id="cmdPaletteModal" style="z-index:1150"><div class="card cmd-modal-card"><span class="close" id="cmdClose">×</span><div style="font-size:13.5px;font-weight:600;margin-bottom:8px">快捷命令面板 <span class="meta" style="margin:0;font-weight:400">· ↑↓ 选择 · Enter 执行 · Esc 关闭</span></div><input type="text" class="cmd-input" id="cmdInput" placeholder="输入关键词搜索命令、目录或当前文件…" autocomplete="off" spellcheck="false"><div class="cmd-list" id="cmdList"></div></div></div>
+<div class="modal" id="usersModal"><div class="card users-modal-card"><span class="close" id="usersClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:28px"><div style="font-size:16px;font-weight:600">子账号与临时测试号</div><button type="button" id="userAddToggleBtn" style="padding:5px 11px;font-size:12px">+ 新建账号</button></div><div class="meta" style="margin-bottom:10px">统一管理长期协作者与限时限额测试号，强制隔离在专属目录子树内，屏蔽系统后台。</div><div class="user-cred-box" id="userCredBox"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><strong style="font-size:13px;color:#059669" id="userCredTitle">账号凭据（仅本次展示明文密码）</strong><button type="button" class="ghost" id="userCredCloseBtn" style="padding:2px 8px;font-size:11.5px">收起</button></div><pre class="user-cred-pre" id="userCredText"></pre><div style="display:flex;justify-content:flex-end;gap:6px"><button type="button" id="userCredCopyBtn" style="padding:5px 11px;font-size:12px">一键复制凭据</button></div></div><div class="users-form-box" id="userFormBox"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:13.5px;font-weight:600" id="userFormTitle">新建子账号 / 测试号</span><button type="button" class="ghost" id="userFormCancelBtn" style="padding:3px 9px;font-size:11.5px">收起</button></div><input type="hidden" id="ufId"><div class="user-presets" id="userPresetsBar"><button type="button" class="user-preset-btn" data-upreset="regular">常规子账号</button><button type="button" class="user-preset-btn" data-upreset="rw24h">24h 读写测试号</button><button type="button" class="user-preset-btn" data-upreset="ro7d">7天只读体验号</button></div><div class="form-grid2"><div class="form-field"><label>登录用户名 *</label><input type="text" id="ufUsername" placeholder="2-32位字母/数字/_/-" maxlength="32" autocomplete="off"></div><div class="form-field"><label>昵称 / 备注名</label><input type="text" id="ufDisplayName" placeholder="如 好友小明 / 访客演示" maxlength="64" autocomplete="off"></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>登录密码 <span id="ufPassHint">*</span></label><div style="display:flex;gap:4px"><input type="text" id="ufPassword" placeholder="至少 4 位" maxlength="128" autocomplete="new-password" style="flex:1;min-width:0"><button type="button" class="ghost" id="ufGenPassBtn" style="padding:4px 8px;font-size:11.5px;flex-shrink:0">随机</button></div></div><div class="form-field"><label>账号类型</label><select id="ufRole"><option value="user">常规子账号 (user)</option><option value="guest">临时测试号 (guest)</option></select></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>绑定根目录</label><select id="ufFolder"><option value="__auto__">自动新建同名目录</option></select></div><div class="form-field"><label>空间配额 (MB，0=不限)</label><input type="number" id="ufQuotaMb" min="0" step="10" value="0" placeholder="0 表示不限"></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>有效期</label><select id="ufExpiresHours"><option value="0">永不过期</option><option value="24">24 小时</option><option value="72">3 天</option><option value="168">7 天</option><option value="720">30 天</option></select></div><div class="form-field"><label>备注说明</label><input type="text" id="ufNote" placeholder="选填，仅管理员可见" maxlength="200"></div></div><div class="user-perm-row"><label><input type="checkbox" id="ufCanUpload" checked style="width:auto"> 允许上传/建目录</label><label><input type="checkbox" id="ufCanDelete" checked style="width:auto"> 允许删除</label><label><input type="checkbox" id="ufCanShare" checked style="width:auto"> 允许分享</label><label><input type="checkbox" id="ufEnabled" checked style="width:auto"> 启用账号</label></div><div class="msg" id="ufMsg" style="margin-top:6px"></div><div class="row" style="justify-content:flex-end;margin-top:8px"><button type="button" id="ufSaveBtn">保存账号</button></div></div><div id="usersListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="usersDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="githubModal"><div class="card gh-modal-card"><span class="close" id="ghClose">×</span><div class="gh-head-row"><div style="font-size:16px;font-weight:600">GitHub 软件拉取</div><button type="button" class="gh-token-pill" id="ghTokenTag" title="点击展开或收起 GitHub Token 设置">匿名 (60/h) · 配 Token</button></div><div class="gh-token-bar" id="ghTokenPanel"><div style="color:var(--muted);margin-bottom:6px">选填只读 GitHub Token（AES-GCM 加密存库，额度提至 5,000 次/h 并支持私有仓库）：</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input type="password" id="ghTokenInput" placeholder="ghp_... 或 github_pat_..." autocomplete="new-password" style="flex:1;min-width:150px;padding:6px 9px;font-size:12.5px"><button type="button" id="ghTokenSaveBtn" style="padding:6px 11px;font-size:12px">保存</button><button type="button" class="ghost danger" id="ghTokenClearBtn" style="padding:6px 10px;font-size:12px;display:none">清除</button></div></div><div class="gh-tabs-bar"><div class="sm-tabs" id="ghTabs"><button type="button" class="sm-tab active" data-ghtab="manual">手动拉取</button><button type="button" class="sm-tab" data-ghtab="watches">自动追更 <span id="ghWatchCnt">0</span></button></div><button type="button" id="ghWatchAddToggleBtn" style="display:none;padding:5px 11px;font-size:12px">+ 新增订阅</button></div><div id="ghTabManual"><div class="row" style="margin-top:0"><input type="text" id="ghRepoInput" placeholder="输入 owner/repo 或 GitHub 链接" autocomplete="off" spellcheck="false" style="flex:1;min-width:0"><button type="button" id="ghInspectBtn" style="flex-shrink:0">解析最新版</button></div><div class="msg" id="ghManualMsg" style="margin-top:6px"></div><div id="ghReleaseBox" style="display:none;margin-top:8px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div style="font-weight:600;font-size:13.5px" id="ghRelTitle"></div><a id="ghRelLink" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent)">查看 Release ↗</a></div><div class="meta" id="ghRelMeta" style="margin-top:2px"></div><div class="gh-asset-list" id="ghAssetList"></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>存入目录</label><select id="ghManualFolder"><option value="">根目录</option></select></div><div class="form-field"><label>目标存储池</label><select id="ghManualPool"></select></div></div><div class="form-grid2" style="margin-top:8px"><div class="form-field"><label>可见性</label><select id="ghManualVis"><option value="public" selected>公开（方便直链下载）</option><option value="private">私密</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;gap:6px"><button type="button" class="ghost" id="ghToWatchBtn" style="flex:1">转为订阅</button><button type="button" id="ghPullGoBtn" style="flex:1">拉取所选</button></div></div></div></div><div id="ghTabWatches" style="display:none"><div class="gh-form-box" id="ghWatchFormBox"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;font-weight:600">新增自动追更订阅</span><button type="button" class="ghost" id="ghWatchFormCancelBtn" style="padding:3px 9px;font-size:11.5px">收起</button></div><div class="form-grid2"><div class="form-field"><label>GitHub 仓库 *</label><input type="text" id="ghWRepo" placeholder="如 owner/repo" autocomplete="off" spellcheck="false"></div><div class="form-field"><label>匹配规则（逗号分隔）</label><input type="text" id="ghWPattern" value="*" placeholder="*.apk, *win64*.exe" autocomplete="off" spellcheck="false"></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>存入目录</label><select id="ghWFolder"><option value="">根目录</option></select></div><div class="form-field"><label>目标存储池</label><select id="ghWPool"></select></div></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>可见性</label><select id="ghWVis"><option value="public" selected>公开</option><option value="private">私密</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="ghWReplaceOld" style="width:auto"> 新版自动替换旧版（旧版进回收站）</label></div></div><div class="msg" id="ghWatchMsg" style="margin-top:4px"></div><div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" id="ghWAddBtn">保存订阅</button></div></div><div class="gh-watch-list" id="ghWatchList"><div class="empty" style="padding:16px 0">加载中…</div></div></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="ghost" id="ghDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="auditModal"><div class="card audit-modal-card"><span class="close" id="auditClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">安全审计日志</div><button type="button" class="ghost" id="auditRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" style="margin-bottom:8px">自动记录管理员登录、密钥变更、存储池与回收站清理等关键操作（滚动保留 30 天）。</div><div class="sm-tabs" id="auditTabs"><button type="button" class="sm-tab active" data-audit-act="">全部</button><button type="button" class="sm-tab" data-audit-act="login">登录</button><button type="button" class="sm-tab" data-audit-act="token">密钥</button><button type="button" class="sm-tab" data-audit-act="pool">存储池</button><button type="button" class="sm-tab" data-audit-act="trash">回收站</button></div><div class="audit-list" id="auditListBox"><div class="empty" style="padding:20px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="auditDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="statsModal"><div class="card stats-modal-card"><span class="close" id="statsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储与访问统计看板</div><button type="button" class="ghost" id="statsRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" id="statsGenTime" style="margin-bottom:12px">实时聚合统计（D1 原生 SQL）</div><div id="statsBody"><div class="empty" style="padding:24px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="statsDoneBtn">关闭</button></div></div></div>
@@ -1281,6 +1307,7 @@
   <div class="top-more-menu nav-drawer" id="topMoreMenu" role="dialog" aria-label="控制台与设置">
    <div class="drawer-head"><span class="drawer-title">控制台与设置</span><div class="drawer-head-acts"><button type="button" class="drawer-side-btn" id="drawerSideBtn" title="切换左侧/右侧滑出">靠右</button><button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="关闭">×</button></div></div>
    <div class="drawer-sec" id="drawerSecAdmin" style="display:none">常用管理</div>
+   <button type="button" id="mobUsersBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> 子账号与测试号</button>
    <button type="button" id="mobGithubBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg> GitHub 软件拉取</button>
    <button type="button" id="mobAuditBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 安全审计日志</button>
    <button type="button" id="mobStatsBtn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 统计看板</button>
@@ -1367,6 +1394,22 @@ let selectedFiles = [];
 let allFiles = [];
 let viewFiles = [];
 let authed = false;
+let isAdmin = false;
+let currentUser = null;
+function canUserUpload() { return !authed || isAdmin || !!(currentUser && currentUser.canUpload); }
+function canUserDelete() { return isAdmin || !!(currentUser && currentUser.canDelete); }
+function canUserShare() { return isAdmin || !!(currentUser && currentUser.canShare); }
+function canUserWrite() { return isAdmin || !!(currentUser && (currentUser.canUpload || currentUser.canDelete)); }
+function fmtRemainShort(expiresAt) {
+ if (!expiresAt) return '';
+ const diff = Number(expiresAt) - Date.now();
+ if (diff <= 0) return '已过期';
+ const mins = Math.ceil(diff / 60000);
+ if (mins < 60) return `剩 ${mins}m`;
+ const hrs = Math.ceil(diff / 3600000);
+ if (hrs < 48) return `剩 ${hrs}h`;
+ return `剩 ${Math.ceil(diff / 86400000)}d`;
+}
 let r2On = false;
 let r2TransferMode = 'presign';
 let r2PresignAvailable = true;
@@ -2240,26 +2283,45 @@ async function refreshAuth() {
  const r = await fetch('/api/me');
  const d = await r.json();
  authed = !!d.authed;
- } catch { authed = false; }
+ isAdmin = !!(d.authed && d.isAdmin !== false);
+ currentUser = (d.authed && !isAdmin && d.user) ? d.user : null;
+ if (currentUser && !currentFolderId) currentFolderId = currentUser.rootFolderId;
+ } catch { authed = false; isAdmin = false; currentUser = null; }
  renderLoginbar();
  $('passwordRow').style.display = authed ? 'none' : '';
 }
 function renderLoginbar() {
  const bar = $('loginbar');
  if (authed) {
- bar.innerHTML = `<span class="user-chip">${ICONS.user} admin <button class="chip-exit" id="logoutBtn" title="退出" aria-label="退出">${ICONS.logout}</button></span>`;
+ let labelHtml = 'admin';
+ let chipCls = 'user-chip';
+ if (!isAdmin && currentUser) {
+  chipCls = 'user-chip sub-chip';
+  const roleTag = currentUser.role === 'guest' ? ((!currentUser.canUpload && !currentUser.canDelete && !currentUser.canShare) ? '体验号' : '测试号') : '子账号';
+  const parts = [roleTag, currentUser.displayName || currentUser.username];
+  const rem = fmtRemainShort(currentUser.expiresAt);
+  if (rem) parts.push(rem);
+  if (currentUser.quotaBytes > 0) parts.push(`${fmtSize(currentUser.usedBytes || 0)}/${fmtSize(currentUser.quotaBytes)}`);
+  labelHtml = escapeHtml(parts.join(' · '));
+ }
+ bar.innerHTML = `<span class="${chipCls}" title="${isAdmin ? '主管理员' : escapeHtml((currentUser && currentUser.username) || '')}">${ICONS.user} ${labelHtml} <button class="chip-exit" id="logoutBtn" title="退出" aria-label="退出">${ICONS.logout}</button></span>`;
  $('logoutBtn').onclick = async () => {
  await fetch('/api/logout', { method: 'POST' });
  authed = false;
+ isAdmin = false;
+ currentUser = null;
+ currentFolderId = null;
+ syncFolderUrl(null, true);
  invalidateDirCache();
  invalidateFolderTree();
  renderLoginbar();
  $('passwordRow').style.display = '';
+ if ($('uploadCard')) $('uploadCard').style.display = '';
  setMsg('已退出登录', '');
  loadList();
  };
  } else {
- bar.innerHTML = `<button id="showLoginBtn">管理员登录</button>`;
+ bar.innerHTML = `<button id="showLoginBtn">登录</button>`;
  $('showLoginBtn').onclick = () => {
  $('loginCard').classList.add('open');
  $('loginPass').focus();
@@ -2271,7 +2333,7 @@ $('loginCancel').onclick = () => {
  $('loginMsg').textContent = '';
 };
 $('loginBtn').onclick = async () => {
- const username = $('loginUser').value.trim() || 'admin';
+ const username = $('loginUser').value.trim();
  const password = $('loginPass').value;
  const lm = $('loginMsg');
  if (!password) { lm.textContent = '请先填密码'; lm.className = 'msg err'; return; }
@@ -2284,6 +2346,10 @@ $('loginBtn').onclick = async () => {
  const d = await r.json();
  if (r.ok && d.ok) {
  authed = true;
+ isAdmin = d.isAdmin !== false;
+ currentUser = (!isAdmin && d.user) ? d.user : null;
+ currentFolderId = currentUser ? currentUser.rootFolderId : null;
+ syncFolderUrl(currentFolderId, true);
  invalidateDirCache();
  invalidateFolderTree();
  $('loginCard').classList.remove('open');
@@ -2291,7 +2357,7 @@ $('loginBtn').onclick = async () => {
  lm.textContent = '';
  renderLoginbar();
  $('passwordRow').style.display = 'none';
- setMsg('已登录，上传不用再输密码', 'ok');
+ setMsg(isAdmin ? '已登录，上传不用再输密码' : `欢迎，${(currentUser && (currentUser.displayName || currentUser.username)) || ''}`, 'ok');
  loadList();
  } else {
  lm.textContent = '登录失败：' + (d.error || ('HTTP ' + r.status));
@@ -2782,13 +2848,19 @@ function prefetchFolder(folderId) {
 }
 function applyDirData(d) {
  const requestedFolderId = currentFolderId;
+ if (d.authed !== undefined) authed = !!d.authed;
+ if (d.isAdmin !== undefined) isAdmin = !!d.isAdmin;
+ if (d.user !== undefined) currentUser = d.user || null;
+ renderLoginbar();
  allFiles = d.files || [];
  dirTotalFiles = Number(d.totalFiles !== undefined ? d.totalFiles : allFiles.length);
  dirHasMore = !!d.hasMore;
  dirLoadingMore = false;
  currentFolders = d.folders || [];
  currentPath = d.path || [{ id: null, name: '根目录' }];
- currentFolderId = (currentPath.length > 1) ? currentPath[currentPath.length - 1].id : null;
+ currentFolderId = currentUser
+  ? (d.folderId || currentUser.rootFolderId)
+  : ((currentPath.length > 1) ? currentPath[currentPath.length - 1].id : null);
  r2On = d.r2 === true;
  r2TransferMode = d.r2TransferMode === 'proxy' ? 'proxy' : 'presign';
  r2PresignAvailable = d.r2PresignAvailable !== false;
@@ -2819,44 +2891,47 @@ function applyDirData(d) {
   updateFilterBtn();
  }
  updateR2Hint();
- $('newFolderBtn').style.display = authed ? '' : 'none';
- $('folderBtn').style.display = authed ? '' : 'none';
- if ($('githubPullBtn')) $('githubPullBtn').style.display = authed ? '' : 'none';
- if ($('remoteFetchBtn')) $('remoteFetchBtn').style.display = authed ? '' : 'none';
- $('selectAllBtn').style.display = authed ? '' : 'none';
- $('announceBtn').style.display = authed ? '' : 'none';
- if ($('tokensBtn')) $('tokensBtn').style.display = authed ? '' : 'none';
- if ($('trashBtn')) $('trashBtn').style.display = authed ? '' : 'none';
- if ($('mobAnnounceBtn')) $('mobAnnounceBtn').style.display = authed ? 'flex' : 'none';
- if ($('mobTokensBtn')) $('mobTokensBtn').style.display = authed ? 'flex' : 'none';
- if ($('mobTrashBtn')) $('mobTrashBtn').style.display = authed ? 'flex' : 'none';
- updateTrashBadge(authed ? Number(d.trashCount || 0) : 0);
- if ($('notifyBtn')) $('notifyBtn').style.display = authed ? '' : 'none';
- if ($('mobNotifyBtn')) $('mobNotifyBtn').style.display = authed ? 'flex' : 'none';
- if ($('githubBtn')) $('githubBtn').style.display = authed ? '' : 'none';
- if ($('mobGithubBtn')) $('mobGithubBtn').style.display = authed ? 'flex' : 'none';
- if ($('auditBtn')) $('auditBtn').style.display = authed ? '' : 'none';
- if ($('mobAuditBtn')) $('mobAuditBtn').style.display = authed ? 'flex' : 'none';
- if ($('statsBtn')) $('statsBtn').style.display = authed ? '' : 'none';
- if ($('mobStatsBtn')) $('mobStatsBtn').style.display = authed ? 'flex' : 'none';
- if ($('sharesMgrBtn')) $('sharesMgrBtn').style.display = authed ? '' : 'none';
- if ($('drawerSecAdmin')) $('drawerSecAdmin').style.display = authed ? '' : 'none';
- if ($('drawerSecSystem')) $('drawerSecSystem').style.display = authed ? '' : 'none';
- if ($('mobSharesMgrBtn')) $('mobSharesMgrBtn').style.display = authed ? 'flex' : 'none';
- if ($('dropsBtn')) $('dropsBtn').style.display = authed ? '' : 'none';
- if ($('mobDropsBtn')) $('mobDropsBtn').style.display = authed ? 'flex' : 'none';
+ if ($('uploadCard')) $('uploadCard').style.display = canUserUpload() ? '' : 'none';
+ $('newFolderBtn').style.display = (authed && canUserUpload()) ? '' : 'none';
+ $('folderBtn').style.display = (authed && canUserUpload()) ? '' : 'none';
+ if ($('githubPullBtn')) $('githubPullBtn').style.display = isAdmin ? '' : 'none';
+ if ($('remoteFetchBtn')) $('remoteFetchBtn').style.display = isAdmin ? '' : 'none';
+ $('selectAllBtn').style.display = (authed && canUserWrite()) ? '' : 'none';
+ $('announceBtn').style.display = isAdmin ? '' : 'none';
+ if ($('usersBtn')) $('usersBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobUsersBtn')) $('mobUsersBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('tokensBtn')) $('tokensBtn').style.display = isAdmin ? '' : 'none';
+ if ($('trashBtn')) $('trashBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobAnnounceBtn')) $('mobAnnounceBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('mobTokensBtn')) $('mobTokensBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('mobTrashBtn')) $('mobTrashBtn').style.display = isAdmin ? 'flex' : 'none';
+ updateTrashBadge(isAdmin ? Number(d.trashCount || 0) : 0);
+ if ($('notifyBtn')) $('notifyBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobNotifyBtn')) $('mobNotifyBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('githubBtn')) $('githubBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobGithubBtn')) $('mobGithubBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('auditBtn')) $('auditBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobAuditBtn')) $('mobAuditBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('statsBtn')) $('statsBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobStatsBtn')) $('mobStatsBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('sharesMgrBtn')) $('sharesMgrBtn').style.display = isAdmin ? '' : 'none';
+ if ($('drawerSecAdmin')) $('drawerSecAdmin').style.display = isAdmin ? '' : 'none';
+ if ($('drawerSecSystem')) $('drawerSecSystem').style.display = isAdmin ? '' : 'none';
+ if ($('mobSharesMgrBtn')) $('mobSharesMgrBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('dropsBtn')) $('dropsBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobDropsBtn')) $('mobDropsBtn').style.display = isAdmin ? 'flex' : 'none';
  if (requestedFolderId && !currentFolderId) {
   syncFolderUrl(null, true);
  }
- if ($('poolsBtn')) $('poolsBtn').style.display = authed ? '' : 'none';
- if ($('mobPoolsBtn')) $('mobPoolsBtn').style.display = authed ? 'flex' : 'none';
- if ($('appearanceBtn')) $('appearanceBtn').style.display = authed ? '' : 'none';
- if ($('mobAppearanceBtn')) $('mobAppearanceBtn').style.display = authed ? 'flex' : 'none';
- if ($('transferModeBtn')) $('transferModeBtn').style.display = (authed && r2ProxyAvailable) ? '' : 'none';
- if ($('mobTransferModeBtn')) $('mobTransferModeBtn').style.display = (authed && r2ProxyAvailable) ? 'flex' : 'none';
+ if ($('poolsBtn')) $('poolsBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobPoolsBtn')) $('mobPoolsBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('appearanceBtn')) $('appearanceBtn').style.display = isAdmin ? '' : 'none';
+ if ($('mobAppearanceBtn')) $('mobAppearanceBtn').style.display = isAdmin ? 'flex' : 'none';
+ if ($('transferModeBtn')) $('transferModeBtn').style.display = (isAdmin && r2ProxyAvailable) ? '' : 'none';
+ if ($('mobTransferModeBtn')) $('mobTransferModeBtn').style.display = (isAdmin && r2ProxyAvailable) ? 'flex' : 'none';
  updateUploadDestUI();
  let quotaHtml = `<div>${currentFolders.length ? `共 ${currentFolders.length} 个文件夹 · ` : '共 '}${dirTotalFiles || allFiles.length} 个文件</div>`;
- if (authed) {
+ if (isAdmin) {
   quotaHtml += `<div class="quota">`;
   if (allPools.length) {
    for (const p of allPools) {
@@ -2881,6 +2956,11 @@ function applyDirData(d) {
    }
   }
   quotaHtml += `</div>`;
+ } else if (currentUser) {
+  const uUsed = currentUser.usedBytes || 0;
+  const uCap = currentUser.quotaBytes || 0;
+  const uPct = uCap > 0 ? Math.min(100, uUsed / uCap * 100) : 0;
+  quotaHtml += `<div class="quota"><div class="quota-row"><span class="q-label">我的空间</span><div class="q-bar r2"><div style="width:${uPct.toFixed(1)}%"></div></div><span class="q-text">${fmtSize(uUsed)}${uCap ? ' / ' + fmtSize(uCap) : ' · 不限配额'}</span></div></div>`;
  }
  $('stats').innerHTML = quotaHtml;
  renderList();
@@ -3022,7 +3102,7 @@ function renderList() {
  <div class="cmeta">${folderMeta(fd, true)}${searching && fd.path ? ' · ' + escapeHtml(fd.path) : ''}</div>
  </div>
  ${authed ? `<div class="cactions">
- <button class="icon-btn folder-share-btn" title="复制文件夹分享链接" aria-label="复制文件夹分享链接" onclick="event.stopPropagation(); copyFolderLink('${fd.id}', this)">${ICONS.link}</button>
+ ${canUserShare() ? `<button class="icon-btn folder-share-btn" title="复制文件夹分享链接" aria-label="复制文件夹分享链接" onclick="event.stopPropagation(); copyFolderLink('${fd.id}', this)">${ICONS.link}</button>` : ''}
  <button class="icon-btn" title="更多操作" aria-label="更多操作" onclick="event.stopPropagation(); openSheet('${fd.id}', 'folder')">${ICONS.more}</button>
  </div>` : ''}
  </div>`).join('') + '</div>' : '';
@@ -3059,7 +3139,7 @@ function renderList() {
  <div class="meta">${folderMeta(fd)}${searching && fd.path ? ' · 在 ' + escapeHtml(fd.path) : ''}</div>
  </div>
  ${authed ? `<div class="actions">
- <button class="icon-btn" title="复制文件夹分享链接" aria-label="复制文件夹分享链接" onclick="event.stopPropagation(); copyFolderLink('${fd.id}', this)">${ICONS.link}</button>
+ ${canUserShare() ? `<button class="icon-btn" title="复制文件夹分享链接" aria-label="复制文件夹分享链接" onclick="event.stopPropagation(); copyFolderLink('${fd.id}', this)">${ICONS.link}</button>` : ''}
  <button class="icon-btn" title="更多操作" aria-label="更多操作" onclick="event.stopPropagation(); openSheet('${fd.id}', 'folder')">${ICONS.more}</button>
  </div>` : ''}
  </div>`).join('') + list.map(f => `
@@ -3075,7 +3155,7 @@ function renderList() {
  <button class="icon-btn" title="文件详情" aria-label="文件详情" onclick="openDetailModal('${f.id}')">${ICONS.info}</button>
  ${isPreviewable(f) ? `<button class="icon-btn" title="预览" aria-label="预览" onclick="preview('${f.id}')">${ICONS.eye}</button>` : ''}
  <button class="icon-btn" title="更多操作" aria-label="更多操作" onclick="openSheet('${f.id}', 'file')">${ICONS.more}</button>
- <button class="icon-btn danger" title="删除" aria-label="删除" onclick="removeFile('${f.id}', '${escapeHtml(f.name)}')">${ICONS.trash}</button>
+ ${(!authed || canUserDelete()) ? `<button class="icon-btn danger" title="删除" aria-label="删除" onclick="removeFile('${f.id}', '${escapeHtml(f.name)}')">${ICONS.trash}</button>` : ''}
  </div>
  </div>`).join('');
  syncSelectionClasses();
@@ -3378,6 +3458,7 @@ document.addEventListener('keydown', (e) => {
  if ($('statsModal') && $('statsModal').classList.contains('open')) { closeStatsModal(); return; }
  if ($('uiConfirmModal') && $('uiConfirmModal').classList.contains('open')) { resolveUiConfirm(false); return; }
  if ($('cmdPaletteModal') && $('cmdPaletteModal').classList.contains('open')) { closeCmdPalette(); return; }
+ if ($('usersModal') && $('usersModal').classList.contains('open')) { closeUsersModal(); return; }
  if ($('githubModal') && $('githubModal').classList.contains('open')) { closeGithubModal(); return; }
  if ($('auditModal') && $('auditModal').classList.contains('open')) { closeAuditModal(); return; }
  if ($('dupCheckModal') && $('dupCheckModal').classList.contains('open')) { closeDupModal(); return; }
@@ -3458,28 +3539,34 @@ function openSheet(id, kind) {
  }
  items.push({ icon: ICONS.qr, label: '二维码', fn: () => showQR(f.id) });
  if (authed) {
- items.push({ icon: ICONS.move, label: '移动到…', fn: () => openMoveModal([f.id]) });
- if (getEnabledPools().length >= 2) items.push({ icon: ICONS.swap, label: '迁移存储池', fn: () => openMigrateModal('file', f.id) });
- items.push({ icon: ICONS.info, label: f.pinned ? '取消置顶' : '置顶文件', fn: () => toggleFilePin(f.id, !f.pinned) });
- items.push({ icon: ICONS.pencil, label: f.note ? '修改备注' : '添加备注', fn: () => editFileNote(f.id, f.name, f.note || '') });
- items.push({ icon: ICONS.pencil, label: '改名', fn: () => renameFile(f.id, f.name) });
- items.push({ icon: ICONS.clock, label: '修改有效期', fn: () => openExpireEdit(f.id) });
- items.push({ icon: f.visibility === 'private' ? ICONS.lock : ICONS.globe, label: f.visibility === 'private' ? '设为公开' : '设为私密', fn: () => setVisibility(f.id, f.visibility === 'private' ? 'public' : 'private') });
- items.push({ icon: ICONS.lock, label: '分享设置（提取码/阅后即焚）', fn: () => openShareSettings(f.id, 'file') });
- if (f.shareToken) items.push({ icon: ICONS.unlink, label: '取消分享', fn: () => revokeShare(f.id) });
- items.push({ icon: ICONS.trash, label: '删除', danger: true, fn: () => removeFile(f.id, f.name) });
+ if (canUserWrite()) {
+  items.push({ icon: ICONS.move, label: '移动到…', fn: () => openMoveModal([f.id]) });
+  if (isAdmin && getEnabledPools().length >= 2) items.push({ icon: ICONS.swap, label: '迁移存储池', fn: () => openMigrateModal('file', f.id) });
+  items.push({ icon: ICONS.info, label: f.pinned ? '取消置顶' : '置顶文件', fn: () => toggleFilePin(f.id, !f.pinned) });
+  items.push({ icon: ICONS.pencil, label: f.note ? '修改备注' : '添加备注', fn: () => editFileNote(f.id, f.name, f.note || '') });
+  items.push({ icon: ICONS.pencil, label: '改名', fn: () => renameFile(f.id, f.name) });
+  items.push({ icon: ICONS.clock, label: '修改有效期', fn: () => openExpireEdit(f.id) });
+  items.push({ icon: f.visibility === 'private' ? ICONS.lock : ICONS.globe, label: f.visibility === 'private' ? '设为公开' : '设为私密', fn: () => setVisibility(f.id, f.visibility === 'private' ? 'public' : 'private') });
+ }
+ if (canUserShare()) {
+  items.push({ icon: ICONS.lock, label: '分享设置（提取码/阅后即焚）', fn: () => openShareSettings(f.id, 'file') });
+  if (f.shareToken) items.push({ icon: ICONS.unlink, label: '取消分享', fn: () => revokeShare(f.id) });
+ }
+ if (canUserDelete()) items.push({ icon: ICONS.trash, label: '删除', danger: true, fn: () => removeFile(f.id, f.name) });
  }
  } else {
  const fd = obj;
  items.push({ icon: ICONS.folder, label: '打开文件夹', fn: () => openFolder(fd.id) });
  items.push({ icon: ICONS.download, label: '打包下载文件夹（ZIP）', fn: () => downloadMainFolderZip(fd.id, fd.name) });
  items.push({ icon: ICONS.link, label: '复制目录直达链接', fn: () => copyText(location.origin + '/?folder=' + encodeURIComponent(fd.id), '目录直达链接已复制') });
- items.push({ icon: ICONS.link, label: '复制文件夹分享链接', fn: () => copyFolderLink(fd.id) });
+ if (canUserShare()) items.push({ icon: ICONS.link, label: '复制文件夹分享链接', fn: () => copyFolderLink(fd.id) });
  if (authed) {
- items.push({ icon: ICONS.move, label: '移动文件夹', fn: () => openMoveModal([fd.id], 'folder', fd.name) });
- items.push({ icon: ICONS.pencil, label: '重命名', fn: () => renameFolder(fd.id, fd.name) });
- items.push({ icon: ICONS.lock, label: '分享设置（提取码/阅后即焚）', fn: () => openShareSettings(fd.id, 'folder') });
- items.push({ icon: ICONS.inbox, label: '创建文件收集箱', fn: () => openDropsModal(fd.id) });
+ if (canUserWrite()) {
+  items.push({ icon: ICONS.move, label: '移动文件夹', fn: () => openMoveModal([fd.id], 'folder', fd.name) });
+  items.push({ icon: ICONS.pencil, label: '重命名', fn: () => renameFolder(fd.id, fd.name) });
+ }
+ if (canUserShare()) items.push({ icon: ICONS.lock, label: '分享设置（提取码/阅后即焚）', fn: () => openShareSettings(fd.id, 'folder') });
+ if (isAdmin) items.push({ icon: ICONS.inbox, label: '创建文件收集箱', fn: () => openDropsModal(fd.id) });
  if (fd.shareToken) items.push({ icon: ICONS.unlink, label: '取消文件夹分享', fn: () => revokeFolderShare(fd.id) });
  items.push({ icon: ICONS.trash, label: '删除文件夹', danger: true, fn: () => deleteFolder(fd.id, fd.name) });
  }
@@ -3526,25 +3613,29 @@ function openCtxMenu(e, id, kind) {
   items.push({ icon: ICONS.link, label: '复制链接', fn: () => copyLink(f.id) });
   items.push({ icon: ICONS.info, label: '文件详情', fn: () => openDetailModal(f.id) });
   if (authed) {
-   items.push({ icon: ICONS.move, label: '移动到…', fn: () => openMoveModal([f.id]) });
-   items.push({ icon: ICONS.info, label: f.pinned ? '取消置顶' : '置顶文件', fn: () => toggleFilePin(f.id, !f.pinned) });
-   items.push({ icon: ICONS.pencil, label: f.note ? '修改备注' : '添加备注', fn: () => editFileNote(f.id, f.name, f.note || '') });
-   items.push({ icon: ICONS.pencil, label: '改名', fn: () => renameFile(f.id, f.name) });
-   items.push({ icon: f.visibility === 'private' ? ICONS.globe : ICONS.lock, label: f.visibility === 'private' ? '设为公开' : '设为私密', fn: () => setVisibility(f.id, f.visibility === 'private' ? 'public' : 'private') });
-   items.push({ icon: ICONS.lock, label: '分享设置', fn: () => openShareSettings(f.id, 'file') });
-   items.push({ icon: ICONS.trash, label: '移入回收站', danger: true, fn: () => removeFile(f.id, f.name) });
+   if (canUserWrite()) {
+    items.push({ icon: ICONS.move, label: '移动到…', fn: () => openMoveModal([f.id]) });
+    items.push({ icon: ICONS.info, label: f.pinned ? '取消置顶' : '置顶文件', fn: () => toggleFilePin(f.id, !f.pinned) });
+    items.push({ icon: ICONS.pencil, label: f.note ? '修改备注' : '添加备注', fn: () => editFileNote(f.id, f.name, f.note || '') });
+    items.push({ icon: ICONS.pencil, label: '改名', fn: () => renameFile(f.id, f.name) });
+    items.push({ icon: f.visibility === 'private' ? ICONS.globe : ICONS.lock, label: f.visibility === 'private' ? '设为公开' : '设为私密', fn: () => setVisibility(f.id, f.visibility === 'private' ? 'public' : 'private') });
+   }
+   if (canUserShare()) items.push({ icon: ICONS.lock, label: '分享设置', fn: () => openShareSettings(f.id, 'file') });
+   if (canUserDelete()) items.push({ icon: ICONS.trash, label: '移入回收站', danger: true, fn: () => removeFile(f.id, f.name) });
   }
  } else {
   const fd = obj;
   items.push({ icon: ICONS.folder, label: '打开文件夹', fn: () => openFolder(fd.id) });
   items.push({ icon: ICONS.download, label: '打包下载（ZIP）', fn: () => downloadMainFolderZip(fd.id, fd.name) });
   items.push({ icon: ICONS.link, label: '复制目录直达链接', fn: () => copyText(location.origin + '/?folder=' + encodeURIComponent(fd.id), '目录直达链接已复制') });
-  items.push({ icon: ICONS.link, label: '复制文件夹分享链接', fn: () => copyFolderLink(fd.id) });
+  if (canUserShare()) items.push({ icon: ICONS.link, label: '复制文件夹分享链接', fn: () => copyFolderLink(fd.id) });
   if (authed) {
-   items.push({ icon: ICONS.move, label: '移动文件夹', fn: () => openMoveModal([fd.id], 'folder', fd.name) });
-   items.push({ icon: ICONS.pencil, label: '重命名', fn: () => renameFolder(fd.id, fd.name) });
-   items.push({ icon: ICONS.lock, label: '分享设置', fn: () => openShareSettings(fd.id, 'folder') });
-   items.push({ icon: ICONS.trash, label: '删除文件夹', danger: true, fn: () => deleteFolder(fd.id, fd.name) });
+   if (canUserWrite()) {
+    items.push({ icon: ICONS.move, label: '移动文件夹', fn: () => openMoveModal([fd.id], 'folder', fd.name) });
+    items.push({ icon: ICONS.pencil, label: '重命名', fn: () => renameFolder(fd.id, fd.name) });
+   }
+   if (canUserShare()) items.push({ icon: ICONS.lock, label: '分享设置', fn: () => openShareSettings(fd.id, 'folder') });
+   if (canUserDelete()) items.push({ icon: ICONS.trash, label: '删除文件夹', danger: true, fn: () => deleteFolder(fd.id, fd.name) });
   }
  }
  const menu = $('ctxMenu');
@@ -8268,7 +8359,8 @@ function buildCmdCandidates(q) {
  if (authed) {
   push('打开统计看板', '管理', () => openStatsModal());
   push('打开分享管理中心', '管理', () => openSharesMgrModal());
-  push('打开 GitHub 软件拉取与自动追更', '工具', () => openGithubModal());
+  if (isAdmin) push('打开子账号与临时测试号管理', '管理', () => openUsersModal());
+  if (isAdmin) push('打开 GitHub 软件拉取与自动追更', '工具', () => openGithubModal());
   push('打开安全审计日志', '安全', () => openAuditModal());
   push('打开回收站', '管理', () => openTrashModal());
   push('打开文件收集箱', '管理', () => openDropsModal());
@@ -8698,6 +8790,289 @@ if ($('mobGithubBtn')) $('mobGithubBtn').onclick = () => { if (typeof closeNavDr
 if ($('ghClose')) $('ghClose').onclick = closeGithubModal;
 if ($('ghDoneBtn')) $('ghDoneBtn').onclick = closeGithubModal;
 if ($('githubModal')) $('githubModal').onclick = (e) => { if (e.target.id === 'githubModal') closeGithubModal(); };
+// ---- v3.8.0 Sub-accounts & Temporary Test Accounts Management ----
+let cachedUsersList = [];
+function genRandomPass(len = 10) {
+ const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+ const arr = new Uint8Array(len);
+ crypto.getRandomValues(arr);
+ return Array.from(arr, b => chars[b % chars.length]).join('');
+}
+function fillUserFolderSelect(selectedId = '__auto__') {
+ const sel = $('ufFolder');
+ if (!sel) return;
+ const folders = (typeof getFolderTreeCache === 'function' ? getFolderTreeCache() : []) || [];
+ let opts = '<option value="__auto__">自动新建同名目录</option>';
+ for (const f of folders) {
+  opts += `<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`;
+ }
+ sel.innerHTML = opts;
+ sel.value = selectedId || '__auto__';
+}
+function showUserCred(username, password, info = {}) {
+ const box = $('userCredBox');
+ const pre = $('userCredText');
+ if (!box || !pre) return;
+ const expStr = info.expiresAt ? fmtDate(info.expiresAt) : '永不过期';
+ const quotaStr = info.quotaBytes > 0 ? fmtSize(info.quotaBytes) : '不限';
+ const lines = [
+  `站点链接：${location.origin}`,
+  `登录账号：${username}`,
+  `登录密码：${password}`,
+  `有效期至：${expStr}`,
+  `空间配额：${quotaStr}`,
+ ];
+ pre.textContent = lines.join('\n');
+ $('userCredTitle').textContent = info.title || '账号凭据（仅本次展示明文密码）';
+ box.classList.add('open');
+}
+function applyUserPreset(kind) {
+ if (kind === 'regular') {
+  $('ufRole').value = 'user';
+  $('ufCanUpload').checked = true;
+  $('ufCanDelete').checked = true;
+  $('ufCanShare').checked = true;
+  $('ufExpiresHours').value = '0';
+  $('ufQuotaMb').value = '0';
+  $('ufEnabled').checked = true;
+ } else if (kind === 'rw24h') {
+  $('ufRole').value = 'guest';
+  $('ufCanUpload').checked = true;
+  $('ufCanDelete').checked = true;
+  $('ufCanShare').checked = true;
+  $('ufExpiresHours').value = '24';
+  $('ufQuotaMb').value = '100';
+  $('ufEnabled').checked = true;
+ } else if (kind === 'ro7d') {
+  $('ufRole').value = 'guest';
+  $('ufCanUpload').checked = false;
+  $('ufCanDelete').checked = false;
+  $('ufCanShare').checked = false;
+  $('ufExpiresHours').value = '168';
+  $('ufQuotaMb').value = '0';
+  $('ufEnabled').checked = true;
+ }
+ if (!$('ufPassword').value && !$('ufId').value) $('ufPassword').value = genRandomPass(10);
+}
+function resetUserForm(editUser = null) {
+ $('ufMsg').textContent = '';
+ fillUserFolderSelect(editUser ? editUser.rootFolderId : '__auto__');
+ if (editUser) {
+  $('userFormTitle').textContent = `编辑账号：${editUser.username}`;
+  $('ufId').value = editUser.id;
+  $('ufUsername').value = editUser.username;
+  $('ufUsername').disabled = true;
+  $('ufDisplayName').value = editUser.displayName || '';
+  $('ufPassword').value = '';
+  $('ufPassword').placeholder = '留空表示不修改密码';
+  $('ufPassHint').textContent = '（选填）';
+  $('ufRole').value = editUser.role === 'guest' ? 'guest' : 'user';
+  $('ufQuotaMb').value = editUser.quotaBytes > 0 ? Math.round(editUser.quotaBytes / 1048576) : 0;
+  $('ufExpiresHours').value = '0';
+  $('ufNote').value = editUser.note || '';
+  $('ufCanUpload').checked = !!editUser.canUpload;
+  $('ufCanDelete').checked = !!editUser.canDelete;
+  $('ufCanShare').checked = !!editUser.canShare;
+  $('ufEnabled').checked = !!editUser.enabled;
+  if ($('userPresetsBar')) $('userPresetsBar').style.display = 'none';
+ } else {
+  $('userFormTitle').textContent = '新建子账号 / 测试号';
+  $('ufId').value = '';
+  $('ufUsername').value = '';
+  $('ufUsername').disabled = false;
+  $('ufDisplayName').value = '';
+  $('ufPassword').value = genRandomPass(10);
+  $('ufPassword').placeholder = '至少 4 位';
+  $('ufPassHint').textContent = '*';
+  $('ufNote').value = '';
+  if ($('userPresetsBar')) $('userPresetsBar').style.display = 'flex';
+  applyUserPreset('regular');
+ }
+}
+function renderUsersList() {
+ const box = $('usersListBox');
+ if (!box) return;
+ if (!cachedUsersList.length) {
+  box.innerHTML = '<div class="empty" style="padding:18px 0">暂无子账号或测试号，点击右上角「+ 新建账号」创建</div>';
+  return;
+ }
+ box.innerHTML = cachedUsersList.map(u => {
+  const isRO = !u.canUpload && !u.canDelete && !u.canShare;
+  const roleBadge = u.role === 'guest'
+   ? (isRO ? '<span class="user-badge ro">只读体验号</span>' : '<span class="user-badge guest">测试号</span>')
+   : '<span class="user-badge">子账号</span>';
+  const statusBadge = !u.enabled
+   ? '<span class="user-badge off">已禁用</span>'
+   : (u.expired ? '<span class="user-badge off">已过期</span>' : '');
+  const perms = [u.canUpload ? '上传' : '', u.canDelete ? '删除' : '', u.canShare ? '分享' : ''].filter(Boolean).join('/') || '仅浏览下载';
+  const expText = u.expiresAt ? (u.expired ? '已过期' : `${fmtRemainShort(u.expiresAt)} (${fmtDate(u.expiresAt)})`) : '永不过期';
+  const qPct = u.quotaBytes > 0 ? Math.min(100, (u.usedBytes || 0) / u.quotaBytes * 100) : 0;
+  const qText = u.quotaBytes > 0 ? `${fmtSize(u.usedBytes || 0)} / ${fmtSize(u.quotaBytes)}` : `已用 ${fmtSize(u.usedBytes || 0)} · 不限配额`;
+  return `<div class="user-card">
+   <div class="user-card-head">
+    <div class="user-card-title"><span>${escapeHtml(u.username)}</span>${u.displayName ? `<span style="font-weight:400;color:var(--muted)">(${escapeHtml(u.displayName)})</span>` : ''}${roleBadge}${statusBadge}</div>
+    <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:var(--muted)"><input type="checkbox" ${u.enabled ? 'checked' : ''} style="width:auto" onchange="toggleUserEnabled('${u.id}', this.checked)"> 启用</label>
+   </div>
+   <div class="user-card-meta">
+    <span>目录：${escapeHtml(u.rootFolderName || u.rootFolderId)}</span>
+    <span>权限：${perms}</span>
+    <span>有效期：${escapeHtml(expText)}</span>
+   </div>
+   <div class="user-card-meta" style="margin-top:3px"><span>空间：${qText}</span>${u.lastLoginAt ? `<span>最近登录：${fmtDate(u.lastLoginAt)}</span>` : ''}${u.note ? `<span>备注：${escapeHtml(u.note)}</span>` : ''}</div>
+   ${u.quotaBytes > 0 ? `<div class="user-qbar"><div style="width:${qPct.toFixed(1)}%"></div></div>` : ''}
+   <div class="user-card-acts">
+    <button type="button" class="ghost" onclick="kickUser('${u.id}', '${escapeHtml(u.username)}')">踢下线</button>
+    <button type="button" class="ghost" onclick="resetUserPassword('${u.id}', '${escapeHtml(u.username)}')">重置密码</button>
+    <button type="button" class="ghost" onclick="editUserCard('${u.id}')">编辑</button>
+    <button type="button" class="ghost danger" onclick="deleteUserCard('${u.id}', '${escapeHtml(u.username)}')">删除</button>
+   </div>
+  </div>`;
+ }).join('');
+}
+async function loadUsersList() {
+ const box = $('usersListBox');
+ if (box) box.innerHTML = '<div class="empty" style="padding:18px 0">加载中…</div>';
+ try {
+  const r = await fetch('/api/users');
+  const d = await r.json();
+  if (!r.ok || !d.ok) { if (box) box.innerHTML = `<div class="empty">${escapeHtml(d.error || '加载失败')}</div>`; return; }
+  cachedUsersList = d.users || [];
+  renderUsersList();
+ } catch {
+  if (box) box.innerHTML = '<div class="empty">网络错误，请重试</div>';
+ }
+}
+async function openUsersModal() {
+ if (!isAdmin) return;
+ $('usersModal').classList.add('open');
+ $('userFormBox').classList.remove('open');
+ $('userCredBox').classList.remove('open');
+ await loadUsersList();
+}
+function closeUsersModal() {
+ $('usersModal').classList.remove('open');
+}
+window.toggleUserEnabled = async (id, enabled) => {
+ const r = await fetch(`/api/users/${encodeURIComponent(id)}`, {
+  method: 'PUT', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ enabled }),
+ });
+ const d = await r.json().catch(() => ({}));
+ if (!r.ok || !d.ok) { setMsg(d.error || '更新失败', 'err'); }
+ else { setMsg(enabled ? '已启用账号' : '已禁用账号并撤销其会话', 'ok'); }
+ loadUsersList();
+};
+window.kickUser = async (id, uname) => {
+ if (!(await uiConfirm({ title: '踢下线', message: `确定强制注销「${uname}」的所有活跃会话吗？`, okText: '踢下线', danger: true }))) return;
+ const r = await fetch(`/api/users/${encodeURIComponent(id)}/kick`, { method: 'POST' });
+ const d = await r.json().catch(() => ({}));
+ if (r.ok && d.ok) setMsg(`已踢下线 ${uname}（${d.kicked || 0} 个会话）`, 'ok');
+ else setMsg(d.error || '操作失败', 'err');
+};
+window.resetUserPassword = async (id, uname) => {
+ if (!(await uiConfirm({ title: '重置密码', message: `确定为「${uname}」生成新随机密码并强制其旧会话下线吗？`, okText: '生成新密码' }))) return;
+ const newPw = genRandomPass(10);
+ const r = await fetch(`/api/users/${encodeURIComponent(id)}`, {
+  method: 'PUT', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ password: newPw }),
+ });
+ const d = await r.json().catch(() => ({}));
+ if (r.ok && d.ok) {
+  showUserCred(uname, newPw, { title: `已重置「${uname}」密码（旧会话已全部失效）`, expiresAt: d.user && d.user.expiresAt, quotaBytes: d.user && d.user.quotaBytes });
+  setMsg(`已重置 ${uname} 的密码`, 'ok');
+ } else {
+  setMsg(d.error || '重置失败', 'err');
+ }
+};
+window.editUserCard = (id) => {
+ const u = cachedUsersList.find(x => x.id === id);
+ if (!u) return;
+ resetUserForm(u);
+ $('userFormBox').classList.add('open');
+};
+window.deleteUserCard = async (id, uname) => {
+ if (!(await uiConfirm({ title: '删除账号', message: `确定删除账号「${uname}」并清除其所有登录会话吗？（已上传文件默认保留）`, okText: '删除账号', danger: true }))) return;
+ const r = await fetch(`/api/users/${encodeURIComponent(id)}`, { method: 'DELETE' });
+ const d = await r.json().catch(() => ({}));
+ if (r.ok && d.ok) { setMsg(`已删除账号 ${uname}`, 'ok'); loadUsersList(); }
+ else setMsg(d.error || '删除失败', 'err');
+};
+if ($('usersBtn')) $('usersBtn').onclick = () => openUsersModal();
+if ($('mobUsersBtn')) $('mobUsersBtn').onclick = () => { if (typeof closeNavDrawer === 'function') closeNavDrawer(); openUsersModal(); };
+if ($('usersClose')) $('usersClose').onclick = () => closeUsersModal();
+if ($('usersDoneBtn')) $('usersDoneBtn').onclick = () => closeUsersModal();
+if ($('usersModal')) $('usersModal').onclick = (e) => { if (e.target.id === 'usersModal') closeUsersModal(); };
+if ($('userAddToggleBtn')) $('userAddToggleBtn').onclick = () => {
+ const box = $('userFormBox');
+ if (box.classList.contains('open') && !$('ufId').value) { box.classList.remove('open'); return; }
+ resetUserForm(null);
+ box.classList.add('open');
+ $('ufUsername').focus();
+};
+if ($('userFormCancelBtn')) $('userFormCancelBtn').onclick = () => $('userFormBox').classList.remove('open');
+if ($('userCredCloseBtn')) $('userCredCloseBtn').onclick = () => $('userCredBox').classList.remove('open');
+if ($('userCredCopyBtn')) $('userCredCopyBtn').onclick = () => copyText($('userCredText').textContent || '', '凭据已复制，可直接发给对方');
+if ($('ufGenPassBtn')) $('ufGenPassBtn').onclick = () => { $('ufPassword').value = genRandomPass(10); };
+document.querySelectorAll('.user-preset-btn').forEach(btn => {
+ btn.onclick = () => applyUserPreset(btn.dataset.upreset);
+});
+if ($('ufSaveBtn')) $('ufSaveBtn').onclick = async () => {
+ const id = $('ufId').value.trim();
+ const username = $('ufUsername').value.trim();
+ const displayName = $('ufDisplayName').value.trim();
+ const password = $('ufPassword').value;
+ const role = $('ufRole').value;
+ const folderVal = $('ufFolder').value;
+ const quotaMb = Math.max(0, Number($('ufQuotaMb').value) || 0);
+ const expiresHours = Number($('ufExpiresHours').value) || 0;
+ const note = $('ufNote').value.trim();
+ const canUpload = $('ufCanUpload').checked;
+ const canDelete = $('ufCanDelete').checked;
+ const canShare = $('ufCanShare').checked;
+ const enabled = $('ufEnabled').checked;
+ const msgEl = $('ufMsg');
+ msgEl.textContent = '';
+ const payload = {
+  displayName, role, quotaBytes: Math.floor(quotaMb * 1048576),
+  canUpload, canDelete, canShare, enabled, note,
+ };
+ if (id) {
+  if (password) payload.password = password;
+  if (folderVal && folderVal !== '__auto__') payload.rootFolderId = folderVal;
+  if (expiresHours > 0) payload.expiresHours = expiresHours;
+  const r = await fetch(`/api/users/${encodeURIComponent(id)}`, {
+   method: 'PUT', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify(payload),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { msgEl.textContent = d.error || '保存失败'; msgEl.className = 'msg err'; return; }
+  $('userFormBox').classList.remove('open');
+  if (password) showUserCred(username, password, { title: `已更新「${username}」密码`, expiresAt: d.user && d.user.expiresAt, quotaBytes: d.user && d.user.quotaBytes });
+  setMsg(`已保存账号 ${username}`, 'ok');
+  loadUsersList();
+ } else {
+  if (!username) { msgEl.textContent = '请填写登录用户名'; msgEl.className = 'msg err'; return; }
+  if (!password || password.length < 4) { msgEl.textContent = '请填写至少 4 位登录密码'; msgEl.className = 'msg err'; return; }
+  payload.username = username;
+  payload.password = password;
+  payload.expiresHours = expiresHours;
+  if (folderVal === '__auto__') payload.autoCreateFolder = true;
+  else payload.rootFolderId = folderVal;
+  const r = await fetch('/api/users', {
+   method: 'POST', headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify(payload),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) { msgEl.textContent = d.error || '创建失败'; msgEl.className = 'msg err'; return; }
+  $('userFormBox').classList.remove('open');
+  showUserCred(username, password, { title: `账号「${username}」创建成功（仅本次展示密码）`, expiresAt: d.user && d.user.expiresAt, quotaBytes: d.user && d.user.quotaBytes });
+  setMsg(`已创建账号 ${username}`, 'ok');
+  invalidateFolderTree();
+  loadUsersList();
+  loadList();
+ }
+};
+
 </script>
 </body>
 </html>

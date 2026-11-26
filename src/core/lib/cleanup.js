@@ -1,4 +1,4 @@
-// RelayBox core lib — expiry + 7-day trash + stale-chunk cleanup (v3.3.6).
+// RelayBox core lib — expiry + 7-day trash + stale-chunk + expired-user-session cleanup (v3.8.0).
 
 import { isExpired, log, CHUNK_TTL_MS } from './util.js';
 import { resolveUploadTarget, buildPoolSummaries } from '../routes/pools.js';
@@ -32,6 +32,9 @@ export async function cleanupExpired(deps) {
   }
 
   await deps.meta.deleteExpiredSessions(now);
+  if (typeof deps.meta.deleteExpiredUserSessions === 'function') {
+    await deps.meta.deleteExpiredUserSessions(now);
+  }
   if (typeof deps.meta.deleteExpiredShares === 'function') {
     await deps.meta.deleteExpiredShares(now);
   }
