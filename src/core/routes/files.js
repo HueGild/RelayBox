@@ -11,6 +11,9 @@ import { getTransferModeState } from './settings.js';
 import { hasLocalDisk, buildPoolSummaries, resolveStorageForFile, BUILTIN_R2_ID, BUILTIN_LOCAL_ID } from './pools.js';
 import { moveFileToTrash, purgeFilePermanently } from './trash.js';
 
+const MAX_PAGE_LIMIT = 500;
+const MAX_BATCH_IDS = 500;
+
 function mapFile(f, shareToken, authed, poolNameMap) {
   const poolId = f.poolId || (f.storage === 'r2' ? BUILTIN_R2_ID : BUILTIN_LOCAL_ID);
   const out = {
@@ -124,7 +127,7 @@ export function registerFiles(app) {
     const folderId = c.req.query('folderId') || null;
     const rawLimit = Number(c.req.query('limit'));
     const rawOffset = Number(c.req.query('offset'));
-    const limit = (Number.isFinite(rawLimit) && rawLimit > 0) ? Math.min(500, Math.floor(rawLimit)) : 0;
+    const limit = (Number.isFinite(rawLimit) && rawLimit > 0) ? Math.min(MAX_PAGE_LIMIT, Math.floor(rawLimit)) : 0;
     const offset = (Number.isFinite(rawOffset) && rawOffset > 0) ? Math.floor(rawOffset) : 0;
     const rawSort = (c.req.query('sort') || 'time-desc').trim();
     const sort = ['time-desc', 'time-asc', 'name-asc', 'name-desc', 'size-desc', 'size-asc'].includes(rawSort) ? rawSort : 'time-desc';
@@ -288,7 +291,6 @@ export function registerFiles(app) {
       const ok = shareToken && (await canAccessViaShare(deps, item, shareToken));
       if (!ok) return c.json({ ok: false, error: '这是私密文件，需要分享链接才能访问' }, 403);
     }
-    if (forceDownload) await deps.meta.incrementDownloads(id);
     const mime = MIME[item.ext] || 'application/octet-stream';
     const disposition = (forceDownload ? 'attachment' : 'inline') +
       `; filename*=UTF-8''${encodeURIComponent(item.name)}`;
@@ -334,6 +336,8 @@ export function registerFiles(app) {
       });
       if (!res) return c.json({ ok: false, error: '文件不存在' }, 404);
       if (forceDownload && res.status !== 416) {
+        const incOk = await deps.meta.incrementDownloads(id);
+        if (incOk === false) log('warn: failed to increment downloads for', id);
         const consumed = await consumeShare(deps, c, shareToken, item);
         if (!consumed.ok) return c.json({ ok: false, error: '分享下载次数已用完' }, 410);
       }
@@ -366,7 +370,7 @@ export function registerFiles(app) {
     if (auth !== 'ok') return authFail(c, auth);
     const body = await readJsonBody(c);
     const defaultFolderId = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;
-    const rawItems = Array.isArray(body.items) ? body.items.slice(0, 500) : [];
+    const rawItems = Array.isArray(body.items) ? body.items.slice(0, MAX_BATCH_IDS) : [];
     const normalized = rawItems
       .filter((x) => x && typeof x.name === 'string' && x.name.trim())
       .map((x, idx) => ({
@@ -394,7 +398,7 @@ export function registerFiles(app) {
     const rawIds = Array.isArray(body.ids) ? body.ids : [];
     const ids = [...new Set(rawIds.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()))];
     if (!ids.length) return c.json({ ok: false, error: '请至少选择一个文件' }, 400);
-    if (ids.length > 500) return c.json({ ok: false, error: '单次批量操作最多支持 500 个文件' }, 400);
+    if (ids.length > MAX_BATCH_IDS) return c.json({ ok: false, error: `单次批量操作最多支持 ${MAX_BATCH_IDS} 个文件` }, 400);
 
     if (action === 'move') {
       const target = (typeof body.folderId === 'string' && body.folderId) ? body.folderId : null;

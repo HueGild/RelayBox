@@ -18,5 +18,5 @@
     "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy"
   },
   "type": "module",
-  "version": "3.6.0"
+  "version": "3.6.1"
 }

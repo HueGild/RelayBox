@@ -5,6 +5,9 @@
 import { FAIL_WINDOW_MS, FAIL_LIMIT, CHUNK_SIZE, MIME, extOf, parseDim } from '../../core/lib/util.js';
 
 const CHUNK_TMP_PREFIX = 'chunks/';
+const BATCH_SIZE_DUP_NAMES = 40;
+const BATCH_SIZE_IDS = 50;
+const MIN_MS_TIMESTAMP = 1_000_000_000_000; // 2001-09-09 in ms; guards against seconds vs ms
 
 /** ISO string -> ms (null stays null). */
 function isoToMs(v) {
@@ -230,7 +233,7 @@ export class D1MetaStore {
       if (!names) { names = new Set(); byFolder.set(fk, names); }
       names.add(it.name);
     }
-    const BATCH = 40;
+    const BATCH = BATCH_SIZE_DUP_NAMES;
     for (const [fk, nameSet] of byFolder.entries()) {
       const fid = fk || null;
       const nameList = [...nameSet];
@@ -383,7 +386,7 @@ export class D1MetaStore {
     const uniq = [...new Set((ids || []).filter((x) => typeof x === 'string' && x))];
     if (!uniq.length) return [];
     const out = [];
-    const BATCH = 50;
+    const BATCH = BATCH_SIZE_IDS;
     for (let i = 0; i < uniq.length; i += BATCH) {
       const slice = uniq.slice(i, i + BATCH);
       const ph = slice.map(() => '?').join(', ');
@@ -407,7 +410,7 @@ export class D1MetaStore {
       ).all();
       for (const r of (results || [])) out.push(this._rowToFile(r));
     }
-    const BATCH = 50;
+    const BATCH = BATCH_SIZE_IDS;
     for (let i = 0; i < nonNull.length; i += BATCH) {
       const slice = nonNull.slice(i, i + BATCH);
       const ph = slice.map(() => '?').join(', ');
@@ -425,9 +428,10 @@ export class D1MetaStore {
     const todayCstStartUtc = Date.UTC(cstNow.getUTCFullYear(), cstNow.getUTCMonth(), cstNow.getUTCDate()) - CST_OFFSET_MS;
     const sevenDaysStartMs = todayCstStartUtc - 6 * 24 * 3600 * 1000;
 
+    // Single GROUP BY kind scan feeds both byKind and overview totals (SQLite/D1 compatible).
     const stmts = [
       this.db.prepare(
-        'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes, COALESCE(SUM(downloads), 0) AS total_downloads FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)',
+        'SELECT kind, COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes, COALESCE(SUM(downloads), 0) AS downloads FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) GROUP BY kind ORDER BY bytes DESC',
       ).bind(now),
       this.db.prepare(
         'SELECT COUNT(*) AS count, COALESCE(SUM(size), 0) AS total_bytes FROM files WHERE deleted_at IS NOT NULL',
@@ -437,35 +441,39 @@ export class D1MetaStore {
         'SELECT COUNT(*) AS count FROM shares WHERE (expires_at IS NULL OR expires_at > ?) AND (max_downloads = 0 OR used_downloads < max_downloads)',
       ).bind(now),
       this.db.prepare(
-        'SELECT kind, COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) GROUP BY kind ORDER BY bytes DESC',
-      ).bind(now),
-      this.db.prepare(
         'SELECT id, name, kind, size, downloads, folder_id, visibility, uploaded_at FROM files WHERE deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?) AND downloads > 0 ORDER BY downloads DESC, uploaded_at DESC LIMIT 10',
       ).bind(now),
       this.db.prepare(
         "SELECT strftime('%Y-%m-%d', (uploaded_at + 28800000) / 1000, 'unixepoch') AS day, COUNT(*) AS count, COALESCE(SUM(size), 0) AS bytes FROM files WHERE deleted_at IS NULL AND uploaded_at >= ? GROUP BY day ORDER BY day ASC",
       ).bind(sevenDaysStartMs),
     ];
-    let overviewRow, trashRow, folderRow, shareRow, kindRows, topRows, trendRows;
+    let kindRows, trashRow, folderRow, shareRow, topRows, trendRows;
     if (typeof this.db.batch === 'function') {
       const b = await this.db.batch(stmts);
-      overviewRow = (b[0] && b[0].results && b[0].results[0]) || null;
+      kindRows = b[0] || { results: [] };
       trashRow = (b[1] && b[1].results && b[1].results[0]) || null;
       folderRow = (b[2] && b[2].results && b[2].results[0]) || null;
       shareRow = (b[3] && b[3].results && b[3].results[0]) || null;
-      kindRows = b[4] || { results: [] };
-      topRows = b[5] || { results: [] };
-      trendRows = b[6] || { results: [] };
+      topRows = b[4] || { results: [] };
+      trendRows = b[5] || { results: [] };
     } else {
-      [overviewRow, trashRow, folderRow, shareRow, kindRows, topRows, trendRows] = await Promise.all([
-        stmts[0].first(), stmts[1].first(), stmts[2].first(), stmts[3].first(),
-        stmts[4].all(), stmts[5].all(), stmts[6].all(),
+      [kindRows, trashRow, folderRow, shareRow, topRows, trendRows] = await Promise.all([
+        stmts[0].all(), stmts[1].first(), stmts[2].first(), stmts[3].first(),
+        stmts[4].all(), stmts[5].all(),
       ]);
     }
 
-    const totalBytes = Number((overviewRow && overviewRow.total_bytes) || 0);
-    const totalFiles = Number((overviewRow && overviewRow.count) || 0);
-    const byKind = (kindRows && kindRows.results ? kindRows.results : []).map((r) => {
+    const rawKinds = (kindRows && kindRows.results) ? kindRows.results : [];
+    let totalFiles = 0;
+    let totalBytes = 0;
+    let totalDownloads = 0;
+    for (const r of rawKinds) {
+      totalFiles += Number(r.count || 0);
+      totalBytes += Number(r.bytes || 0);
+      totalDownloads += Number(r.downloads || 0);
+    }
+    const overviewRow = { total_downloads: totalDownloads };
+    const byKind = rawKinds.map((r) => {
       const bytes = Number(r.bytes || 0);
       const count = Number(r.count || 0);
       return {
@@ -567,33 +575,34 @@ export class D1MetaStore {
   }
 
   async updateFile(id, patch) {
-    const cur = await this.getFile(id);
-    if (!cur) return null;
-    const next = { ...cur, ...patch };
-    const row = {
-      id: next.id, name: next.name, size: next.size, ext: next.ext || '',
-      kind: next.kind || 'file', storage: next.storage, storage_key: next.storageKey,
-      folder_id: next.folderId, visibility: next.visibility,
-      expires_at: isoToMs(next.expiresAt), downloads: next.downloads || 0,
-      uploaded_at: isoToMs(next.uploadedAt),
-      upload_ip: (typeof next.uploadIp === 'string' && next.uploadIp) ? next.uploadIp : null,
-      upload_geo: (typeof next.uploadGeo === 'string' && next.uploadGeo) ? next.uploadGeo : null,
-      width: parseDim(next.width),
-      height: parseDim(next.height),
-      pool_id: (typeof next.poolId === 'string' && next.poolId) ? next.poolId : null,
-      deleted_at: isoToMs(next.deletedAt),
-      pinned: next.pinned ? 1 : 0,
-      note: typeof next.note === 'string' ? next.note : '',
-    };
-    await this.db.prepare(
-      'UPDATE files SET name = ?, size = ?, ext = ?, kind = ?, storage = ?, storage_key = ?, folder_id = ?, visibility = ?, expires_at = ?, downloads = ?, uploaded_at = ?, upload_ip = ?, upload_geo = ?, width = ?, height = ?, pool_id = ?, deleted_at = ?, pinned = ?, note = ? WHERE id = ?',
-    ).bind(
-      row.name, row.size, row.ext, row.kind, row.storage, row.storage_key,
-      row.folder_id, row.visibility, row.expires_at, row.downloads, row.uploaded_at,
-      row.upload_ip, row.upload_geo, row.width, row.height, row.pool_id, row.deleted_at,
-      row.pinned, row.note, id,
-    ).run();
-    return this._rowToFile(row);
+    if (!patch || typeof patch !== 'object') return this.getFile(id);
+    const sets = [];
+    const binds = [];
+    const push = (col, val) => { sets.push(`${col} = ?`); binds.push(val); };
+    if (patch.name !== undefined) push('name', patch.name);
+    if (patch.size !== undefined) push('size', patch.size);
+    if (patch.ext !== undefined) push('ext', patch.ext || '');
+    if (patch.kind !== undefined) push('kind', patch.kind || 'file');
+    if (patch.storage !== undefined) push('storage', patch.storage === 'r2' ? 'r2' : 'local');
+    if (patch.storageKey !== undefined) push('storage_key', patch.storageKey);
+    if (patch.folderId !== undefined) push('folder_id', (typeof patch.folderId === 'string' && patch.folderId) ? patch.folderId : null);
+    if (patch.visibility !== undefined) push('visibility', patch.visibility === 'private' ? 'private' : 'public');
+    if (patch.expiresAt !== undefined) push('expires_at', isoToMs(patch.expiresAt));
+    if (patch.downloads !== undefined) push('downloads', Number(patch.downloads) || 0);
+    if (patch.uploadedAt !== undefined) push('uploaded_at', isoToMs(patch.uploadedAt));
+    if (patch.uploadIp !== undefined) push('upload_ip', (typeof patch.uploadIp === 'string' && patch.uploadIp) ? patch.uploadIp : null);
+    if (patch.uploadGeo !== undefined) push('upload_geo', (typeof patch.uploadGeo === 'string' && patch.uploadGeo) ? patch.uploadGeo : null);
+    if (patch.width !== undefined) push('width', parseDim(patch.width));
+    if (patch.height !== undefined) push('height', parseDim(patch.height));
+    if (patch.poolId !== undefined) push('pool_id', (typeof patch.poolId === 'string' && patch.poolId) ? patch.poolId : null);
+    if (patch.deletedAt !== undefined) push('deleted_at', isoToMs(patch.deletedAt));
+    if (patch.pinned !== undefined) push('pinned', patch.pinned ? 1 : 0);
+    if (patch.note !== undefined) push('note', typeof patch.note === 'string' ? patch.note.slice(0, 200) : '');
+    if (!sets.length) return this.getFile(id);
+    binds.push(id);
+    const out = await this.db.prepare(`UPDATE files SET ${sets.join(', ')} WHERE id = ?`).bind(...binds).run();
+    if (out && out.meta && out.meta.changes === 0) return null;
+    return this.getFile(id);
   }
 
   async batchUpdateFiles(ids, patch) {
@@ -691,7 +700,8 @@ export class D1MetaStore {
   }
 
   async incrementDownloads(id) {
-    await this.db.prepare('UPDATE files SET downloads = downloads + 1 WHERE id = ?').bind(id).run();
+    const out = await this.db.prepare('UPDATE files SET downloads = downloads + 1 WHERE id = ?').bind(id).run();
+    return (out && out.meta && out.meta.changes > 0) || false;
   }
 
   // ---- folders ----
@@ -779,19 +789,21 @@ export class D1MetaStore {
     return item;
   }
   async updateShare(token, patch) {
-    const cur = await this.getShareByToken(token);
-    if (!cur) return null;
-    const next = { ...cur };
-    if (patch.code !== undefined) next.code = patch.code ? patch.code : '';
-    if (patch.burn !== undefined) next.burn = !!patch.burn;
-    if (patch.maxDownloads !== undefined) next.maxDownloads = Math.max(0, Math.floor(Number(patch.maxDownloads)) || 0);
-    if (patch.usedDownloads !== undefined) next.usedDownloads = Math.max(0, Math.floor(Number(patch.usedDownloads)) || 0);
-    if (patch.pickupCode !== undefined) next.pickupCode = (typeof patch.pickupCode === 'string' && patch.pickupCode) ? patch.pickupCode : null;
-    if (patch.expiresAt !== undefined) next.expiresAt = patch.expiresAt ? msToIso(isoToMs(patch.expiresAt)) : null;
-    await this.db.prepare(
-      'UPDATE shares SET code = ?, burn = ?, max_downloads = ?, used_downloads = ?, pickup_code = ?, expires_at = ? WHERE token = ?',
-    ).bind(next.code, next.burn ? 1 : 0, next.maxDownloads, next.usedDownloads, next.pickupCode, isoToMs(next.expiresAt), token).run();
-    return next;
+    if (!patch || typeof patch !== 'object') return this.getShareByToken(token);
+    const sets = [];
+    const binds = [];
+    const push = (col, val) => { sets.push(`${col} = ?`); binds.push(val); };
+    if (patch.code !== undefined) push('code', patch.code ? patch.code : '');
+    if (patch.burn !== undefined) push('burn', patch.burn ? 1 : 0);
+    if (patch.maxDownloads !== undefined) push('max_downloads', Math.max(0, Math.floor(Number(patch.maxDownloads)) || 0));
+    if (patch.usedDownloads !== undefined) push('used_downloads', Math.max(0, Math.floor(Number(patch.usedDownloads)) || 0));
+    if (patch.pickupCode !== undefined) push('pickup_code', (typeof patch.pickupCode === 'string' && patch.pickupCode) ? patch.pickupCode : null);
+    if (patch.expiresAt !== undefined) push('expires_at', patch.expiresAt ? isoToMs(patch.expiresAt) : null);
+    if (!sets.length) return this.getShareByToken(token);
+    binds.push(token);
+    const out = await this.db.prepare(`UPDATE shares SET ${sets.join(', ')} WHERE token = ?`).bind(...binds).run();
+    if (out && out.meta && out.meta.changes === 0) return null;
+    return this.getShareByToken(token);
   }
   async incrementShareDownloads(token) {
     const out = await this.db.prepare(
@@ -848,12 +860,9 @@ export class D1MetaStore {
 
   // ---- sessions ----
   async getSession(token) {
-    const r = await this.db.prepare('SELECT * FROM sessions WHERE token = ?').bind(token).first();
+    const r = await this.db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > ?')
+      .bind(token, Date.now()).first();
     if (!r) return null;
-    if (Date.now() > r.expires_at) {
-      await this.db.prepare('DELETE FROM sessions WHERE token = ?').bind(token).run();
-      return null;
-    }
     return { token, username: 'admin', expiresAt: r.expires_at };
   }
   async createSession(token, expiresAt) {
@@ -1131,9 +1140,13 @@ export class D1MetaStore {
   }
 
   async listStaleChunkUploads(before) {
+    const beforeMs = (typeof before === 'number' && Number.isFinite(before)) ? before : Date.now();
+    if (beforeMs < MIN_MS_TIMESTAMP || beforeMs > Date.now() + 86400000) {
+      throw new Error(`listStaleChunkUploads: invalid ms timestamp (${beforeMs})`);
+    }
     const { results } = await this.db.prepare(
       'SELECT * FROM chunk_uploads WHERE created_at < ?',
-    ).bind(before).all();
+    ).bind(beforeMs).all();
     return (results || []).map((r) => this._rowToChunk(r));
   }
 
