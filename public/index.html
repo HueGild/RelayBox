@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.8.0 UI r33 (2026-11-26 · 子账号与临时测试号系统：账号管理弹窗、预设模板、凭据一键复制、目录沙盒与权限位动态显隐) -->
+<!-- RelayBox v3.8.0 UI r34 (2026-11-26 · 凭据框 120s 自动隐藏、目录拖拽递归深度限制与全局 Promise 异常兜底) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -7918,8 +7918,8 @@ function readAllDirEntries(dirReader) {
   step();
  });
 }
-async function walkFileEntry(entry, prefix, out) {
- if (!entry) return;
+async function walkFileEntry(entry, prefix, out, depth = 0) {
+ if (!entry || depth > 16) return;
  if (entry.isFile) {
   await new Promise((resolve) => {
    entry.file((file) => {
@@ -7932,7 +7932,7 @@ async function walkFileEntry(entry, prefix, out) {
  } else if (entry.isDirectory) {
   const children = await readAllDirEntries(entry.createReader());
   for (const child of children) {
-   await walkFileEntry(child, prefix + entry.name + '/', out);
+   await walkFileEntry(child, prefix + entry.name + '/', out, depth + 1);
   }
  }
 }
@@ -8809,10 +8809,22 @@ function fillUserFolderSelect(selectedId = '__auto__') {
  sel.innerHTML = opts;
  sel.value = selectedId || '__auto__';
 }
+let userCredHideTimer = null;
+function clearUserCredTimer() {
+ if (userCredHideTimer) { clearTimeout(userCredHideTimer); userCredHideTimer = null; }
+}
+function hideUserCredBox() {
+ clearUserCredTimer();
+ const box = $('userCredBox');
+ const pre = $('userCredText');
+ if (box) box.classList.remove('open');
+ if (pre) pre.textContent = '';
+}
 function showUserCred(username, password, info = {}) {
  const box = $('userCredBox');
  const pre = $('userCredText');
  if (!box || !pre) return;
+ clearUserCredTimer();
  const expStr = info.expiresAt ? fmtDate(info.expiresAt) : '永不过期';
  const quotaStr = info.quotaBytes > 0 ? fmtSize(info.quotaBytes) : '不限';
  const lines = [
@@ -8823,8 +8835,9 @@ function showUserCred(username, password, info = {}) {
   `空间配额：${quotaStr}`,
  ];
  pre.textContent = lines.join('\n');
- $('userCredTitle').textContent = info.title || '账号凭据（仅本次展示明文密码）';
+ $('userCredTitle').textContent = info.title || '账号凭据（仅本次展示明文密码，2 分钟后自动隐藏）';
  box.classList.add('open');
+ userCredHideTimer = setTimeout(() => { hideUserCredBox(); }, 120000);
 }
 function applyUserPreset(kind) {
  if (kind === 'regular') {
@@ -8950,6 +8963,7 @@ async function openUsersModal() {
  await loadUsersList();
 }
 function closeUsersModal() {
+ hideUserCredBox();
  $('usersModal').classList.remove('open');
 }
 window.toggleUserEnabled = async (id, enabled) => {
@@ -9010,7 +9024,7 @@ if ($('userAddToggleBtn')) $('userAddToggleBtn').onclick = () => {
  $('ufUsername').focus();
 };
 if ($('userFormCancelBtn')) $('userFormCancelBtn').onclick = () => $('userFormBox').classList.remove('open');
-if ($('userCredCloseBtn')) $('userCredCloseBtn').onclick = () => $('userCredBox').classList.remove('open');
+if ($('userCredCloseBtn')) $('userCredCloseBtn').onclick = () => hideUserCredBox();
 if ($('userCredCopyBtn')) $('userCredCopyBtn').onclick = () => copyText($('userCredText').textContent || '', '凭据已复制，可直接发给对方');
 if ($('ufGenPassBtn')) $('ufGenPassBtn').onclick = () => { $('ufPassword').value = genRandomPass(10); };
 document.querySelectorAll('.user-preset-btn').forEach(btn => {
@@ -9073,6 +9087,12 @@ if ($('ufSaveBtn')) $('ufSaveBtn').onclick = async () => {
  }
 };
 
+window.addEventListener('unhandledrejection', (e) => {
+ const err = e && e.reason;
+ if (err && (err.name === 'AbortError' || /abort/i.test(String(err.message || '')))) return;
+ console.error('[RelayBox] Unhandled rejection:', err);
+ if (typeof setMsg === 'function') setMsg('操作发生异常，请检查网络或稍后重试', 'err');
+});
 </script>
 </body>
 </html>
