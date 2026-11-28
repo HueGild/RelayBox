@@ -1,7 +1,7 @@
-// RelayBox core routes — runtime settings & site appearance (v3.1.6 + v3.2).
+// RelayBox core routes — runtime settings & site appearance (v3.1.6 + v3.2 + v3.9.2).
 // - R2 transfer mode ('presign' | 'proxy') stored in settings table.
 // - Site appearance (desktop/mobile wallpaper, overlay opacity, card blur,
-//   custom brand title, logo/avatar, favicon) stored in settings table.
+//   custom brand title, logo/avatar, logoLink, hero art title, favicon) stored in settings table.
 
 import { readJsonBody, log } from '../lib/util.js';
 import { isAuthed } from '../lib/auth.js';
@@ -9,20 +9,35 @@ import { isAuthed } from '../lib/auth.js';
 export const SETTING_R2_TRANSFER_MODE = 'r2_transfer_mode';
 export const SETTING_SITE_APPEARANCE = 'site_appearance';
 
+const DEFAULT_LOGO_LINK = 'https://github.com/HueGild/relaybox';
+
 const DEFAULT_APPEARANCE = {
   siteTitle: 'RelayBox',
   siteLogo: '',
+  logoLink: DEFAULT_LOGO_LINK,
   siteFavicon: '',
   bgDesktop: '',
   bgMobile: '',
   bgOverlay: 45,
   cardBlur: 14,
+  heroArtEnabled: false,
+  heroArtText: 'RelayBox | Cloud File Hub',
+  heroArtStyle: 'script',
+  heroArtTyping: true,
 };
 
 function sanitizeImageUrl(v) {
   const s = String(v || '').trim().slice(0, 500);
   if (!s) return '';
   if (s.startsWith('/') && !s.startsWith('//')) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  return '';
+}
+
+function sanitizeExternalLink(v, fallback = '') {
+  if (v === undefined) return fallback;
+  const s = String(v || '').trim().slice(0, 500);
+  if (!s) return '';
   if (/^https?:\/\//i.test(s)) return s;
   return '';
 }
@@ -38,14 +53,25 @@ export function normalizeAppearance(raw) {
   const title = (typeof o.siteTitle === 'string' && o.siteTitle.trim())
     ? o.siteTitle.trim().slice(0, 40)
     : DEFAULT_APPEARANCE.siteTitle;
+  const artStyle = ['script', 'gradient', 'serif'].includes(o.heroArtStyle)
+    ? o.heroArtStyle
+    : DEFAULT_APPEARANCE.heroArtStyle;
+  const artText = (typeof o.heroArtText === 'string' && o.heroArtText.trim())
+    ? o.heroArtText.trim().slice(0, 120)
+    : DEFAULT_APPEARANCE.heroArtText;
   return {
     siteTitle: title,
     siteLogo: sanitizeImageUrl(o.siteLogo),
+    logoLink: sanitizeExternalLink(o.logoLink, DEFAULT_LOGO_LINK),
     siteFavicon: sanitizeImageUrl(o.siteFavicon),
     bgDesktop: sanitizeImageUrl(o.bgDesktop),
     bgMobile: sanitizeImageUrl(o.bgMobile),
     bgOverlay: clampInt(o.bgOverlay, 0, 85, DEFAULT_APPEARANCE.bgOverlay),
     cardBlur: clampInt(o.cardBlur, 0, 24, DEFAULT_APPEARANCE.cardBlur),
+    heroArtEnabled: o.heroArtEnabled === true,
+    heroArtText: artText,
+    heroArtStyle: artStyle,
+    heroArtTyping: o.heroArtTyping !== false,
   };
 }
 
@@ -124,7 +150,7 @@ export function registerSettings(app) {
     });
   });
 
-  // 站点外观（公开读，管理员写）：支持双端壁纸、遮罩、毛玻璃、站点头像与 Favicon。
+  // 站点外观（公开读，管理员写）：支持双端壁纸、遮罩、毛玻璃、站点头像、头像跳转链接、首页艺术字与 Favicon。
   app.get('/api/appearance', async (c) => {
     const deps = c.get('deps');
     const appearance = await getAppearance(deps);

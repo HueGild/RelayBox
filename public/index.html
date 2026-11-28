@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RelayBox v3.9.1 UI r36 (2026-11-28 · API密钥按需查看复制、圆形水波扩散主题切换、弹窗微动效、返回顶部悬浮钮与图片双击缩放) -->
+<!-- RelayBox v3.9.2 UI r37 (2026-11-28 · 修复网格卡片带备注裁切、站点头像可配置跳转链接与首页居中艺术字打字机动效) -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -234,7 +234,7 @@
  .move-opt { display: block; width: 100%; text-align: left; background: var(--surface-soft); color: var(--text); padding: 10px 12px; border-radius: 10px; margin-bottom: 6px; font-size: 14px; border: 1px solid var(--border); }
  .move-opt:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
- .grid .card { display: flex; flex-direction: column; height: 222px; padding: 0; margin-bottom: 0; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; content-visibility: auto; contain: layout paint style; contain-intrinsic-size: 222px; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+ .grid .card { display: flex; flex-direction: column; min-height: 218px; height: auto; padding: 0; margin-bottom: 0; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; content-visibility: auto; contain: layout paint style; contain-intrinsic-size: 222px; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
  .grid .card:hover { transform: translateY(-2px); border-color: rgba(59,130,246,.45); box-shadow: var(--card-hover-shadow); }
  .card .thumb { position: relative; flex: 0 0 150px; height: 150px; background: var(--surface-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; }
  .card .thumb img, .card .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .28s ease; }
@@ -249,7 +249,7 @@
  .card .ctag { position: absolute; top: 8px; left: 8px; z-index: 10; display: flex; gap: 4px; }
  .card .ctag .badge { box-shadow: 0 2px 6px rgba(0,0,0,.18); }
  .card .cinfo { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 8px 10px; background: var(--surface); min-height: 0; border-top: 1px solid var(--border); }
- .card .cname { font-size: 13px; color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
+ .card .cname { font-size: 13px; color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.35; flex-shrink: 0; }
  .card .cfoot { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
  .card .cmeta { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
  .card .cactions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; margin-right: -4px; }
@@ -984,7 +984,7 @@
 
 /* ===== v3.6.0 UI r29: 站内确认弹窗、Ctrl+K 命令面板、置顶备注、相册网格、安全审计日志 ===== */
 .pin-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: #D97706; background: rgba(217, 119, 6, 0.14); padding: 1px 6px; border-radius: 999px; font-weight: 600; margin-right: 4px; vertical-align: middle; }
-.file-note-line { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.file-note-line { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.35; margin-top: 1px; flex-shrink: 0; }
 .auto-copy-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 7px 11px; border-radius: 10px; background: var(--surface-2, rgba(127,127,127,.06)); border: 1px solid var(--border); font-size: 12.5px; color: var(--muted); }
 .auto-copy-bar label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); margin: 0; white-space: nowrap; flex-shrink: 0; }
 .auto-copy-bar > span { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1050,6 +1050,18 @@
 #backTopBtn.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
 #backTopBtn:hover { border-color: var(--accent); color: var(--accent); }
 #backTopBtn svg { width: 18px; height: 18px; }
+#brandMark.has-link { cursor: pointer; transition: transform .18s ease, opacity .18s ease; }
+#brandMark.has-link:hover { transform: scale(1.08); opacity: .92; }
+.hero-art-wrap { text-align: center; padding: 6px 12px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hero-art-text { min-height: 1.35em; font-size: clamp(26px, 4.6vw, 42px); line-height: 1.3; letter-spacing: .02em; color: var(--text); word-break: break-word; }
+body.has-wallpaper .hero-art-text { text-shadow: 0 2px 14px rgba(0,0,0,.38); }
+.hero-art-text.style-script { font-family: 'Dancing Script', 'Segoe Script', 'Brush Script MT', 'Apple Chancery', 'KaiTi', cursive; font-weight: 700; }
+.hero-art-text.style-gradient { font-family: 'Dancing Script', 'Segoe Script', 'PingFang SC', system-ui, sans-serif; font-weight: 800; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6); background-size: 240% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: rbxArtGrad 6s linear infinite; }
+.hero-art-text.style-serif { font-family: Georgia, 'Songti SC', 'Noto Serif SC', serif; font-weight: 700; letter-spacing: .05em; }
+.hero-art-cursor { display: inline-block; width: 2px; height: .92em; background: var(--accent); margin-left: 3px; vertical-align: -.1em; animation: rbxBlink 1s steps(1) infinite; }
+.hero-art-line { width: min(260px, 56%); height: 2px; margin-top: 6px; border-radius: 999px; background: linear-gradient(90deg, transparent, var(--accent), #8b5cf6, transparent); opacity: .85; }
+@keyframes rbxBlink { 50% { opacity: 0; } }
+@keyframes rbxArtGrad { to { background-position: 240% center; } }
 .gh-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 38px; margin-bottom: 4px; flex-wrap: wrap; }
 .gh-token-pill { padding: 3px 9px; border-radius: 999px; font-size: 11.5px; border: 1px solid var(--border); background: var(--surface-2, rgba(127,127,127,.08)); color: var(--muted); cursor: pointer; white-space: nowrap; }
 .gh-token-pill.ok { color: var(--ok-text, #059669); border-color: rgba(5,150,105,.35); background: rgba(5,150,105,.09); }
@@ -1123,6 +1135,7 @@
  <div class="msg" id="loginMsg"></div>
  </div>
 
+ <div class="hero-art-wrap" id="heroArtWrap" style="display:none"><div class="hero-art-text style-script" id="heroArtText"></div><div class="hero-art-line"></div></div>
  <div class="quick-bar-grid" id="quickBarGrid">
  <div class="card pickup-card" id="pickupCard">
  <span class="pickup-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V3"/><path d="M8 3h8"/><path d="M9 14h6"/></svg><span>取件码</span></span>
@@ -1312,7 +1325,7 @@
 <div class="modal" id="sharesMgrModal"><div class="card pool-modal-card"><span class="close" id="sharesMgrClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">分享管理中心</div><button type="button" class="ghost" id="sharesMgrRefreshBtn" style="padding:5px 11px;font-size:12px">刷新</button></div><div class="meta" style="margin-bottom:10px">一屏管控全站文件与文件夹外链、提取码、剩余下载次数及 5 位取件码。</div><div class="sm-toolbar"><div class="sm-tabs" id="sharesMgrTabs"><button type="button" class="sm-tab active" data-filter="all">全部 <span id="smCntAll">0</span></button><button type="button" class="sm-tab" data-filter="active">活跃 <span id="smCntActive">0</span></button><button type="button" class="sm-tab" data-filter="inactive">已失效 <span id="smCntInactive">0</span></button></div><input type="text" class="sm-search" id="sharesMgrSearch" placeholder="搜索文件名或取件码…"></div><div class="pool-list" id="sharesMgrList"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="sharesMgrDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="dropsModal"><div class="card pool-modal-card"><span class="close" id="dropsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">文件收集箱</div><button type="button" id="dropAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新建收集箱</button></div><div class="meta" style="margin-bottom:12px">生成反向收件链接发给他人，对方无需登录即可投递文件到指定目录，且彼此不可见已交文件。</div><div class="pool-list" id="dropListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="dropFormBox"><div style="font-size:13.5px;font-weight:600">新建文件收集箱</div><div class="form-grid2"><div class="form-field"><label>收集箱标题 *</label><input type="text" id="dfTitle" placeholder="如 作业提交 / 活动素材收集" maxlength="60"></div><div class="form-field"><label>文件存入目录</label><select id="dfFolder"><option value="">根目录</option></select></div></div><div class="form-grid2"><div class="form-field"><label>提交口令（留空 = 免密）</label><input type="text" id="dfPassword" placeholder="可选，如 2026" maxlength="64" autocomplete="off"></div><div class="form-field"><label>最大收集份数（0 = 不限）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="dfMaxFiles" value="" placeholder="留空或 0 表示不限，如 30" maxlength="6" autocomplete="off"><div class="preset-row" id="dfMaxFilesPresets" style="margin:6px 0 0"><button type="button" class="pill active" data-dfmax="0">不限</button><button type="button" class="pill" data-dfmax="1">1 份</button><button type="button" class="pill" data-dfmax="10">10 份</button><button type="button" class="pill" data-dfmax="30">30 份</button><button type="button" class="pill" data-dfmax="50">50 份</button><button type="button" class="pill" data-dfmax="100">100 份</button></div></div></div><div class="form-grid2"><div class="form-field"><label>单文件上限</label><select id="dfMaxSize"><option value="10485760">10 MB</option><option value="52428800">50 MB</option><option value="104857600" selected>100 MB</option><option value="524288000">500 MB</option><option value="1073741824">1 GB</option></select></div><div class="form-field"><label>链接有效期</label><select id="dfExpires"><option value="24">24 小时</option><option value="72">3 天</option><option value="168" selected>7 天</option><option value="720">30 天</option><option value="0">永久有效</option></select></div></div><div class="form-field"><label>收到的文件默认可见性</label><select id="dfVis"><option value="private" selected>私密（推荐：仅管理员可见）</option><option value="public">公开（任何人可访问）</option></select></div><div class="msg" id="dfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="dfCancelBtn">取消</button><button type="button" id="dfCreateBtn">创建并复制链接</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="dropsDoneBtn">关闭</button></div></div></div>
 <div class="modal" id="poolsModal"><div class="card pool-modal-card"><span class="close" id="poolsClose">×</span><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;padding-right:24px"><div style="font-size:16px;font-weight:600">存储池管理</div><button type="button" id="poolAddToggleBtn" style="padding:6px 12px;font-size:12px">+ 新增外部桶</button></div><div class="meta" style="margin-bottom:12px">支持内置 R2 与任意外部 Cloudflare R2 / S3 兼容桶（如亚太桶、B2、MinIO），新增即用无需重新部署。</div><div class="pool-list" id="poolListBox"><div class="empty" style="padding:18px 0">加载中…</div></div><div class="pool-form" id="poolFormBox"><div style="font-size:13.5px;font-weight:600" id="poolFormTitle">新增外部存储池</div><input type="hidden" id="pfId"><div class="form-grid2"><div class="form-field"><label>显示名称 *</label><input type="text" id="pfName" placeholder="如 亚太 R2 桶" maxlength="40"></div><div class="form-field"><label>存储桶名 (Bucket) *</label><input type="text" id="pfBucket" placeholder="如 relaybox-apac" maxlength="100"></div></div><div class="form-field"><label>S3 Endpoint *</label><input type="text" id="pfEndpoint" placeholder="https://&lt;AccountID&gt;.r2.cloudflarestorage.com"></div><div class="form-field"><label>公开访问域名（选填）</label><input type="text" id="pfPublicDomain" placeholder="https://cdn.example.com（留空走默认中转/预签名）"><div class="meta" style="margin-top:3px">配置后，公开图片/视频在线预览将优先 302 直出该域名（省 Worker 流量）；私密文件与强制下载仍走原鉴权链路。</div></div><div class="form-grid2"><div class="form-field"><label>Access Key ID *</label><input type="text" id="pfAk" placeholder="S3 Access Key ID" autocomplete="off"></div><div class="form-field"><label>Secret Access Key <span id="pfSkHint">*</span></label><input type="password" id="pfSk" placeholder="加密存库，绝不回传明文" autocomplete="new-password"></div></div><div class="form-grid2"><div class="form-field"><label>Region（R2 填 auto）</label><input type="text" id="pfRegion" value="auto" placeholder="auto"></div><div class="form-field"><label>显示配额（GB）</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="pfQuotaGb" value="10" placeholder="如 10" maxlength="6" autocomplete="off"></div></div><div class="form-grid2"><div class="form-field"><label>传输模式</label><select id="pfMode"><option value="proxy">Worker 中转（校园网/图床推荐）</option><option value="presign">预签名直传（大文件模式）</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="pfDefault" style="width:auto"> 设为默认上传池</label></div></div><div class="msg" id="pfMsg" style="margin-top:0"></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button type="button" class="ghost" id="pfCancelBtn">取消</button><button type="button" class="ghost" id="pfTestBtn">测试连接</button><button type="button" id="pfSaveBtn">保存存储池</button></div></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="poolsDoneBtn">关闭</button></div></div></div>
-<div class="modal" id="appearanceModal"><div class="card appear-modal-card"><span class="close" id="appearanceClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">外观与壁纸设置</div><div class="meta" style="margin-bottom:8px">支持桌面端与手机端分开设置壁纸，自定义左上角站点头像、标题与网页图标，保存后全站生效。</div><div class="appear-tip-banner">提示：壁纸与头像/图标需使用<strong>公开图片直链</strong>（如 <code>/f/...</code> 或外部直链），请勿填写 <code>/s/...</code> 分享页链接（或直接点右侧「上传」自动生成公开直链）。</div><input type="file" id="appearUploadInput" accept="image/*" style="display:none"><div class="appear-field"><label>站点名称 <span>显示在左上角与浏览器标题</span></label><input type="text" id="apTitle" placeholder="RelayBox" maxlength="40" style="width:100%"></div><div class="appear-field"><label>桌面端背景图片 <span>横屏推荐 16:9</span></label><div class="appear-input-row"><input type="text" id="apBgDesktop" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgDesktop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnBgDesktop"></div><div class="appear-prev desk" id="prevBgDesktop"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgDesktop" title="清除">×</button></div></div><div class="appear-field"><label>手机端背景图片 <span>竖屏推荐 9:16，留空则沿用桌面壁纸</span></label><div class="appear-input-row"><input type="text" id="apBgMobile" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgMobile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnBgMobile"></div><div class="appear-prev mob" id="prevBgMobile"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgMobile" title="清除">×</button></div></div><div class="appear-field"><label>左上角站点头像 / Logo <span>留空使用默认蓝色图标</span></label><div class="appear-input-row"><input type="text" id="apLogo" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnLogo"></div><div class="appear-prev ico" id="prevLogo"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apLogo" title="清除">×</button></div></div><div class="appear-field"><label>网站图标 (Favicon) <span>浏览器标签页小图标</span></label><div class="appear-input-row"><input type="text" id="apFavicon" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apFavicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnFavicon"></div><div class="appear-prev ico" id="prevFavicon"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apFavicon" title="清除">×</button></div></div><div class="form-grid2"><div class="appear-field"><label>壁纸遮罩暗度 <span id="apOverlayVal">45%</span></label><input type="range" class="appear-range" id="apOverlay" min="0" max="85" value="45"></div><div class="appear-field"><label>卡片毛玻璃模糊 <span id="apBlurVal">14px</span></label><input type="range" class="appear-range" id="apBlur" min="0" max="24" value="14"></div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="apResetBtn">恢复默认</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="apCancelBtn">取消</button><button type="button" id="apSaveBtn">保存外观</button></div></div></div></div>
+<div class="modal" id="appearanceModal"><div class="card appear-modal-card"><span class="close" id="appearanceClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">外观与壁纸设置</div><div class="meta" style="margin-bottom:8px">支持桌面端与手机端分开设置壁纸，自定义左上角站点头像、标题与网页图标，保存后全站生效。</div><div class="appear-tip-banner">提示：壁纸与头像/图标需使用<strong>公开图片直链</strong>（如 <code>/f/...</code> 或外部直链），请勿填写 <code>/s/...</code> 分享页链接（或直接点右侧「上传」自动生成公开直链）。</div><input type="file" id="appearUploadInput" accept="image/*" style="display:none"><div class="appear-field"><label>站点名称 <span>显示在左上角与浏览器标题</span></label><input type="text" id="apTitle" placeholder="RelayBox" maxlength="40" style="width:100%"></div><div class="appear-field"><label>桌面端背景图片 <span>横屏推荐 16:9</span></label><div class="appear-input-row"><input type="text" id="apBgDesktop" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgDesktop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnBgDesktop"></div><div class="appear-prev desk" id="prevBgDesktop"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgDesktop" title="清除">×</button></div></div><div class="appear-field"><label>手机端背景图片 <span>竖屏推荐 9:16，留空则沿用桌面壁纸</span></label><div class="appear-input-row"><input type="text" id="apBgMobile" placeholder="贴入图片链接，或点击右侧上传"><button type="button" class="ghost appear-up-btn" data-ap-upload="apBgMobile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnBgMobile"></div><div class="appear-prev mob" id="prevBgMobile"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apBgMobile" title="清除">×</button></div></div><div class="appear-field"><label>左上角站点头像 / Logo <span>留空使用默认蓝色图标</span></label><div class="appear-input-row"><input type="text" id="apLogo" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnLogo"></div><div class="appear-prev ico" id="prevLogo"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apLogo" title="清除">×</button></div></div><div class="appear-field"><label>站点头像点击跳转链接 <span>留空则不跳转，默认指向本项目仓库</span></label><input type="text" id="apLogoLink" placeholder="https://github.com/HueGild/relaybox" maxlength="500" style="width:100%" autocomplete="off" spellcheck="false"></div><div class="appear-field"><label>网站图标 (Favicon) <span>浏览器标签页小图标</span></label><div class="appear-input-row"><input type="text" id="apFavicon" placeholder="https://... 或上传图片"><button type="button" class="ghost appear-up-btn" data-ap-upload="apFavicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传</button></div><div class="appear-warn" id="warnFavicon"></div><div class="appear-prev ico" id="prevFavicon"><img alt=""><button type="button" class="appear-prev-clear" data-ap-clear="apFavicon" title="清除">×</button></div></div><div class="form-grid2"><div class="appear-field"><label>壁纸遮罩暗度 <span id="apOverlayVal">45%</span></label><input type="range" class="appear-range" id="apOverlay" min="0" max="85" value="45"></div><div class="appear-field"><label>卡片毛玻璃模糊 <span id="apBlurVal">14px</span></label><input type="range" class="appear-range" id="apBlur" min="0" max="24" value="14"></div></div><div class="appear-field" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text)"><input type="checkbox" id="apHeroArtEnabled" style="width:auto"> 开启首页顶部居中艺术字标题</label><div class="form-field" style="margin-top:6px"><label>艺术字文案（多句用 | 隔开可循环打字，如 RelayBox | Cloud File Hub）</label><input type="text" id="apHeroArtText" placeholder="RelayBox | Cloud File Hub" maxlength="120" style="width:100%"></div><div class="form-grid2" style="margin-top:6px"><div class="form-field"><label>字体风格</label><select id="apHeroArtStyle"><option value="script">手写花体（英文推荐）</option><option value="gradient">流光渐变艺术字</option><option value="serif">优雅衬线体</option></select></div><div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:6px"><label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;color:var(--text)"><input type="checkbox" id="apHeroArtTyping" checked style="width:auto"> 打字机循环动效</label></div></div></div><div class="row" style="justify-content:space-between;margin-top:10px"><button type="button" class="ghost" id="apResetBtn">恢复默认</button><div style="display:flex;gap:8px"><button type="button" class="ghost" id="apCancelBtn">取消</button><button type="button" id="apSaveBtn">保存外观</button></div></div></div></div>
 <div class="modal" id="transferModeModal"><div class="card" style="max-width:440px;width:100%"><span class="close" id="transferModeClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">R2 传输模式</div><div class="meta" style="margin-bottom:8px">根据网络环境与文件大小随时切换，保存后全站即时生效（无需重新部署）。</div><div class="mode-opts" id="transferModeOpts"><button type="button" class="mode-opt" data-mode="proxy"><div class="mode-opt-head"><strong>Worker 绑定中转（图床模式）</strong><span class="mode-opt-tag">校园网推荐</span></div><p>上传下载全程走当前自定义域名，绕开 r2.cloudflarestorage.com 阻断，支持公开文件边缘缓存与视频进度条拖动；零 S3 密钥、零 CORS；超过 20MB 自动分片。</p></button><button type="button" class="mode-opt" data-mode="presign" id="modeOptPresign"><div class="mode-opt-head"><strong>R2 预签名直传（大文件模式）</strong><span class="mode-opt-tag" id="modePresignTag">GB 级大文件</span></div><p>≤100MB 直连 R2 上传，下载 302 走 R2 边缘直出，最省 Worker 额度且大文件下载最稳；需要配置 R2 S3 密钥与桶 CORS。</p></button></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="transferModeCancel">取消</button><button type="button" id="transferModeSave">保存并生效</button></div></div></div>
 <div class="modal" id="copyFmtModal"><div class="card" style="max-width:400px;width:100%"><span class="close" id="copyFmtClose">×</span><div style="font-size:16px;font-weight:600;margin-bottom:4px">默认复制链接格式</div><div class="meta" style="margin-bottom:8px">点击文件上的“复制链接”图标时，自动按所选格式复制（仅保存在本机浏览器）。</div><div class="fmt-opts" id="copyFmtOpts"><button type="button" class="fmt-opt" data-fmt="raw"><strong>原始直链</strong><span>https://.../f/id</span></button><button type="button" class="fmt-opt" data-fmt="md"><strong>Markdown</strong><span>![name](url)</span></button><button type="button" class="fmt-opt" data-fmt="html"><strong>HTML</strong><span>&lt;img src="url"&gt;</span></button><button type="button" class="fmt-opt" data-fmt="bb"><strong>BBCode</strong><span>[img]url[/img]</span></button></div><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">自定义链接前缀（留空 = 使用当前站点域名）</label><input type="text" id="copyPrefixInput" placeholder="例如 https://relaybox.19660716.xyz" style="width:100%"><div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="ghost" id="copyFmtCancel">取消</button><button type="button" class="ghost desk-only-btn" id="resetTopbarOrderBtn" style="margin-right:auto;font-size:12px;padding:7px 10px" title="恢复桌面端顶栏图标默认顺序">重置顶栏顺序</button><button type="button" id="copyFmtSave">保存设置</button></div></div></div>
   <div class="nav-drawer-mask" id="navDrawerMask"></div>
@@ -5640,7 +5653,66 @@ if ($('pfSaveBtn')) $('pfSaveBtn').onclick = async () => {
 // ===== r9: 外观、双端壁纸与站点头像/图标设置 =====
 const DEFAULT_FAVICON = (document.querySelector('link[rel="icon"]') || {}).href || '';
 const DEFAULT_BRAND_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
-let siteAppearance = { siteTitle: 'RelayBox', siteLogo: '', siteFavicon: '', bgDesktop: '', bgMobile: '', bgOverlay: 45, cardBlur: 14 };
+const DEFAULT_LOGO_LINK = 'https://github.com/HueGild/relaybox';
+let siteAppearance = { siteTitle: 'RelayBox', siteLogo: '', logoLink: DEFAULT_LOGO_LINK, siteFavicon: '', bgDesktop: '', bgMobile: '', bgOverlay: 45, cardBlur: 14, heroArtEnabled: false, heroArtText: 'RelayBox | Cloud File Hub', heroArtStyle: 'script', heroArtTyping: true };
+let heroArtTimer = null;
+let heroArtFontLoaded = false;
+function ensureHeroArtFont() {
+ if (heroArtFontLoaded) return;
+ heroArtFontLoaded = true;
+ try {
+  const lk = document.createElement('link');
+  lk.rel = 'stylesheet';
+  lk.href = 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap';
+  document.head.appendChild(lk);
+ } catch {}
+}
+function renderHeroArtTitle(ap) {
+ const wrap = $('heroArtWrap');
+ const el = $('heroArtText');
+ if (!wrap || !el) return;
+ if (heroArtTimer) { clearTimeout(heroArtTimer); heroArtTimer = null; }
+ if (!ap || !ap.heroArtEnabled) { wrap.style.display = 'none'; el.innerHTML = ''; return; }
+ const style = ['script', 'gradient', 'serif'].includes(ap.heroArtStyle) ? ap.heroArtStyle : 'script';
+ if (style === 'script' || style === 'gradient') ensureHeroArtFont();
+ el.className = 'hero-art-text style-' + style;
+ wrap.style.display = '';
+ const phrases = String(ap.heroArtText || ap.siteTitle || 'RelayBox').split('|').map(x => x.trim()).filter(Boolean);
+ if (!phrases.length) phrases.push('RelayBox');
+ const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if (!ap.heroArtTyping || reduceMotion) {
+  el.textContent = phrases[0];
+  return;
+ }
+ let pIdx = 0, cIdx = 0, deleting = false;
+ const step = () => {
+  const cur = phrases[pIdx % phrases.length];
+  if (!deleting) {
+   cIdx++;
+   el.innerHTML = escapeHtml(cur.slice(0, cIdx)) + '<span class="hero-art-cursor"></span>';
+   if (cIdx >= cur.length) {
+    if (phrases.length === 1) {
+     heroArtTimer = setTimeout(() => { deleting = true; step(); }, 2800);
+    } else {
+     heroArtTimer = setTimeout(() => { deleting = true; step(); }, 1800);
+    }
+    return;
+   }
+   heroArtTimer = setTimeout(step, 95);
+  } else {
+   cIdx--;
+   el.innerHTML = escapeHtml(cur.slice(0, Math.max(0, cIdx))) + '<span class="hero-art-cursor"></span>';
+   if (cIdx <= 0) {
+    deleting = false;
+    pIdx = (pIdx + 1) % phrases.length;
+    heroArtTimer = setTimeout(step, 380);
+    return;
+   }
+   heroArtTimer = setTimeout(step, 52);
+  }
+ };
+ step();
+}
 let appearanceSnapshot = null;
 
 function applyAppearance(ap) {
@@ -5658,7 +5730,12 @@ function applyAppearance(ap) {
    mark.innerHTML = DEFAULT_BRAND_SVG;
    mark.style.background = '';
   }
+  const link = (typeof a.logoLink === 'string' && /^https?:\/\//i.test(a.logoLink.trim())) ? a.logoLink.trim() : '';
+  mark.classList.toggle('has-link', !!link);
+  mark.title = link ? `打开 ${link}` : '';
+  mark.onclick = link ? () => window.open(link, '_blank', 'noopener,noreferrer') : null;
  }
+ renderHeroArtTitle(a);
  const favHref = a.siteFavicon || a.siteLogo || DEFAULT_FAVICON;
  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(lk => {
   if (favHref) lk.href = favHref;
@@ -5719,9 +5796,14 @@ function collectAppearanceForm() {
   bgDesktop: $('apBgDesktop').value.trim(),
   bgMobile: $('apBgMobile').value.trim(),
   siteLogo: $('apLogo').value.trim(),
+  logoLink: $('apLogoLink') ? $('apLogoLink').value.trim() : DEFAULT_LOGO_LINK,
   siteFavicon: $('apFavicon').value.trim(),
   bgOverlay: Number($('apOverlay').value),
   cardBlur: Number($('apBlur').value),
+  heroArtEnabled: !!($('apHeroArtEnabled') && $('apHeroArtEnabled').checked),
+  heroArtText: ($('apHeroArtText') ? $('apHeroArtText').value.trim() : '') || 'RelayBox | Cloud File Hub',
+  heroArtStyle: $('apHeroArtStyle') ? $('apHeroArtStyle').value : 'script',
+  heroArtTyping: $('apHeroArtTyping') ? !!$('apHeroArtTyping').checked : true,
  };
 }
 function openAppearanceModal() {
@@ -5731,7 +5813,12 @@ function openAppearanceModal() {
  $('apBgDesktop').value = siteAppearance.bgDesktop || '';
  $('apBgMobile').value = siteAppearance.bgMobile || '';
  $('apLogo').value = siteAppearance.siteLogo || '';
+ if ($('apLogoLink')) $('apLogoLink').value = siteAppearance.logoLink !== undefined ? siteAppearance.logoLink : DEFAULT_LOGO_LINK;
  $('apFavicon').value = siteAppearance.siteFavicon || '';
+ if ($('apHeroArtEnabled')) $('apHeroArtEnabled').checked = !!siteAppearance.heroArtEnabled;
+ if ($('apHeroArtText')) $('apHeroArtText').value = siteAppearance.heroArtText || 'RelayBox | Cloud File Hub';
+ if ($('apHeroArtStyle')) $('apHeroArtStyle').value = siteAppearance.heroArtStyle || 'script';
+ if ($('apHeroArtTyping')) $('apHeroArtTyping').checked = siteAppearance.heroArtTyping !== false;
  $('apOverlay').value = String(siteAppearance.bgOverlay ?? 45);
  $('apBlur').value = String(siteAppearance.cardBlur ?? 14);
  syncAppearancePreviews();
@@ -5744,7 +5831,7 @@ function closeAppearanceModal(keepCurrent) {
  }
  appearanceSnapshot = null;
 }
-['apTitle', 'apBgDesktop', 'apBgMobile', 'apLogo', 'apFavicon', 'apOverlay', 'apBlur'].forEach(id => {
+['apTitle', 'apBgDesktop', 'apBgMobile', 'apLogo', 'apLogoLink', 'apFavicon', 'apOverlay', 'apBlur', 'apHeroArtEnabled', 'apHeroArtText', 'apHeroArtStyle', 'apHeroArtTyping'].forEach(id => {
  const el = $(id);
  if (el) el.addEventListener('input', () => { syncAppearancePreviews(); applyAppearance(collectAppearanceForm()); });
 });
@@ -5818,7 +5905,12 @@ if ($('apResetBtn')) $('apResetBtn').onclick = () => {
  $('apBgDesktop').value = '';
  $('apBgMobile').value = '';
  $('apLogo').value = '';
+ if ($('apLogoLink')) $('apLogoLink').value = DEFAULT_LOGO_LINK;
  $('apFavicon').value = '';
+ if ($('apHeroArtEnabled')) $('apHeroArtEnabled').checked = false;
+ if ($('apHeroArtText')) $('apHeroArtText').value = 'RelayBox | Cloud File Hub';
+ if ($('apHeroArtStyle')) $('apHeroArtStyle').value = 'script';
+ if ($('apHeroArtTyping')) $('apHeroArtTyping').checked = true;
  $('apOverlay').value = '45';
  $('apBlur').value = '14';
  syncAppearancePreviews();
