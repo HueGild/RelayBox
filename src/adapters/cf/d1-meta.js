@@ -848,7 +848,7 @@ export class D1MetaStore {
     return (out.meta && typeof out.meta.changes === 'number') ? out.meta.changes : 0;
   }
 
-  // ---- API tokens (v3.1) ----
+  // ---- API tokens (v3.1 + v3.9.1 encrypted reveal) ----
   _rowToApiToken(r) {
     if (!r) return null;
     return {
@@ -856,19 +856,31 @@ export class D1MetaStore {
       name: r.name,
       prefix: r.prefix,
       scope: r.scope || 'upload',
+      hasReveal: typeof r.token_enc === 'string' && r.token_enc.length > 0,
       lastUsedAt: (typeof r.last_used_at === 'number') ? r.last_used_at : null,
       createdAt: r.created_at,
     };
   }
   async createApiToken(t) {
+    const tokenEnc = typeof t.tokenEnc === 'string' ? t.tokenEnc : '';
     const item = {
       id: t.id, name: t.name, prefix: t.prefix, scope: t.scope || 'upload',
+      hasReveal: tokenEnc.length > 0,
       lastUsedAt: null, createdAt: t.createdAt,
     };
     await this.db.prepare(
-      'INSERT INTO api_tokens (id, name, token_hash, prefix, scope, last_used_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    ).bind(item.id, item.name, t.tokenHash, item.prefix, item.scope, null, item.createdAt).run();
+      'INSERT INTO api_tokens (id, name, token_hash, token_enc, prefix, scope, last_used_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(item.id, item.name, t.tokenHash, tokenEnc, item.prefix, item.scope, null, item.createdAt).run();
     return item;
+  }
+  async getApiTokenById(id) {
+    if (!id) return null;
+    const r = await this.db.prepare('SELECT * FROM api_tokens WHERE id = ?').bind(id).first();
+    if (!r) return null;
+    return {
+      ...this._rowToApiToken(r),
+      tokenEnc: typeof r.token_enc === 'string' ? r.token_enc : '',
+    };
   }
   async getApiTokenByHash(tokenHash) {
     const r = await this.db.prepare('SELECT * FROM api_tokens WHERE token_hash = ?').bind(tokenHash).first();

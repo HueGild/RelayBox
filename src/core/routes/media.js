@@ -156,7 +156,33 @@ export function registerMedia(app) {
     const tgCfg = await getTelegramConfig(deps);
     const allowedRaw = cfg.tgAllowedChats || tgCfg.chatId || '';
     const allowedSet = new Set(allowedRaw.split(/[\s,，]+/).map((x) => x.trim()).filter(Boolean));
-    if (!allowedSet.size || !allowedSet.has(chatId)) {
+    const isAllowed = allowedSet.size > 0 && allowedSet.has(chatId);
+
+    // /start or /id helper: replies with current Chat ID & whitelist status for instant troubleshooting
+    if (/^\/(?:start|id)(?:@[A-Za-z0-9_]+)?(?:\s|$)/i.test(text)) {
+      let tok = '';
+      if (tgCfg.botTokenEnc) {
+        try { tok = await decryptSecret(tgCfg.botTokenEnc, deps.config.uploadPassword); } catch {}
+      }
+      if (tok) {
+        const fetchFn = deps.fetch || fetch;
+        const chatType = (msg.chat && msg.chat.type) || 'unknown';
+        const info = [
+          '🤖 <b>RelayBox 自动存视频助手</b>',
+          `当前 Chat ID：<code>${escapeTgHtml(chatId)}</code>（${escapeTgHtml(chatType)}）`,
+          `白名单状态：${isAllowed ? '✅ 已允许（直接发抖音/短视频分享口令即可自动转存）' : '⚠️ 未在白名单中，请将上方 Chat ID 填入 RelayBox「允许的 Chat ID 白名单」并保存'}`,
+        ].join('\n');
+        await tgApiCall(fetchFn, tgCfg.apiBase, tok, 'sendMessage', {
+          chat_id: chatId,
+          text: info,
+          parse_mode: 'HTML',
+          reply_to_message_id: msg.message_id,
+        }).catch(() => {});
+      }
+      return c.json({ ok: true, command: 'id', chatId, allowed: isAllowed });
+    }
+
+    if (!isAllowed) {
       return c.json({ ok: true, ignored: 'chat_not_allowed' });
     }
 

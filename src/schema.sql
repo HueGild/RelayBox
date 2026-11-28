@@ -70,6 +70,7 @@ CREATE TABLE api_tokens (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   token_hash TEXT NOT NULL UNIQUE,
+  token_enc TEXT NOT NULL DEFAULT '',
   prefix TEXT NOT NULL,
   scope TEXT NOT NULL DEFAULT 'upload',
   last_used_at INTEGER,

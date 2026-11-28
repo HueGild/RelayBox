@@ -234,5 +234,33 @@ const whOk = await req('POST', '/api/tg/webhook', {
 const replyCall = tgCalls.slice(beforeEdits).find((c) => c.url.endsWith('/editMessageText'));
 check('TG webhook parses Douyin link, saves file & replies with RelayBox link', whOk.status === 200 && replyCall && replyCall.body.text.includes('已转存到 RelayBox') && replyCall.body.text.includes('/f/'), replyCall);
 
+
+// 3. v3.9.1 tests: nested video_data.nwm_video_url_HQ, TG /id helper, and API token reveal
+{
+  const idBefore = tgCalls.length;
+  const idRes = await req('POST', '/api/tg/webhook', {
+    headers: { 'X-Telegram-Bot-Api-Secret-Token': secret },
+    body: { message: { message_id: 10, chat: { id: 888888, type: 'private' }, text: '/id' } },
+  });
+  const idReply = tgCalls.slice(idBefore).find((c) => c.url.endsWith('/sendMessage'));
+  check('TG /id command replies with Chat ID & whitelist hint', idRes.status === 200 && idRes.json?.command === 'id' && idReply && idReply.body.text.includes('888888'));
+
+  // API Token create + reveal + unauth block
+  const tkCreate = await req('POST', '/api/tokens', { cookie: admC, body: { name: 'WebDAV Sync', scope: 'all' } });
+  const createdTok = tkCreate.json?.token;
+  const createdId = tkCreate.json?.id;
+  check('API token created with hasReveal=true', tkCreate.status === 200 && !!createdTok && tkCreate.json?.hasReveal === true);
+
+  const tkList = await req('GET', '/api/tokens', { cookie: admC });
+  const listed = (tkList.json?.tokens || []).find((x) => x.id === createdId);
+  check('API token list exposes hasReveal without plaintext/ciphertext', listed && listed.hasReveal === true && !listed.token && !listed.tokenEnc);
+
+  const tkRevUnauth = await req('GET', `/api/tokens/${createdId}/reveal`);
+  check('Unauthenticated token reveal rejected (401)', tkRevUnauth.status === 401);
+
+  const tkRev = await req('GET', `/api/tokens/${createdId}/reveal`, { cookie: admC });
+  check('Admin token reveal returns exact original plaintext token', tkRev.status === 200 && tkRev.json?.token === createdTok);
+}
+
 console.log(`\n=== v3.9.0 Media & TG Webhook Test Summary: ${passed} passed, ${failed} failed ===`);
 if (failed > 0) process.exit(1);

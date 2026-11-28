@@ -229,11 +229,16 @@ export function parseDouyinRouterHtml(html) {
 function pickFromCustomParserJson(json) {
   if (!json || typeof json !== 'object') return null;
   const d = (json.data && typeof json.data === 'object') ? json.data : json;
+  const vd = (d.video_data && typeof d.video_data === 'object') ? d.video_data : null;
   const candidates = [
     json.url,
     json.video_url,
     json.videoUrl,
     json.play,
+    vd && vd.nwm_video_url_HQ,
+    vd && vd.nwm_video_url,
+    vd && vd.play,
+    d.nwm_video_url_HQ,
     d.nwm_video_url,
     d.hdplay,
     d.play,
@@ -241,6 +246,8 @@ function pickFromCustomParserJson(json) {
     d.videoUrl,
     d.url,
     d.video && d.video.play_addr && d.video.play_addr.url_list && d.video.play_addr.url_list[0],
+    d.aweme_detail && d.aweme_detail.video && d.aweme_detail.video.play_addr && d.aweme_detail.video.play_addr.url_list && d.aweme_detail.video.play_addr.url_list[0],
+    vd && vd.wm_video_url,
   ];
   const mediaUrl = candidates.find((x) => typeof x === 'string' && /^https?:\/\//i.test(x.trim()));
   if (!mediaUrl) return null;
